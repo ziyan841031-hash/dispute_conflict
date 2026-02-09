@@ -123,7 +123,7 @@ public class DifyClient {
         // 构造请求实体。
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         // 发起POST请求。
-        ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
         // 打印响应日志。
         log.info("Dify要素提取响应: status={}, traceId={}", response.getStatusCodeValue(), traceId);
         // 返回响应体。
