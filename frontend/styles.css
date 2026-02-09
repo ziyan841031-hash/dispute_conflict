@@ -147,10 +147,10 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 .flow-node { min-width: 90px; height: 46px; font-size: 12px; border-radius: 12px; }
 
 .node-accept { left: 40px; top: 240px; }
-.node-mediation { left: 270px; top: 240px; }
-.node-huajie { left: 380px; top: 145px; }
-.node-huanjie { left: 380px; top: 248px; }
-.node-shujie { left: 380px; top: 350px; }
+.node-mediation { left: 380px; top: 95px; }
+.node-huajie { left: 380px; top: 190px; }
+.node-huanjie { left: 380px; top: 285px; }
+.node-shujie { left: 380px; top: 380px; }
 .node-people { left: 600px; top: 115px; }
 .node-admin { left: 600px; top: 235px; }
 .node-professional { left: 600px; top: 355px; }
