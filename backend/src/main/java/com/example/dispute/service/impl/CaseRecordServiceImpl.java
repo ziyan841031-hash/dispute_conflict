@@ -162,7 +162,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         // 设置办理进度。
         record.setHandlingProgress(defaultVal(handlingProgress, "待处理"));
         // 设置接待人。
-        record.setReceiver(defaultVal(receiver, "系统"));
+        record.setReceiver(defaultVal(receiver, "张三"));
         // 设置登记时间。
         record.setRegisterTime(now);
         // 设置案件内容。
