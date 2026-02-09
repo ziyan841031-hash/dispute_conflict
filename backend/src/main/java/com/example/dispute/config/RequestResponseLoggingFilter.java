@@ -34,13 +34,23 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
         // 读取查询参数。
         String query = request.getQueryString();
-        // 打印请求进入日志。
-        log.info("[REQUEST] method={}, uri={}, query={}", method, uri, query);
+        // 对预检请求单独标识日志。
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            log.info("[CORS-PREFLIGHT] method={}, uri={}, query={}", method, uri, query);
+        } else {
+            // 打印请求进入日志。
+            log.info("[REQUEST] method={}, uri={}, query={}", method, uri, query);
+        }
         // 放行请求。
         filterChain.doFilter(request, response);
         // 计算耗时。
         long cost = System.currentTimeMillis() - start;
-        // 打印响应完成日志。
-        log.info("[RESPONSE] method={}, uri={}, status={}, costMs={}", method, uri, response.getStatus(), cost);
+        // 对预检请求单独标识响应日志。
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            log.info("[CORS-PREFLIGHT-RESPONSE] method={}, uri={}, status={}, costMs={}", method, uri, response.getStatus(), cost);
+        } else {
+            // 打印响应完成日志。
+            log.info("[RESPONSE] method={}, uri={}, status={}, costMs={}", method, uri, response.getStatus(), cost);
+        }
     }
 }
