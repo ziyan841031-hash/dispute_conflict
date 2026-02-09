@@ -102,7 +102,7 @@ public class DifyClient {
         Map<String, Object> inputs = new HashMap<>();
         // 按App变量定义传值，文本为空则不设置具体变量，仅保留空对象。
         if (StringUtils.hasText(caseText)) {
-            inputs.put("case_text", caseText);
+            inputs.put("material_text", caseText);
         }
 
         // 创建请求体Map。
