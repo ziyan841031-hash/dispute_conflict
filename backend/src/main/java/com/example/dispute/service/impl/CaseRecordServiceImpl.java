@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.UUID;
 
@@ -54,15 +55,25 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     @Override // 重写接口方法。
     public CaseRecord ingestText(TextIngestRequest request) {
         // 打印服务日志。
-        log.info("服务层-文本入库开始: partyName={}, disputeType={}", request.getPartyName(), request.getDisputeType());
+        log.info("服务层-文本入库开始: eventSource={}", request.getEventSource());
         // 调用Dify要素提取智能体。
         Object extractResult = difyClient.runExtractWorkflow(request.getCaseText());
         // 打印要素提取响应日志。
         log.info("服务层-Dify要素提取完成: resultType={}", extractResult == null ? "null" : extractResult.getClass().getSimpleName());
+
+        // 提取当事人名称。
+        String parsedPartyName = pickOutputValue(extractResult, "party_name");
+        // 提取对方当事人名称。
+        String parsedCounterpartyName = pickOutputValue(extractResult, "counterparty_name");
+        // 提取纠纷概要文本。
+        String parsedSummary = pickOutputValue(extractResult, "dispute_summary");
+
         // 保存案件数据。
-        CaseRecord record = saveCase("TEXT", request.getCaseText(), null, null,
-                request.getPartyName(), request.getCounterpartyName(), request.getDisputeType(),
-                request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver());
+        CaseRecord record = saveCase(defaultVal(request.getEventSource(), "其他线下接待"),
+                defaultVal(parsedSummary, request.getCaseText()), null, null,
+                defaultVal(parsedPartyName, request.getPartyName()),
+                defaultVal(parsedCounterpartyName, request.getCounterpartyName()),
+                request.getDisputeType(), request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver());
         // 打印服务日志。
         log.info("服务层-文本入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -188,6 +199,32 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         caseRecordMapper.insert(record);
         // 返回实体对象。
         return record;
+    }
+
+    /**
+     * 从Dify结果中提取outputs指定字段。
+     */
+    private String pickOutputValue(Object extractResult, String key) {
+        // 判断结果是否为Map。
+        if (!(extractResult instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转顶层Map。
+        Map<?, ?> rootMap = (Map<?, ?>) extractResult;
+        // 提取outputs对象。
+        Object outputsObj = rootMap.get("outputs");
+        // 判断outputs是否为Map。
+        if (!(outputsObj instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转outputs对象。
+        Map<?, ?> outputsMap = (Map<?, ?>) outputsObj;
+        // 获取目标字段值。
+        Object value = outputsMap.get(key);
+        // 返回字符串值。
+        return value == null ? null : String.valueOf(value);
     }
 
     /**

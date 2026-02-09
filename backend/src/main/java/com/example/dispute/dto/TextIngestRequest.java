@@ -16,4 +16,5 @@ public class TextIngestRequest {
     private String riskLevel;
     private String handlingProgress;
     private String receiver;
+    private String eventSource;
 }

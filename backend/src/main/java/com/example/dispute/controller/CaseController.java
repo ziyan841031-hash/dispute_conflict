@@ -50,7 +50,7 @@ public class CaseController {
         // 生成文本预览。
         String preview = buildCaseTextPreview(request.getCaseText());
         // 打印请求参数日志。
-        log.info("文字入库请求: textLength={}, preview={}", textLength, preview);
+        log.info("文字入库请求: textLength={}, preview={}, eventSource={}", textLength, preview, request.getEventSource());
         // 调用服务执行入库。
         CaseRecord record = caseRecordService.ingestText(request);
         // 打印响应结果日志。

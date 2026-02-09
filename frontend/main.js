@@ -18,7 +18,9 @@ async function submitText() {
   // 组装请求载荷。
   const payload = {
     // 读取案件描述。
-    caseText: document.getElementById('caseText').value
+    caseText: document.getElementById('caseText').value,
+    // 读取事件来源。
+    eventSource: document.getElementById('eventSource').value
   };
 
   // 发起POST请求。
