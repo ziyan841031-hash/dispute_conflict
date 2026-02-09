@@ -6,19 +6,7 @@ async function submitText() {
   // 组装请求载荷。
   const payload = {
     // 读取案件描述。
-    caseText: document.getElementById('caseText').value,
-    // 读取当事人。
-    partyName: document.getElementById('partyName').value,
-    // 读取对方当事人。
-    counterpartyName: document.getElementById('counterpartyName').value,
-    // 读取纠纷类型。
-    disputeType: document.getElementById('disputeType').value,
-    // 读取风险等级。
-    riskLevel: document.getElementById('riskLevel').value,
-    // 读取办理进度。
-    handlingProgress: document.getElementById('handlingProgress').value,
-    // 读取接待人。
-    receiver: document.getElementById('receiver').value
+    caseText: document.getElementById('caseText').value
   };
 
   // 发起POST请求。

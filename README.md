@@ -8,7 +8,7 @@
 ### 2.1 控台首页（`frontend/index.html`）
 功能：
 1. 案件描述文字输入。
-2. 录入案件主表字段：当事人、对方当事人、纠纷类型、风险等级、办理进度、接待人。
+2. 仅保留案件描述输入框（后台解析文字并入库）。
 3. 上传 Excel（解析文本后入库）。
 4. 上传音频（转写占位后入库）。
 
@@ -32,13 +32,7 @@
 - Body:
 ```json
 {
-  "caseText": "邻里因噪音产生纠纷...",
-  "partyName": "张三",
-  "counterpartyName": "李四",
-  "disputeType": "邻里纠纷",
-  "riskLevel": "中",
-  "handlingProgress": "待处理",
-  "receiver": "王接待"
+  "caseText": "邻里因噪音产生纠纷..."
 }
 ```
 
