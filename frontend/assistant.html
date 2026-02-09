@@ -210,10 +210,15 @@
         nodesDraggable: false,
         nodesConnectable: false,
         elementsSelectable: true,
+        zoomOnScroll: true,
+        zoomOnPinch: true,
+        panOnDrag: true,
+        minZoom: 0.45,
+        maxZoom: 1.8,
         onNodeClick: (_, node) => setActiveNodeId(node.id)
       },
       h(Background, { gap: 18, size: 1, color: '#e5e7eb' }),
-      h(Controls, { showInteractive: false }));
+      h(Controls, { showInteractive: true }));
     }
 
     const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
