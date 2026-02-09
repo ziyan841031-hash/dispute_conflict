@@ -45,8 +45,12 @@ public class CaseController {
      */
     @PostMapping("/ingest/text") // 定义文字入库接口。
     public ApiResponse<CaseRecord> ingestText(@Valid @RequestBody TextIngestRequest request) {
+        // 计算文本长度。
+        int textLength = request.getCaseText() == null ? 0 : request.getCaseText().length();
+        // 生成文本预览。
+        String preview = buildCaseTextPreview(request.getCaseText());
         // 打印请求参数日志。
-        log.info("文字入库请求: partyName={}, disputeType={}, riskLevel={}", request.getPartyName(), request.getDisputeType(), request.getRiskLevel());
+        log.info("文字入库请求: textLength={}, preview={}", textLength, preview);
         // 调用服务执行入库。
         CaseRecord record = caseRecordService.ingestText(request);
         // 打印响应结果日志。
@@ -83,6 +87,27 @@ public class CaseController {
         log.info("音频入库响应: caseNo={}", record.getCaseNo());
         // 返回统一成功响应。
         return ApiResponse.success(record);
+    }
+
+
+    /**
+     * 生成案件文本预览。
+     */
+    private String buildCaseTextPreview(String caseText) {
+        // 判断文本是否为空。
+        if (caseText == null) {
+            // 返回空标识。
+            return "";
+        }
+        // 去除首尾空白字符。
+        String normalized = caseText.trim();
+        // 判断文本是否超过50字符。
+        if (normalized.length() > 50) {
+            // 返回截断预览。
+            return normalized.substring(0, 50) + "...";
+        }
+        // 返回原始预览。
+        return normalized;
     }
 
     /**
