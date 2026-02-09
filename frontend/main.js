@@ -217,12 +217,12 @@ function renderTimeline(data) {
 function bindFlowInteraction() {
   const relations = [
     ['accept', 'mediation', 'l-accept-mediation'],
-    ['mediation', 'huajie', 'l-mediation-huajie'],
-    ['mediation', 'huanjie', 'l-mediation-huanjie'],
-    ['mediation', 'shujie', 'l-mediation-shujie'],
-    ['huajie', 'people', 'l-mediation-people'],
-    ['huajie', 'admin', 'l-mediation-admin'],
-    ['huajie', 'professional', 'l-mediation-prof'],
+    ['accept', 'huajie', 'l-accept-huajie'],
+    ['accept', 'huanjie', 'l-accept-huanjie'],
+    ['accept', 'shujie', 'l-accept-shujie'],
+    ['mediation', 'people', 'l-mediation-people'],
+    ['mediation', 'admin', 'l-mediation-admin'],
+    ['mediation', 'professional', 'l-mediation-prof'],
     ['people', 'finalMediation', 'l-people-final'],
     ['admin', 'finalMediation', 'l-admin-final'],
     ['professional', 'finalMediation', 'l-prof-final'],
