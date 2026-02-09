@@ -23,33 +23,46 @@
     <section class="assistant-main-grid">
       <div class="card flow-card">
         <h3>调解流程图</h3>
-        <div class="flow-container" id="flowContainer">
-          <svg class="flow-lines" viewBox="0 0 1000 420" preserveAspectRatio="none">
-            <line id="l-accept-mediation" x1="120" y1="210" x2="260" y2="210" class="flow-line" />
-            <line id="l-mediation-huajie" x1="300" y1="210" x2="420" y2="150" class="flow-line" />
-            <line id="l-mediation-huanjie" x1="300" y1="210" x2="420" y2="210" class="flow-line" />
-            <line id="l-mediation-shujie" x1="300" y1="210" x2="420" y2="270" class="flow-line" />
-            <line id="l-mediation-people" x1="460" y1="150" x2="580" y2="90" class="flow-line" />
-            <line id="l-mediation-admin" x1="460" y1="150" x2="580" y2="150" class="flow-line" />
-            <line id="l-mediation-prof" x1="460" y1="150" x2="580" y2="210" class="flow-line" />
-            <line id="l-people-final" x1="620" y1="90" x2="760" y2="150" class="flow-line" />
-            <line id="l-admin-final" x1="620" y1="150" x2="760" y2="150" class="flow-line" />
-            <line id="l-prof-final" x1="620" y1="210" x2="760" y2="150" class="flow-line" />
-            <line id="l-final-success" x1="800" y1="150" x2="900" y2="110" class="flow-line" />
-            <line id="l-final-failed" x1="800" y1="150" x2="900" y2="220" class="flow-line" />
-          </svg>
+        <div class="flow-container">
+          <div class="flow-board" id="flowContainer">
+            <svg class="flow-lines" viewBox="0 0 1280 520" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"></path>
+                </marker>
+                <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L8,4 L0,8 z" fill="#16a34a"></path>
+                </marker>
+              </defs>
+              <line id="l-accept-mediation" x1="160" y1="260" x2="320" y2="260" class="flow-line" />
+              <line id="l-mediation-huajie" x1="410" y1="240" x2="540" y2="180" class="flow-line" />
+              <line id="l-mediation-huanjie" x1="410" y1="260" x2="540" y2="260" class="flow-line" />
+              <line id="l-mediation-shujie" x1="410" y1="280" x2="540" y2="340" class="flow-line" />
+              <line id="l-mediation-people" x1="620" y1="180" x2="760" y2="120" class="flow-line" />
+              <line id="l-mediation-admin" x1="620" y1="180" x2="760" y2="200" class="flow-line" />
+              <line id="l-mediation-prof" x1="620" y1="180" x2="760" y2="280" class="flow-line" />
+              <line id="l-people-final" x1="890" y1="120" x2="990" y2="210" class="flow-line" />
+              <line id="l-admin-final" x1="890" y1="200" x2="990" y2="230" class="flow-line" />
+              <line id="l-prof-final" x1="890" y1="280" x2="990" y2="250" class="flow-line" />
+              <line id="l-final-success" x1="1080" y1="230" x2="1180" y2="170" class="flow-line" />
+              <line id="l-final-failed" x1="1080" y1="250" x2="1180" y2="330" class="flow-line" />
+            </svg>
 
-          <button class="flow-node" style="left:20px;top:180px" data-node="accept">受理<br><small id="acceptTime">--</small></button>
-          <button class="flow-node" style="left:240px;top:180px" data-node="mediation">调解</button>
-          <button class="flow-node" style="left:420px;top:120px" data-node="huajie">化解</button>
-          <button class="flow-node" style="left:420px;top:180px" data-node="huanjie">缓解</button>
-          <button class="flow-node" style="left:420px;top:240px" data-node="shujie">疏解</button>
-          <button class="flow-node" style="left:580px;top:60px" data-node="people">人民调解</button>
-          <button class="flow-node" style="left:580px;top:120px" data-node="admin">行政调解</button>
-          <button class="flow-node" style="left:580px;top:180px" data-node="professional">专业调解</button>
-          <button class="flow-node" style="left:740px;top:120px" data-node="finalMediation">调解节点</button>
-          <button class="flow-node" style="left:900px;top:80px" data-node="success">归档成功</button>
-          <button class="flow-node" style="left:900px;top:190px" data-node="failed">归档失败</button>
+            <button class="flow-node node-accept" data-node="accept">受理<br><small id="acceptTime">--</small></button>
+            <button class="flow-node node-mediation" data-node="mediation">调解</button>
+
+            <button class="flow-node node-huajie" data-node="huajie">化解</button>
+            <button class="flow-node node-huanjie" data-node="huanjie">缓解</button>
+            <button class="flow-node node-shujie" data-node="shujie">疏解</button>
+
+            <button class="flow-node node-people" data-node="people">人民调解</button>
+            <button class="flow-node node-admin" data-node="admin">行政调解</button>
+            <button class="flow-node node-professional" data-node="professional">专业调解</button>
+
+            <button class="flow-node node-final" data-node="finalMediation">调解节点</button>
+            <button class="flow-node node-success" data-node="success">归档成功</button>
+            <button class="flow-node node-failed" data-node="failed">归档失败</button>
+          </div>
         </div>
       </div>
 
