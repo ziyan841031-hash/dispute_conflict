@@ -6,6 +6,7 @@
   <title>矛盾纠纷系统管理 - 智能助手</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://unpkg.com/reactflow/dist/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
 <div class="layout">
@@ -72,50 +73,71 @@
     const Controls = RF.Controls;
     const MarkerType = RF.MarkerType;
 
-    const initialNodes = [
-      { id: 'accept', position: { x: 10, y: 210 }, data: { label: '已受理\n--' }, type: 'default' },
-      { id: 'mediation', position: { x: 250, y: 60 }, data: { label: '调解' }, type: 'default' },
-      { id: 'huajie', position: { x: 250, y: 160 }, data: { label: '化解' }, type: 'default' },
-      { id: 'huanjie', position: { x: 250, y: 260 }, data: { label: '缓解' }, type: 'default' },
-      { id: 'shujie', position: { x: 250, y: 360 }, data: { label: '疏解' }, type: 'default' },
-      { id: 'people', position: { x: 520, y: 120 }, data: { label: '人民调解' }, type: 'default' },
-      { id: 'admin', position: { x: 520, y: 230 }, data: { label: '行政调解' }, type: 'default' },
-      { id: 'professional', position: { x: 520, y: 340 }, data: { label: '专业调解' }, type: 'default' },
-      { id: 'status', position: { x: 780, y: 220 }, data: { label: '调解状态' }, type: 'default' },
-      { id: 'success', position: { x: 1020, y: 150 }, data: { label: '调解成功' }, type: 'default' },
-      { id: 'failed', position: { x: 1020, y: 300 }, data: { label: '调解失败' }, type: 'default' },
-      { id: 'archive', position: { x: 1200, y: 225 }, data: { label: '案件归档' }, type: 'default' }
+    function WorkflowNode(props) {
+      const data = props.data || {};
+      const selected = props.selected;
+      return h('div', {
+          className: `bg-white rounded-xl border shadow-sm hover:shadow-md px-3 py-2 min-w-[108px] text-center transition-all ${selected ? 'border-green-500 ring-2 ring-green-100' : 'border-zinc-200'}`
+        },
+        h('div', {className: 'text-sm font-semibold text-zinc-900'}, data.title || '-'),
+        h('div', {className: 'text-xs text-zinc-500 mt-1'}, data.subtitle || '')
+      );
+    }
+
+    const nodeTypes = {workflow: WorkflowNode};
+
+    const baseNodes = [
+      { id: 'accept', position: { x: 420, y: 20 }, data: { title: '已受理', subtitle: '--' }, type: 'workflow' },
+
+      { id: 'mediation', position: { x: 120, y: 160 }, data: { title: '调解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'huajie', position: { x: 320, y: 160 }, data: { title: '化解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'huanjie', position: { x: 520, y: 160 }, data: { title: '缓解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'shujie', position: { x: 720, y: 160 }, data: { title: '疏解', subtitle: '二级节点' }, type: 'workflow' },
+
+      { id: 'people', position: { x: 80, y: 320 }, data: { title: '人民调解', subtitle: '三级节点' }, type: 'workflow' },
+      { id: 'admin', position: { x: 240, y: 320 }, data: { title: '行政调解', subtitle: '三级节点' }, type: 'workflow' },
+      { id: 'professional', position: { x: 400, y: 320 }, data: { title: '专业调解', subtitle: '三级节点' }, type: 'workflow' },
+
+      { id: 'status', position: { x: 300, y: 470 }, data: { title: '调解状态', subtitle: '四级节点' }, type: 'workflow' },
+      { id: 'success', position: { x: 170, y: 620 }, data: { title: '调解成功', subtitle: '结果分支' }, type: 'workflow' },
+      { id: 'failed', position: { x: 430, y: 620 }, data: { title: '调解失败', subtitle: '结果分支' }, type: 'workflow' },
+      { id: 'archive', position: { x: 300, y: 760 }, data: { title: '案件归档', subtitle: '五级节点' }, type: 'workflow' }
     ];
 
-    const initialEdges = [
-      { id: 'e-accept-mediation', source: 'accept', target: 'mediation' },
-      { id: 'e-accept-huajie', source: 'accept', target: 'huajie' },
-      { id: 'e-accept-huanjie', source: 'accept', target: 'huanjie' },
-      { id: 'e-accept-shujie', source: 'accept', target: 'shujie' },
+    const baseEdges = [
+      { id: 'e-accept-mediation', source: 'accept', target: 'mediation', label: '分流' },
+      { id: 'e-accept-huajie', source: 'accept', target: 'huajie', label: '分流' },
+      { id: 'e-accept-huanjie', source: 'accept', target: 'huanjie', label: '分流' },
+      { id: 'e-accept-shujie', source: 'accept', target: 'shujie', label: '分流' },
+
       { id: 'e-mediation-people', source: 'mediation', target: 'people' },
       { id: 'e-mediation-admin', source: 'mediation', target: 'admin' },
       { id: 'e-mediation-professional', source: 'mediation', target: 'professional' },
+
       { id: 'e-people-status', source: 'people', target: 'status' },
       { id: 'e-admin-status', source: 'admin', target: 'status' },
       { id: 'e-professional-status', source: 'professional', target: 'status' },
+
       { id: 'e-status-success', source: 'status', target: 'success' },
       { id: 'e-status-failed', source: 'status', target: 'failed' },
       { id: 'e-success-archive', source: 'success', target: 'archive' },
       { id: 'e-failed-archive', source: 'failed', target: 'archive' }
     ];
 
-    function collectPath(targetId, parentMap, edgeSet, nodeSet) {
+    function walkUpstream(targetId, parentMap, edgeSet, nodeSet) {
       nodeSet.add(targetId);
-      if (targetId === 'accept') return;
-      const edges = parentMap[targetId] || [];
-      edges.forEach((edge) => {
+      if (targetId === 'accept') {
+        return;
+      }
+      const incoming = parentMap[targetId] || [];
+      incoming.forEach((edge) => {
         edgeSet.add(edge.id);
-        collectPath(edge.source, parentMap, edgeSet, nodeSet);
+        walkUpstream(edge.source, parentMap, edgeSet, nodeSet);
       });
     }
 
     function WorkflowApp() {
-      const [activeNode, setActiveNode] = useState('accept');
+      const [activeNodeId, setActiveNodeId] = useState('accept');
       const [acceptTime, setAcceptTime] = useState('--');
 
       window.updateWorkflowAcceptTime = function (timeText) {
@@ -123,83 +145,74 @@
       };
 
       const parentMap = useMemo(() => {
-        const map = {};
-        initialEdges.forEach((edge) => {
-          if (!map[edge.target]) map[edge.target] = [];
-          map[edge.target].push(edge);
+        const m = {};
+        baseEdges.forEach((edge) => {
+          if (!m[edge.target]) {
+            m[edge.target] = [];
+          }
+          m[edge.target].push(edge);
         });
-        return map;
+        return m;
       }, []);
 
-      const activeEdgeIds = useMemo(() => {
-        const eSet = new Set();
-        const nSet = new Set();
-        collectPath(activeNode, parentMap, eSet, nSet);
-        return eSet;
-      }, [activeNode, parentMap]);
-
-      const activeNodeIds = useMemo(() => {
-        const eSet = new Set();
-        const nSet = new Set();
-        collectPath(activeNode, parentMap, eSet, nSet);
-        return nSet;
-      }, [activeNode, parentMap]);
+      const pathState = useMemo(() => {
+        const edgeSet = new Set();
+        const nodeSet = new Set();
+        walkUpstream(activeNodeId, parentMap, edgeSet, nodeSet);
+        return { edgeSet, nodeSet };
+      }, [activeNodeId, parentMap]);
 
       const nodes = useMemo(() => {
-        return initialNodes.map((node) => {
-          const isActive = activeNodeIds.has(node.id);
+        return baseNodes.map((node) => {
           const isAccept = node.id === 'accept';
-          const labelText = isAccept ? `已受理\n${acceptTime}` : node.data.label;
+          const isInPath = pathState.nodeSet.has(node.id);
           return {
             ...node,
             data: {
-              label: h('div', { className: 'rf-node-label' },
-                labelText.split('\n').map((line, i) => h('div', { key: i }, line))
-              )
+              ...node.data,
+              subtitle: isAccept ? acceptTime : node.data.subtitle
             },
-            style: {
-              borderRadius: '12px',
-              border: isActive ? '2px solid #16a34a' : '1px solid #cbd5e1',
-              background: isActive ? '#f0fdf4' : '#ffffff',
-              color: '#0f172a',
-              fontSize: '12px',
-              fontWeight: 600,
-              padding: '6px 10px',
-              width: 104,
-              textAlign: 'center',
-              boxShadow: isActive ? '0 0 0 2px rgba(22,163,74,.15)' : '0 1px 6px rgba(15,23,42,.1)'
-            }
+            selected: isInPath
           };
         });
-      }, [activeNodeIds, acceptTime]);
+      }, [acceptTime, pathState.nodeSet]);
 
       const edges = useMemo(() => {
-        return initialEdges.map((edge) => {
-          const active = activeEdgeIds.has(edge.id);
+        return baseEdges.map((edge) => {
+          const active = pathState.edgeSet.has(edge.id);
           return {
             ...edge,
-            type: 'step',
+            type: 'smoothstep',
+            pathOptions: { borderRadius: 16 },
             animated: false,
-            style: { stroke: active ? '#16a34a' : '#94a3b8', strokeWidth: active ? 3 : 2 },
+            style: {
+              stroke: active ? '#22c55e' : '#d4d4d8',
+              strokeWidth: active ? 3 : 2
+            },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: active ? '#16a34a' : '#94a3b8'
-            }
+              color: active ? '#22c55e' : '#d4d4d8'
+            },
+            labelBgStyle: { fill: '#ffffff', color: '#52525b', fillOpacity: 1 },
+            labelBgPadding: [8, 3],
+            labelBgBorderRadius: 999,
+            labelStyle: { fontSize: 10, fontWeight: 500, fill: '#71717a' }
           };
         });
-      }, [activeEdgeIds]);
+      }, [pathState.edgeSet]);
 
       return h(ReactFlowComp, {
         nodes,
         edges,
+        nodeTypes,
         fitView: true,
-        fitViewOptions: { padding: 0.1 },
+        fitViewOptions: { padding: 0.16 },
         nodesDraggable: false,
         nodesConnectable: false,
-        elementsSelectable: false,
-        onNodeClick: (_, node) => setActiveNode(node.id)
+        elementsSelectable: true,
+        onNodeClick: (_, node) => setActiveNodeId(node.id)
       },
-      h(Background, { gap: 20, size: 1, color: '#e2e8f0' }),
+      h(Background, { gap: 18, size: 1, color: '#e5e7eb' }),
       h(Controls, { showInteractive: false }));
     }
 

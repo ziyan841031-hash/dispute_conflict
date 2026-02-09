@@ -29,27 +29,28 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 .assistant-top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .assistant-main-grid { display: grid; grid-template-columns: 7fr 3fr; gap: 12px; align-items: stretch; }
 
-.flow-card { min-height: 520px; }
+.flow-card { min-height: 560px; }
 .flow-container {
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #f8fbff 0%, #f3f7ff 100%);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f1f5ff 100%);
   padding: 10px;
 }
 .workflow-canvas {
   width: 100%;
-  height: 500px;
+  height: 540px;
   border: 1px solid #dbe4ff;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fbff;
 }
 .workflow-canvas .react-flow__pane { cursor: default; }
 .workflow-canvas .react-flow__controls { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
 .workflow-canvas .react-flow__attribution { display: none; }
-.workflow-canvas .react-flow__background path { stroke: #e2e8f0; }
+.workflow-canvas .react-flow__background path { stroke: #e5e7eb; }
+.workflow-canvas .react-flow__edge-path { transition: stroke .2s ease, stroke-width .2s ease; }
 .rf-node-label { line-height: 1.15; }
 
-.side-card { min-height: 520px; display: flex; flex-direction: column; gap: 10px; }
+.side-card { min-height: 560px; display: flex; flex-direction: column; gap: 10px; }
 .bookmark-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
 .bookmark-tab {
   border: none;
@@ -68,12 +69,12 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
   padding: 10px;
   background: #fff;
 }
-.guide-panel { flex: 1; min-height: 280px; }
-.timeline-panel { flex: 1; min-height: 220px; }
+.guide-panel { flex: 1; min-height: 300px; }
+.timeline-panel { flex: 1; min-height: 240px; }
 .timeline-panel.hidden, .guide-panel.hidden { display: none; }
 
 .scroll-box {
-  height: 220px;
+  height: 250px;
   overflow-y: auto;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -84,7 +85,7 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 .guide-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
 .guide-input-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
 
-.timeline-vertical { position: relative; padding-left: 18px; max-height: 220px; overflow-y: auto; }
+.timeline-vertical { position: relative; padding-left: 18px; max-height: 250px; overflow-y: auto; }
 .timeline-vertical::before {
   content: '';
   position: absolute;
@@ -122,5 +123,5 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 @media (max-width: 900px) {
   .assistant-main-grid { grid-template-columns: 1fr; }
   .side-card { min-height: 420px; }
-  .workflow-canvas { height: 350px; }
+  .workflow-canvas { height: 380px; }
 }
