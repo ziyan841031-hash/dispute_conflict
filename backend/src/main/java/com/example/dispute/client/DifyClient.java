@@ -50,6 +50,10 @@ public class DifyClient {
     @Value("${dify.extract-user:abc-123}")
     private String extractUser;
 
+    // 注入智能分类接口专用密钥。
+    @Value("${dify.classify-api-key:replace-with-classify-key}")
+    private String classifyApiKey;
+
     /**
      * 调用Dify接口。
      */
@@ -90,6 +94,22 @@ public class DifyClient {
      * 调用Dify要素提取工作流并解析SSE报文。
      */
     public Object runExtractWorkflow(String caseText) {
+        // 使用要素提取密钥调用工作流。
+        return runWorkflowByApiKey(caseText, apiKey, "要素提取");
+    }
+
+    /**
+     * 调用Dify智能分类工作流。
+     */
+    public Object runClassifyWorkflow(String caseText) {
+        // 使用智能分类专用密钥调用工作流。
+        return runWorkflowByApiKey(caseText, classifyApiKey, "智能分类");
+    }
+
+    /**
+     * 按指定密钥调用同一工作流并解析SSE报文。
+     */
+    private Object runWorkflowByApiKey(String caseText, String currentApiKey, String scene) {
         // 拼接请求地址。
         String url = difyBaseUrl + extractWorkflowEndpoint;
         // 生成链路追踪ID。
@@ -99,7 +119,7 @@ public class DifyClient {
         // 设置内容类型。
         headers.setContentType(MediaType.APPLICATION_JSON);
         // 设置认证令牌。
-        headers.setBearerAuth(apiKey);
+        headers.setBearerAuth(currentApiKey);
         // 设置追踪ID请求头（优先级最高）。
         headers.set("X-Trace-Id", traceId);
 
@@ -124,13 +144,13 @@ public class DifyClient {
         body.put("trace_id", traceId);
 
         // 打印请求日志。
-        log.info("Dify要素提取请求: url={}, textLength={}, traceId={}", url, caseText == null ? 0 : caseText.length(), traceId);
+        log.info("Dify{}请求: url={}, textLength={}, traceId={}", scene, url, caseText == null ? 0 : caseText.length(), traceId);
         // 构造请求实体。
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         // 发起POST请求。
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
         // 打印响应状态日志。
-        log.info("Dify要素提取响应: status={}, traceId={}", response.getStatusCodeValue(), traceId);
+        log.info("Dify{}响应: status={}, traceId={}", scene, response.getStatusCodeValue(), traceId);
         // 解析SSE报文并返回结构化结果。
         return parseWorkflowSseResponse(response.getBody());
     }

@@ -1,6 +1,7 @@
 package com.example.dispute.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
@@ -31,13 +32,17 @@ public class CaseController {
     private static final Logger log = LoggerFactory.getLogger(CaseController.class);
     // 定义案件服务对象。
     private final CaseRecordService caseRecordService;
+    // 定义Dify客户端对象。
+    private final DifyClient difyClient;
 
     /**
      * 构造函数。
      */
-    public CaseController(CaseRecordService caseRecordService) {
+    public CaseController(CaseRecordService caseRecordService, DifyClient difyClient) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
+        // 注入Dify客户端。
+        this.difyClient = difyClient;
     }
 
     /**
@@ -57,6 +62,23 @@ public class CaseController {
         log.info("文字入库响应: caseNo={}", record.getCaseNo());
         // 返回统一成功响应。
         return ApiResponse.success(record);
+    }
+
+
+
+    /**
+     * 处理智能分类接口。
+     */
+    @PostMapping("/intelligent-classify") // 定义智能分类接口。
+    public ApiResponse<Object> intelligentClassify(@Valid @RequestBody TextIngestRequest request) {
+        // 打印智能分类请求日志。
+        log.info("智能分类请求: textLength={}", request.getCaseText() == null ? 0 : request.getCaseText().length());
+        // 调用Dify智能分类工作流。
+        Object classifyResult = difyClient.runClassifyWorkflow(request.getCaseText());
+        // 打印智能分类响应日志。
+        log.info("智能分类响应完成");
+        // 返回统一成功响应。
+        return ApiResponse.success(classifyResult);
     }
 
     /**

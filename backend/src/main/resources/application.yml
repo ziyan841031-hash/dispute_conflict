@@ -24,3 +24,5 @@ dify:
 
   extract-workflow-endpoint: /workflows/run
   extract-user: abc-123
+
+  classify-api-key: replace-with-classify-key

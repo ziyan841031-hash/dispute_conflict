@@ -34,8 +34,24 @@ async function submitText() {
   });
   // 渲染返回结果。
   renderResult(await res.json());
-  // 标记文字接口完成。
+  // 标记要素提取接口完成。
   markDone('text');
+
+  // 标记智能分类接口处理中。
+  setLoading('excel');
+  // 调用智能分类接口。
+  const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
+    // 指定请求方法。
+    method: 'POST',
+    // 指定请求头。
+    headers: {'Content-Type': 'application/json'},
+    // 指定请求体（只需要案件描述）。
+    body: JSON.stringify({caseText: payload.caseText})
+  });
+  // 渲染智能分类响应结果。
+  renderResult(await classifyRes.json());
+  // 标记智能分类接口完成。
+  markDone('excel');
 }
 
 // 提交Excel案件。

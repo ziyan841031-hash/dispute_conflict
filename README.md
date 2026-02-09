@@ -18,6 +18,7 @@
 - `POST /api/cases/ingest/text`
 - `POST /api/cases/ingest/excel`
 - `POST /api/cases/ingest/audio`
+- `POST /api/cases/intelligent-classify`
 
 ### 2.2 案件管理页（`frontend/cases.html`）
 功能：
@@ -48,6 +49,16 @@
 3) 音频案件入库
 - `POST /api/cases/ingest/audio`
 - form-data: `file`
+
+4) 智能分类接口
+- `POST /api/cases/intelligent-classify`
+- Body:
+```json
+{
+  "caseText": "邻里因噪音产生纠纷..."
+}
+```
+- 处理逻辑：调用 Dify 工作流（与要素提取一致），但使用独立的 `dify.classify-api-key`。
 
 ### 3.2 案件查询接口
 - `GET /api/cases?keyword=纠纷&disputeType=邻里纠纷&eventSource=TEXT&riskLevel=中&pageNo=1&pageSize=10`
