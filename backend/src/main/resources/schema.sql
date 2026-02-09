@@ -39,3 +39,21 @@ CREATE INDEX IF NOT EXISTS idx_case_record_dispute_type ON case_record(dispute_t
 CREATE INDEX IF NOT EXISTS idx_case_record_dispute_sub_type ON case_record(dispute_sub_type);
 CREATE INDEX IF NOT EXISTS idx_case_record_event_source ON case_record(event_source);
 CREATE INDEX IF NOT EXISTS idx_case_record_register_time ON case_record(register_time DESC);
+
+
+CREATE TABLE IF NOT EXISTS case_classify_record (
+    id BIGSERIAL PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    workflow_run_id VARCHAR(64),
+    classify_payload TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+COMMENT ON TABLE case_classify_record IS '案件智能分类结果表';
+COMMENT ON COLUMN case_classify_record.id IS '主键ID';
+COMMENT ON COLUMN case_classify_record.case_id IS '案件ID';
+COMMENT ON COLUMN case_classify_record.workflow_run_id IS '工作流运行ID';
+COMMENT ON COLUMN case_classify_record.classify_payload IS '智能分类原始结果';
+COMMENT ON COLUMN case_classify_record.created_at IS '创建时间';
+
+CREATE INDEX IF NOT EXISTS idx_case_classify_record_case_id ON case_classify_record(case_id);

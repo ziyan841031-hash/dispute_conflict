@@ -6,9 +6,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
+import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseRecord;
+import com.example.dispute.mapper.CaseClassifyRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -38,15 +42,21 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     private final CaseRecordMapper caseRecordMapper;
     // 定义Dify客户端对象。
     private final DifyClient difyClient;
+    // 定义分类结果Mapper对象。
+    private final CaseClassifyRecordMapper caseClassifyRecordMapper;
+    // 定义JSON转换对象。
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 构造函数。
      */
-    public CaseRecordServiceImpl(CaseRecordMapper caseRecordMapper, DifyClient difyClient) {
+    public CaseRecordServiceImpl(CaseRecordMapper caseRecordMapper, DifyClient difyClient, CaseClassifyRecordMapper caseClassifyRecordMapper) {
         // 注入Mapper。
         this.caseRecordMapper = caseRecordMapper;
         // 注入Dify客户端。
         this.difyClient = difyClient;
+        // 注入分类结果Mapper。
+        this.caseClassifyRecordMapper = caseClassifyRecordMapper;
     }
 
     /**
@@ -173,11 +183,13 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         Object classifyResult = difyClient.runClassifyWorkflow(request.getCaseText());
         // 提取纠纷类型。
         String disputeType = firstNonEmpty(
+                pickOutputValue(classifyResult, "dispute_category_l1"),
                 pickOutputValue(classifyResult, "dispute_type"),
                 pickOutputValue(classifyResult, "纠纷类型")
         );
         // 提取纠纷子类型。
         String disputeSubType = firstNonEmpty(
+                pickOutputValue(classifyResult, "dispute_category_l2"),
                 pickOutputValue(classifyResult, "dispute_sub_type"),
                 pickOutputValue(classifyResult, "纠纷子类型")
         );
@@ -216,8 +228,88 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         result.put("riskLevel", record.getRiskLevel());
         // 写入原始分类结果。
         result.put("classifyResult", classifyResult);
+
+        // 保存案件分类子表记录。
+        saveCaseClassifyRecord(record.getId(), classifyResult);
         // 返回结果。
         return result;
+    }
+
+    /**
+     * 保存案件分类子表记录。
+     */
+    private void saveCaseClassifyRecord(Long caseId, Object classifyResult) {
+        // 创建子表实体对象。
+        CaseClassifyRecord classifyRecord = new CaseClassifyRecord();
+        // 设置案件ID。
+        classifyRecord.setCaseId(caseId);
+        // 设置工作流运行ID。
+        classifyRecord.setWorkflowRunId(firstNonEmpty(
+                pickRootValue(classifyResult, "workflow_run_id"),
+                pickNestedValue(classifyResult, "data", "workflow_run_id")
+        ));
+        // 设置分类原始结果。
+        classifyRecord.setClassifyPayload(toJson(classifyResult));
+        // 设置创建时间。
+        classifyRecord.setCreatedAt(LocalDateTime.now());
+        // 执行插入。
+        caseClassifyRecordMapper.insert(classifyRecord);
+    }
+
+    /**
+     * 从顶层结果中提取指定字段。
+     */
+    private String pickRootValue(Object result, String key) {
+        // 判断结果是否为Map。
+        if (!(result instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转Map对象。
+        Map<?, ?> root = (Map<?, ?>) result;
+        // 获取字段值。
+        Object value = root.get(key);
+        // 返回字符串值。
+        return value == null ? null : String.valueOf(value);
+    }
+
+    /**
+     * 从嵌套结果中提取指定字段。
+     */
+    private String pickNestedValue(Object result, String parentKey, String key) {
+        // 判断结果是否为Map。
+        if (!(result instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转根Map对象。
+        Map<?, ?> root = (Map<?, ?>) result;
+        // 获取父节点值。
+        Object parent = root.get(parentKey);
+        // 判断父节点是否为Map。
+        if (!(parent instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转父Map对象。
+        Map<?, ?> nested = (Map<?, ?>) parent;
+        // 获取子节点值。
+        Object value = nested.get(key);
+        // 返回字符串值。
+        return value == null ? null : String.valueOf(value);
+    }
+
+    /**
+     * 将对象转为JSON字符串。
+     */
+    private String toJson(Object value) {
+        try {
+            // 返回JSON文本。
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            // 回退字符串形式。
+            return String.valueOf(value);
+        }
     }
 
     /**
