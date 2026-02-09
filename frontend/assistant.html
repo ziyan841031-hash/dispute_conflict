@@ -25,7 +25,7 @@
         <h3>调解流程图</h3>
         <div class="flow-container">
           <div class="flow-board" id="flowContainer">
-            <svg class="flow-lines" viewBox="0 0 1280 520" preserveAspectRatio="xMidYMid meet">
+            <svg class="flow-lines" viewBox="0 0 1400 620" preserveAspectRatio="xMidYMid meet">
               <defs>
                 <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                   <path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"></path>
@@ -34,23 +34,30 @@
                   <path d="M0,0 L8,4 L0,8 z" fill="#16a34a"></path>
                 </marker>
               </defs>
-              <line id="l-accept-mediation" x1="160" y1="260" x2="320" y2="260" class="flow-line" />
-              <line id="l-accept-huajie" x1="160" y1="250" x2="540" y2="180" class="flow-line" />
-              <line id="l-accept-huanjie" x1="160" y1="260" x2="540" y2="260" class="flow-line" />
-              <line id="l-accept-shujie" x1="160" y1="270" x2="540" y2="340" class="flow-line" />
-              <line id="l-mediation-people" x1="410" y1="240" x2="760" y2="120" class="flow-line" />
-              <line id="l-mediation-admin" x1="410" y1="260" x2="760" y2="200" class="flow-line" />
-              <line id="l-mediation-prof" x1="410" y1="280" x2="760" y2="280" class="flow-line" />
-              <line id="l-people-final" x1="890" y1="120" x2="990" y2="210" class="flow-line" />
-              <line id="l-admin-final" x1="890" y1="200" x2="990" y2="230" class="flow-line" />
-              <line id="l-prof-final" x1="890" y1="280" x2="990" y2="250" class="flow-line" />
-              <line id="l-final-success" x1="1080" y1="230" x2="1180" y2="170" class="flow-line" />
-              <line id="l-final-failed" x1="1080" y1="250" x2="1180" y2="330" class="flow-line" />
+
+              <path id="l-accept-mediation" class="flow-line" d="M220,310 C290,310 300,310 370,310"/>
+              <path id="l-accept-huajie" class="flow-line" d="M220,302 C300,260 390,215 500,190"/>
+              <path id="l-accept-huanjie" class="flow-line" d="M220,310 C300,318 390,322 500,318"/>
+              <path id="l-accept-shujie" class="flow-line" d="M220,318 C300,365 390,405 500,444"/>
+
+              <path id="l-mediation-people" class="flow-line" d="M470,300 C560,245 640,190 760,160"/>
+              <path id="l-mediation-admin" class="flow-line" d="M470,310 C560,305 640,302 760,300"/>
+              <path id="l-mediation-prof" class="flow-line" d="M470,320 C560,375 640,425 760,450"/>
+
+              <path id="l-people-status" class="flow-line" d="M910,160 C980,180 1020,220 1080,270"/>
+              <path id="l-admin-status" class="flow-line" d="M910,300 C980,300 1020,295 1080,285"/>
+              <path id="l-prof-status" class="flow-line" d="M910,450 C980,420 1020,360 1080,300"/>
+
+              <path id="l-status-success" class="flow-line" d="M1210,270 C1260,240 1290,220 1330,200"/>
+              <path id="l-status-failed" class="flow-line" d="M1210,300 C1260,330 1290,350 1330,380"/>
+
+              <path id="l-success-archive" class="flow-line" d="M1330,200 C1360,240 1360,290 1330,330"/>
+              <path id="l-failed-archive" class="flow-line" d="M1330,380 C1360,360 1360,350 1330,330"/>
             </svg>
 
-            <button class="flow-node node-accept" data-node="accept">受理<br><small id="acceptTime">--</small></button>
-            <button class="flow-node node-mediation" data-node="mediation">调解</button>
+            <button class="flow-node node-accept" data-node="accept">已受理<br><small id="acceptTime">--</small></button>
 
+            <button class="flow-node node-mediation" data-node="mediation">调解</button>
             <button class="flow-node node-huajie" data-node="huajie">化解</button>
             <button class="flow-node node-huanjie" data-node="huanjie">缓解</button>
             <button class="flow-node node-shujie" data-node="shujie">疏解</button>
@@ -59,23 +66,32 @@
             <button class="flow-node node-admin" data-node="admin">行政调解</button>
             <button class="flow-node node-professional" data-node="professional">专业调解</button>
 
-            <button class="flow-node node-final" data-node="finalMediation">调解节点</button>
-            <button class="flow-node node-success" data-node="success">归档成功</button>
-            <button class="flow-node node-failed" data-node="failed">归档失败</button>
+            <button class="flow-node node-status" data-node="mediationStatus">调解状态</button>
+            <button class="flow-node node-success" data-node="success">调解成功</button>
+            <button class="flow-node node-failed" data-node="failed">调解失败</button>
+            <button class="flow-node node-archive" data-node="archive">案件归档</button>
           </div>
         </div>
       </div>
 
       <div class="card side-card">
-        <div class="side-split">
-          <div>
-            <h3>智能指导</h3>
-            <div id="guideList" class="scroll-box"></div>
+        <div class="tag-row">
+          <span class="tag-card active">智能指引</span>
+          <span class="tag-card">案件时间</span>
+        </div>
+
+        <div class="guide-panel">
+          <h3>智能指引</h3>
+          <div id="guideList" class="scroll-box"></div>
+          <div class="guide-input-row">
+            <input id="guideInput" placeholder="输入补充指引信息..." />
+            <button onclick="addGuideNote()">添加</button>
           </div>
-          <div>
-            <h3>案件时间</h3>
-            <div id="timelineList" class="scroll-box"></div>
-          </div>
+        </div>
+
+        <div class="timeline-panel">
+          <h3>案件时间</h3>
+          <div id="timelineList" class="timeline-vertical"></div>
         </div>
       </div>
     </section>

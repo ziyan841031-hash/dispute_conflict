@@ -143,6 +143,10 @@ function openAssistant(caseId) {
   window.open(`assistant.html?caseId=${caseId}`, '_blank');
 }
 
+// 智能指引补充记录。
+const assistantGuideNotes = [];
+let assistantDataCache = {};
+
 // 加载智能助手页面。
 async function loadAssistantPage() {
   if (!document.getElementById('assistantTopInfo')) {
@@ -163,9 +167,10 @@ async function loadAssistantPage() {
     data = {parseError: '智能助手数据加载失败，请检查后端服务。'};
   }
 
-  renderAssistantTop(data);
-  renderGuide(data);
-  renderTimeline(data);
+  assistantDataCache = data || {};
+  renderAssistantTop(assistantDataCache);
+  renderGuide(assistantDataCache);
+  renderTimeline(assistantDataCache);
   bindFlowInteraction();
 }
 
@@ -188,60 +193,108 @@ function renderAssistantTop(data) {
   }
 }
 
-// 渲染智能指导。
+// 渲染智能指引。
 function renderGuide(data) {
   const box = document.getElementById('guideList');
   const guides = [
     `风险等级：${data.riskLevel || '-'}`,
     `建议优先路径：${data.modelSuggestedCategoryL1 || data.disputeType || '-'} / ${data.modelSuggestedCategoryL2 || data.disputeSubType || '-'}`,
-    '先核对当事人诉求与事实摘要，明确调解目标。',
-    '优先采用人民调解，必要时切换行政/专业调解。',
+    '优先核对案件事实摘要与诉求，再选择化解/缓解/疏解策略。',
+    '调解分流优先顺序：人民调解 -> 行政调解 -> 专业调解。',
     data.parseError ? `解析提示：${data.parseError}` : '解析状态：正常'
-  ];
+  ].concat(assistantGuideNotes.map((item, idx) => `自定义指引${idx + 1}：${item}`));
   box.innerHTML = guides.map(g => `<div class="timeline-item">${g}</div>`).join('');
 }
 
-// 渲染案件时间。
+// 添加智能指引补充内容。
+function addGuideNote() {
+  const input = document.getElementById('guideInput');
+  if (!input) {
+    return;
+  }
+  const text = (input.value || '').trim();
+  if (!text) {
+    return;
+  }
+  assistantGuideNotes.unshift(text);
+  input.value = '';
+  renderGuide(assistantDataCache);
+}
+
+// 渲染案件时间线（竖状）。
 function renderTimeline(data) {
   const box = document.getElementById('timelineList');
   const timeline = [
-    {time: data.registerTime || '-', text: '案件受理'},
-    {time: data.classifyCreatedAt || '-', text: '智能分类完成'},
-    {time: data.updatedAt || '-', text: `当前状态：${data.handlingProgress || '-'}`},
-    {time: '-', text: '归档处理中'}
+    {name: '已受理', enter: data.registerTime || '-', done: data.classifyCreatedAt || '-'},
+    {name: '调解分流', enter: data.classifyCreatedAt || '-', done: data.updatedAt || '-'},
+    {name: '调解状态', enter: data.updatedAt || '-', done: '-'},
+    {name: '案件归档', enter: '-', done: data.handlingProgress || '待归档'}
   ];
-  box.innerHTML = timeline.map(t => `<div class="timeline-item"><div>${t.time}</div><div>${t.text}</div></div>`).join('');
+  box.innerHTML = timeline.map(item => `
+    <div class="timeline-row">
+      <div class="timeline-left"><strong>${item.name}</strong><span>进入时间：${item.enter}</span></div>
+      <div class="timeline-right"><strong>处理完成时间</strong><span>${item.done}</span></div>
+    </div>
+  `).join('');
 }
 
-// 绑定流程图点击交互。
+// 绑定流程图点击交互（从主节点到当前节点高亮）。
 function bindFlowInteraction() {
-  const relations = [
-    ['accept', 'mediation', 'l-accept-mediation'],
-    ['accept', 'huajie', 'l-accept-huajie'],
-    ['accept', 'huanjie', 'l-accept-huanjie'],
-    ['accept', 'shujie', 'l-accept-shujie'],
-    ['mediation', 'people', 'l-mediation-people'],
-    ['mediation', 'admin', 'l-mediation-admin'],
-    ['mediation', 'professional', 'l-mediation-prof'],
-    ['people', 'finalMediation', 'l-people-final'],
-    ['admin', 'finalMediation', 'l-admin-final'],
-    ['professional', 'finalMediation', 'l-prof-final'],
-    ['finalMediation', 'success', 'l-final-success'],
-    ['finalMediation', 'failed', 'l-final-failed']
+  const edges = [
+    {from: 'accept', to: 'mediation', lineId: 'l-accept-mediation'},
+    {from: 'accept', to: 'huajie', lineId: 'l-accept-huajie'},
+    {from: 'accept', to: 'huanjie', lineId: 'l-accept-huanjie'},
+    {from: 'accept', to: 'shujie', lineId: 'l-accept-shujie'},
+    {from: 'mediation', to: 'people', lineId: 'l-mediation-people'},
+    {from: 'mediation', to: 'admin', lineId: 'l-mediation-admin'},
+    {from: 'mediation', to: 'professional', lineId: 'l-mediation-prof'},
+    {from: 'people', to: 'mediationStatus', lineId: 'l-people-status'},
+    {from: 'admin', to: 'mediationStatus', lineId: 'l-admin-status'},
+    {from: 'professional', to: 'mediationStatus', lineId: 'l-prof-status'},
+    {from: 'mediationStatus', to: 'success', lineId: 'l-status-success'},
+    {from: 'mediationStatus', to: 'failed', lineId: 'l-status-failed'},
+    {from: 'success', to: 'archive', lineId: 'l-success-archive'},
+    {from: 'failed', to: 'archive', lineId: 'l-failed-archive'}
   ];
+
+  const parentMap = {};
+  edges.forEach(edge => {
+    if (!parentMap[edge.to]) {
+      parentMap[edge.to] = [];
+    }
+    parentMap[edge.to].push(edge);
+  });
+
+  function collectPathLines(target, lineSet = new Set(), nodeSet = new Set()) {
+    nodeSet.add(target);
+    if (target === 'accept') {
+      return {lineSet, nodeSet};
+    }
+    const parents = parentMap[target] || [];
+    parents.forEach(edge => {
+      lineSet.add(edge.lineId);
+      collectPathLines(edge.from, lineSet, nodeSet);
+    });
+    return {lineSet, nodeSet};
+  }
 
   document.querySelectorAll('.flow-node').forEach(node => {
     node.addEventListener('click', () => {
       const current = node.dataset.node;
       document.querySelectorAll('.flow-line').forEach(line => line.classList.remove('active'));
-      document.querySelectorAll('.flow-node').forEach(n => n.classList.remove('active'));
-      node.classList.add('active');
-      relations.forEach(([a, b, lineId]) => {
-        if (a === current || b === current) {
-          const line = document.getElementById(lineId);
-          if (line) {
-            line.classList.add('active');
-          }
+      document.querySelectorAll('.flow-node').forEach(item => item.classList.remove('active'));
+
+      const {lineSet, nodeSet} = collectPathLines(current);
+      nodeSet.forEach(nodeName => {
+        const nodeEl = document.querySelector(`.flow-node[data-node="${nodeName}"]`);
+        if (nodeEl) {
+          nodeEl.classList.add('active');
+        }
+      });
+      lineSet.forEach(lineId => {
+        const line = document.getElementById(lineId);
+        if (line) {
+          line.classList.add('active');
         }
       });
     });
