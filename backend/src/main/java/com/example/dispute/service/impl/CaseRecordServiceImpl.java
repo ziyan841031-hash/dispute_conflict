@@ -174,11 +174,11 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         // 设置对方当事人。
         record.setCounterpartyName(defaultVal(counterpartyName, "未知对方当事人"));
         // 设置纠纷类型。
-        record.setDisputeType(defaultVal(disputeType, "未分类"));
+        record.setDisputeType(defaultVal(disputeType, ""));
         // 设置事件来源。
         record.setEventSource(eventSource);
         // 设置风险等级。
-        record.setRiskLevel(defaultVal(riskLevel, "中"));
+        record.setRiskLevel(defaultVal(riskLevel, ""));
         // 设置办理进度。
         record.setHandlingProgress(defaultVal(handlingProgress, "待处理"));
         // 设置接待人。
