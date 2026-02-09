@@ -1,9 +1,19 @@
 // 定义后端接口基础地址。
 const API_BASE = 'http://localhost:8080/api';
 
+// 定义文字案件解析状态。
+const parseStatus = {
+  text: false,
+  classify: false
+};
+
 
 // 提交文字案件。
 async function submitText() {
+  // 打开解析弹窗。
+  openParseModal();
+  // 设置要素提取处理中。
+  setLoading('text');
 
   // 组装请求载荷。
   const payload = {
@@ -24,10 +34,14 @@ async function submitText() {
   });
   // 解析文字接口响应。
   const textJson = await res.json();
+  // 标记要素提取完成。
+  markDone('text');
 
   // 提取案件ID。
   const caseId = textJson && textJson.data ? textJson.data.id : null;
 
+  // 设置智能分类处理中。
+  setLoading('classify');
   // 调用智能分类接口。
   const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
     // 指定请求方法。
@@ -39,6 +53,8 @@ async function submitText() {
   });
   // 消费智能分类响应。
   await classifyRes.json();
+  // 标记智能分类完成。
+  markDone('classify');
 }
 
 // 提交Excel案件。
@@ -67,6 +83,70 @@ async function submitAudio() {
   const res = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
   // 消费接口响应。
   await res.json();
+}
+
+
+// 打开解析弹窗。
+function openParseModal() {
+  // 重置状态。
+  parseStatus.text = false;
+  parseStatus.classify = false;
+  // 刷新图标。
+  refreshAllIcons();
+  // 打开弹窗。
+  document.getElementById('parseModal').classList.remove('hidden');
+}
+
+// 关闭解析弹窗。
+function closeParseModal() {
+  // 关闭弹窗。
+  document.getElementById('parseModal').classList.add('hidden');
+}
+
+// 设置处理中图标。
+function setLoading(type) {
+  // 获取图标节点。
+  const icon = document.getElementById(`icon-${type}`);
+  // 更新图标状态。
+  icon.textContent = '◔';
+  icon.classList.add('loading');
+  icon.classList.remove('done');
+}
+
+// 标记完成图标。
+function markDone(type) {
+  // 写入状态。
+  parseStatus[type] = true;
+  // 获取图标节点。
+  const icon = document.getElementById(`icon-${type}`);
+  // 更新图标状态。
+  icon.textContent = '✔';
+  icon.classList.add('done');
+  icon.classList.remove('loading');
+}
+
+// 刷新全部图标。
+function refreshAllIcons() {
+  // 刷新要素提取图标。
+  refreshOneIcon('text');
+  // 刷新智能分类图标。
+  refreshOneIcon('classify');
+}
+
+// 刷新单个图标。
+function refreshOneIcon(type) {
+  // 获取图标节点。
+  const icon = document.getElementById(`icon-${type}`);
+  // 判断是否完成。
+  if (parseStatus[type]) {
+    icon.textContent = '✔';
+    icon.classList.add('done');
+    icon.classList.remove('loading');
+  } else {
+    icon.textContent = '○';
+    icon.classList.remove('done');
+    icon.classList.remove('loading');
+  }
 }
 
 // 查询案件列表。
