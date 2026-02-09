@@ -44,7 +44,7 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
   border-radius: 12px;
   background: #f8fbff;
 }
-.workflow-canvas .react-flow__pane { cursor: default; }
+.workflow-canvas .react-flow__pane { cursor: grab; }
 .workflow-canvas .react-flow__controls { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
 .workflow-canvas .react-flow__attribution { display: none; }
 .workflow-canvas .react-flow__background path { stroke: #e5e7eb; }
