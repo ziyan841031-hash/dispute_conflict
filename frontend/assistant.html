@@ -22,10 +22,10 @@
 
     <section class="assistant-main-grid">
       <div class="card flow-card">
-        <h3>调解流程图</h3>
+        <h3>调解流程图（移动端优化）</h3>
         <div class="flow-container">
           <div class="flow-board" id="flowContainer">
-            <svg class="flow-lines" viewBox="0 0 1400 620" preserveAspectRatio="xMidYMid meet">
+            <svg class="flow-lines" viewBox="0 0 1120 520" preserveAspectRatio="xMidYMid meet">
               <defs>
                 <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                   <path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"></path>
@@ -35,24 +35,24 @@
                 </marker>
               </defs>
 
-              <path id="l-accept-mediation" class="flow-line" d="M220,310 C290,310 300,310 370,310"/>
-              <path id="l-accept-huajie" class="flow-line" d="M220,302 C300,260 390,215 500,190"/>
-              <path id="l-accept-huanjie" class="flow-line" d="M220,310 C300,318 390,322 500,318"/>
-              <path id="l-accept-shujie" class="flow-line" d="M220,318 C300,365 390,405 500,444"/>
+              <path id="l-accept-mediation" class="flow-line" d="M130,263 C180,263 215,263 270,263"/>
+              <path id="l-accept-huajie" class="flow-line" d="M130,257 C200,220 280,185 380,168"/>
+              <path id="l-accept-huanjie" class="flow-line" d="M130,263 C205,270 285,272 380,270"/>
+              <path id="l-accept-shujie" class="flow-line" d="M130,268 C205,315 285,350 380,372"/>
 
-              <path id="l-mediation-people" class="flow-line" d="M470,300 C560,245 640,190 760,160"/>
-              <path id="l-mediation-admin" class="flow-line" d="M470,310 C560,305 640,302 760,300"/>
-              <path id="l-mediation-prof" class="flow-line" d="M470,320 C560,375 640,425 760,450"/>
+              <path id="l-mediation-people" class="flow-line" d="M360,252 C440,215 510,175 600,138"/>
+              <path id="l-mediation-admin" class="flow-line" d="M360,263 C440,260 510,257 600,258"/>
+              <path id="l-mediation-prof" class="flow-line" d="M360,274 C440,320 510,355 600,378"/>
 
-              <path id="l-people-status" class="flow-line" d="M910,160 C980,180 1020,220 1080,270"/>
-              <path id="l-admin-status" class="flow-line" d="M910,300 C980,300 1020,295 1080,285"/>
-              <path id="l-prof-status" class="flow-line" d="M910,450 C980,420 1020,360 1080,300"/>
+              <path id="l-people-status" class="flow-line" d="M690,138 C760,160 810,195 860,248"/>
+              <path id="l-admin-status" class="flow-line" d="M690,258 C760,258 810,255 860,252"/>
+              <path id="l-prof-status" class="flow-line" d="M690,378 C760,350 810,300 860,270"/>
 
-              <path id="l-status-success" class="flow-line" d="M1210,270 C1260,240 1290,220 1330,200"/>
-              <path id="l-status-failed" class="flow-line" d="M1210,300 C1260,330 1290,350 1330,380"/>
+              <path id="l-status-success" class="flow-line" d="M950,248 C980,220 1000,200 1020,180"/>
+              <path id="l-status-failed" class="flow-line" d="M950,272 C980,300 1000,320 1020,352"/>
 
-              <path id="l-success-archive" class="flow-line" d="M1330,200 C1360,240 1360,290 1330,330"/>
-              <path id="l-failed-archive" class="flow-line" d="M1330,380 C1360,360 1360,350 1330,330"/>
+              <path id="l-success-archive" class="flow-line" d="M1030,175 C1060,205 1060,250 1010,270"/>
+              <path id="l-failed-archive" class="flow-line" d="M1030,350 C1060,330 1060,300 1010,280"/>
             </svg>
 
             <button class="flow-node node-accept" data-node="accept">已受理<br><small id="acceptTime">--</small></button>
@@ -75,12 +75,12 @@
       </div>
 
       <div class="card side-card">
-        <div class="tag-row">
-          <span class="tag-card active">智能指引</span>
-          <span class="tag-card">案件时间</span>
+        <div class="bookmark-tabs">
+          <button class="bookmark-tab active" data-tab="guide" onclick="switchAssistantTab('guide')">智能指引</button>
+          <button class="bookmark-tab" data-tab="timeline" onclick="switchAssistantTab('timeline')">办理时间轴</button>
         </div>
 
-        <div class="guide-panel">
+        <div class="guide-panel" data-panel="guide">
           <h3>智能指引</h3>
           <div id="guideList" class="scroll-box"></div>
           <div class="guide-input-row">
@@ -89,8 +89,8 @@
           </div>
         </div>
 
-        <div class="timeline-panel">
-          <h3>案件时间</h3>
+        <div class="timeline-panel hidden" data-panel="timeline">
+          <h3>办理时间轴</h3>
           <div id="timelineList" class="timeline-vertical"></div>
         </div>
       </div>

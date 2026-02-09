@@ -81,30 +81,8 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
   box-shadow: 0 0 0 3px rgba(22, 163, 74, .20);
 }
 
-.node-accept { left: 70px; top: 280px; }
-.node-mediation { left: 370px; top: 280px; }
-.node-huajie { left: 500px; top: 160px; }
-.node-huanjie { left: 500px; top: 288px; }
-.node-shujie { left: 500px; top: 420px; }
-.node-people { left: 760px; top: 130px; }
-.node-admin { left: 760px; top: 270px; }
-.node-professional { left: 760px; top: 420px; }
-.node-status { left: 1080px; top: 260px; }
-.node-success { left: 1320px; top: 170px; }
-.node-failed { left: 1320px; top: 350px; }
-.node-archive { left: 1260px; top: 300px; }
 
 .side-card { min-height: 660px; display: flex; flex-direction: column; gap: 10px; }
-.tag-row { display: flex; gap: 8px; }
-.tag-card {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #334155;
-  font-size: 12px;
-  border: 1px solid #dbe4ff;
-}
-.tag-card.active { background: #265dff; color: #fff; }
 
 .guide-panel, .timeline-panel {
   border: 1px solid #e2e8f0;
@@ -161,3 +139,49 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
   border: 2px solid #fff;
 }
 .timeline-left strong, .timeline-right strong { display: block; color: #334155; margin-bottom: 4px; }
+
+
+.flow-card { min-height: 520px; }
+.flow-board { width: 1120px; height: 520px; }
+.flow-lines { width: 1120px; height: 520px; }
+.flow-node { min-width: 90px; height: 46px; font-size: 12px; border-radius: 12px; }
+
+.node-accept { left: 40px; top: 240px; }
+.node-mediation { left: 270px; top: 240px; }
+.node-huajie { left: 380px; top: 145px; }
+.node-huanjie { left: 380px; top: 248px; }
+.node-shujie { left: 380px; top: 350px; }
+.node-people { left: 600px; top: 115px; }
+.node-admin { left: 600px; top: 235px; }
+.node-professional { left: 600px; top: 355px; }
+.node-status { left: 860px; top: 225px; }
+.node-success { left: 1020px; top: 150px; }
+.node-failed { left: 1020px; top: 325px; }
+.node-archive { left: 980px; top: 245px; }
+
+.bookmark-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+.bookmark-tab {
+  border: none;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 10px 10px 0 0;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.bookmark-tab.active { background: #265dff; color: #fff; }
+
+.guide-panel, .timeline-panel { border-top: 2px solid #265dff; }
+.timeline-panel.hidden, .guide-panel.hidden { display: none; }
+
+@media (max-width: 900px) {
+  .assistant-main-grid { grid-template-columns: 1fr; }
+  .side-card { min-height: 420px; }
+  .flow-container { overflow: hidden; }
+  .flow-board {
+    width: 1120px;
+    height: 520px;
+    transform: scale(0.72);
+    transform-origin: top left;
+  }
+  .flow-container { height: 390px; }
+}

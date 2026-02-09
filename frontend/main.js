@@ -171,6 +171,7 @@ async function loadAssistantPage() {
   renderAssistantTop(assistantDataCache);
   renderGuide(assistantDataCache);
   renderTimeline(assistantDataCache);
+  switchAssistantTab('guide');
   bindFlowInteraction();
 }
 
@@ -191,6 +192,17 @@ function renderAssistantTop(data) {
   if (acceptTime) {
     acceptTime.textContent = data.registerTime || '--';
   }
+}
+
+
+// 切换智能助手右侧书签页签。
+function switchAssistantTab(tabName) {
+  document.querySelectorAll('.bookmark-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
+  });
+  document.querySelectorAll('[data-panel]').forEach(panel => {
+    panel.classList.toggle('hidden', panel.dataset.panel !== tabName);
+  });
 }
 
 // 渲染智能指引。
