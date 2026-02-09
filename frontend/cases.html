@@ -18,18 +18,25 @@
       <h2>案件管理</h2>
       <div class="filter-row">
         <input id="keyword" placeholder="关键词搜索">
-        <select id="sourceType">
-          <option value="">全部来源</option>
+        <input id="disputeType" placeholder="纠纷类型">
+        <select id="eventSource">
+          <option value="">全部事件来源</option>
           <option value="TEXT">TEXT</option>
           <option value="EXCEL">EXCEL</option>
           <option value="AUDIO">AUDIO</option>
+        </select>
+        <select id="riskLevel">
+          <option value="">全部风险等级</option>
+          <option value="低">低</option>
+          <option value="中">中</option>
+          <option value="高">高</option>
         </select>
         <button onclick="loadCases()">查询</button>
       </div>
       <table>
         <thead>
         <tr>
-          <th>案件编号</th><th>来源</th><th>状态</th><th>内容</th><th>创建时间</th>
+          <th>案件编号</th><th>当事人</th><th>对方当事人</th><th>纠纷类型</th><th>事件来源</th><th>风险等级</th><th>办理进度</th><th>接待人</th><th>登记时间</th>
         </tr>
         </thead>
         <tbody id="caseTableBody"></tbody>

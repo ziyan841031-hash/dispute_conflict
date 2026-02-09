@@ -16,6 +16,21 @@
   <main class="content">
     <section class="card">
       <h2>案件描述上传</h2>
+      <div class="filter-row">
+        <input id="partyName" placeholder="当事人">
+        <input id="counterpartyName" placeholder="对方当事人">
+        <input id="disputeType" placeholder="纠纷类型">
+      </div>
+      <div class="filter-row">
+        <select id="riskLevel">
+          <option value="">风险等级(默认中)</option>
+          <option value="低">低</option>
+          <option value="中">中</option>
+          <option value="高">高</option>
+        </select>
+        <input id="handlingProgress" placeholder="办理进度(如: 待处理/处理中/已办结)">
+        <input id="receiver" placeholder="接待人">
+      </div>
       <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
       <button onclick="submitText()">提交文字案件</button>
       <div class="upload">

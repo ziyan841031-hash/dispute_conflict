@@ -25,7 +25,7 @@ public class CaseController {
 
     @PostMapping("/ingest/text")
     public ApiResponse<CaseRecord> ingestText(@Valid @RequestBody TextIngestRequest request) {
-        return ApiResponse.success(caseRecordService.ingestText(request.getCaseText()));
+        return ApiResponse.success(caseRecordService.ingestText(request));
     }
 
     @PostMapping("/ingest/excel")

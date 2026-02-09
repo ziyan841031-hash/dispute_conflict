@@ -18,8 +18,29 @@ public class CaseRecord {
     @TableField("case_no")
     private String caseNo;
 
-    @TableField("source_type")
-    private String sourceType;
+    @TableField("party_name")
+    private String partyName;
+
+    @TableField("counterparty_name")
+    private String counterpartyName;
+
+    @TableField("dispute_type")
+    private String disputeType;
+
+    @TableField("event_source")
+    private String eventSource;
+
+    @TableField("risk_level")
+    private String riskLevel;
+
+    @TableField("handling_progress")
+    private String handlingProgress;
+
+    @TableField("receiver")
+    private String receiver;
+
+    @TableField("register_time")
+    private LocalDateTime registerTime;
 
     @TableField("case_text")
     private String caseText;
@@ -29,9 +50,6 @@ public class CaseRecord {
 
     @TableField("audio_duration_sec")
     private Integer audioDurationSec;
-
-    @TableField("status")
-    private String status;
 
     @TableField("created_at")
     private LocalDateTime createdAt;
