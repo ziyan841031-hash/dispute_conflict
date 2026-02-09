@@ -1,6 +1,8 @@
 package com.example.dispute.client;
 
 import com.example.dispute.dto.DifyInvokeRequest;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +31,8 @@ public class DifyClient {
     private static final Logger log = LoggerFactory.getLogger(DifyClient.class);
     // 定义HTTP客户端。
     private final RestTemplate restTemplate = new RestTemplate();
+    // 定义JSON解析器。
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 注入Dify地址。
     @Value("${dify.base-url:http://localhost:5001/v1}")
@@ -82,7 +87,7 @@ public class DifyClient {
     }
 
     /**
-     * 调用Dify要素提取工作流。
+     * 调用Dify要素提取工作流并解析SSE报文。
      */
     public Object runExtractWorkflow(String caseText) {
         // 拼接请求地址。
@@ -124,9 +129,89 @@ public class DifyClient {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         // 发起POST请求。
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-        // 打印响应日志。
+        // 打印响应状态日志。
         log.info("Dify要素提取响应: status={}, traceId={}", response.getStatusCodeValue(), traceId);
-        // 返回响应体。
-        return response.getBody();
+        // 解析SSE报文并返回结构化结果。
+        return parseWorkflowSseResponse(response.getBody());
+    }
+
+    /**
+     * 解析Dify工作流SSE响应，提取最终outputs。
+     */
+    private Map<String, Object> parseWorkflowSseResponse(String sseBody) {
+        // 创建返回对象。
+        Map<String, Object> result = new HashMap<>();
+        // 设置默认原始报文。
+        result.put("raw", sseBody);
+        // 初始化事件计数。
+        int eventCount = 0;
+        // 判断报文是否为空。
+        if (!StringUtils.hasText(sseBody)) {
+            // 写入空结果说明。
+            result.put("message", "SSE响应为空");
+            // 返回结果。
+            return result;
+        }
+
+        // 按空行切分SSE事件块。
+        String[] blocks = sseBody.split("\\n\\n");
+        // 遍历事件块。
+        for (String block : blocks) {
+            // 按行切分事件块。
+            String[] lines = block.split("\\n");
+            // 遍历每一行。
+            for (String line : lines) {
+                // 仅处理data行。
+                if (!line.startsWith("data: ")) {
+                    // 跳过非data行。
+                    continue;
+                }
+                // 提取JSON字符串。
+                String json = line.substring("data: ".length()).trim();
+                // 判断JSON是否为空。
+                if (!StringUtils.hasText(json)) {
+                    // 跳过空数据。
+                    continue;
+                }
+                try {
+                    // 解析为Map对象。
+                    Map<String, Object> eventMap = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
+                    });
+                    // 事件计数加一。
+                    eventCount++;
+                    // 读取事件名。
+                    Object event = eventMap.get("event");
+                    // 判断是否为工作流结束事件。
+                    if ("workflow_finished".equals(event)) {
+                        // 提取data对象。
+                        Object dataObj = eventMap.get("data");
+                        // 判断data对象类型。
+                        if (dataObj instanceof Map) {
+                            // 强转data对象。
+                            Map<?, ?> dataMap = (Map<?, ?>) dataObj;
+                            // 提取outputs对象。
+                            Object outputsObj = dataMap.get("outputs");
+                            // 写入最终输出。
+                            result.put("outputs", outputsObj);
+                            // 写入工作流状态。
+                            result.put("workflow_status", dataMap.get("status"));
+                            // 写入workflow_run_id。
+                            result.put("workflow_run_id", eventMap.get("workflow_run_id"));
+                        }
+                    }
+                } catch (IOException ex) {
+                    // 写入解析错误信息。
+                    result.put("parse_error", ex.getMessage());
+                    // 打印解析错误日志。
+                    log.warn("SSE事件解析失败: line={}", line, ex);
+                }
+            }
+        }
+        // 写入事件总数。
+        result.put("event_count", eventCount);
+        // 打印解析摘要日志。
+        log.info("Dify要素提取SSE解析完成: eventCount={}, hasOutputs={}", eventCount, result.containsKey("outputs"));
+        // 返回解析结果。
+        return result;
     }
 }
