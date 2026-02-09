@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>矛盾纠纷系统管理 - 智能助手</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="vendor/reactflow.css">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
@@ -86,21 +87,21 @@
     const nodeTypes = {workflow: WorkflowNode};
 
     const baseNodes = [
-      { id: 'accept', position: { x: 420, y: 20 }, data: { title: '已受理', subtitle: '--' }, type: 'workflow' },
+      { id: 'accept', position: { x: 20, y: 240 }, data: { title: '已受理', subtitle: '--' }, type: 'workflow' },
 
-      { id: 'mediation', position: { x: 120, y: 160 }, data: { title: '调解', subtitle: '二级节点' }, type: 'workflow' },
-      { id: 'huajie', position: { x: 320, y: 160 }, data: { title: '化解', subtitle: '二级节点' }, type: 'workflow' },
-      { id: 'huanjie', position: { x: 520, y: 160 }, data: { title: '缓解', subtitle: '二级节点' }, type: 'workflow' },
-      { id: 'shujie', position: { x: 720, y: 160 }, data: { title: '疏解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'mediation', position: { x: 240, y: 70 }, data: { title: '调解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'huajie', position: { x: 240, y: 190 }, data: { title: '化解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'huanjie', position: { x: 240, y: 310 }, data: { title: '缓解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'shujie', position: { x: 240, y: 430 }, data: { title: '疏解', subtitle: '二级节点' }, type: 'workflow' },
 
-      { id: 'people', position: { x: 80, y: 320 }, data: { title: '人民调解', subtitle: '三级节点' }, type: 'workflow' },
-      { id: 'admin', position: { x: 240, y: 320 }, data: { title: '行政调解', subtitle: '三级节点' }, type: 'workflow' },
-      { id: 'professional', position: { x: 400, y: 320 }, data: { title: '专业调解', subtitle: '三级节点' }, type: 'workflow' },
+      { id: 'people', position: { x: 500, y: 140 }, data: { title: '人民调解', subtitle: '三级节点' }, type: 'workflow' },
+      { id: 'admin', position: { x: 500, y: 260 }, data: { title: '行政调解', subtitle: '三级节点' }, type: 'workflow' },
+      { id: 'professional', position: { x: 500, y: 380 }, data: { title: '专业调解', subtitle: '三级节点' }, type: 'workflow' },
 
-      { id: 'status', position: { x: 300, y: 470 }, data: { title: '调解状态', subtitle: '四级节点' }, type: 'workflow' },
-      { id: 'success', position: { x: 170, y: 620 }, data: { title: '调解成功', subtitle: '结果分支' }, type: 'workflow' },
-      { id: 'failed', position: { x: 430, y: 620 }, data: { title: '调解失败', subtitle: '结果分支' }, type: 'workflow' },
-      { id: 'archive', position: { x: 300, y: 760 }, data: { title: '案件归档', subtitle: '五级节点' }, type: 'workflow' }
+      { id: 'status', position: { x: 760, y: 260 }, data: { title: '调解状态', subtitle: '四级节点' }, type: 'workflow' },
+      { id: 'success', position: { x: 980, y: 180 }, data: { title: '调解成功', subtitle: '结果分支' }, type: 'workflow' },
+      { id: 'failed', position: { x: 980, y: 340 }, data: { title: '调解失败', subtitle: '结果分支' }, type: 'workflow' },
+      { id: 'archive', position: { x: 1180, y: 260 }, data: { title: '案件归档', subtitle: '五级节点' }, type: 'workflow' }
     ];
 
     const baseEdges = [
