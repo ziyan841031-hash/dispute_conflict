@@ -45,9 +45,16 @@ CREATE TABLE IF NOT EXISTS case_classify_record (
     id BIGSERIAL PRIMARY KEY,
     case_id BIGINT NOT NULL,
     workflow_run_id VARCHAR(64),
-    dispute_type VARCHAR(50),
-    dispute_sub_type VARCHAR(50),
+    dispute_category_l1 VARCHAR(100),
+    dispute_category_l2 VARCHAR(100),
+    model_suggested_category_l1 VARCHAR(100),
+    model_suggested_category_l2 VARCHAR(100),
     risk_level VARCHAR(20),
+    facts_summary TEXT,
+    judgement_basis TEXT,
+    emotion_assessment TEXT,
+    is_in_client_taxonomy INTEGER,
+    parse_error TEXT,
     created_at TIMESTAMP NOT NULL
 );
 
@@ -55,9 +62,16 @@ COMMENT ON TABLE case_classify_record IS '案件智能分类结果表';
 COMMENT ON COLUMN case_classify_record.id IS '主键ID';
 COMMENT ON COLUMN case_classify_record.case_id IS '案件ID';
 COMMENT ON COLUMN case_classify_record.workflow_run_id IS '工作流运行ID';
-COMMENT ON COLUMN case_classify_record.dispute_type IS '纠纷一级分类';
-COMMENT ON COLUMN case_classify_record.dispute_sub_type IS '纠纷二级分类';
+COMMENT ON COLUMN case_classify_record.dispute_category_l1 IS '纠纷一级分类';
+COMMENT ON COLUMN case_classify_record.dispute_category_l2 IS '纠纷二级分类';
+COMMENT ON COLUMN case_classify_record.model_suggested_category_l1 IS '模型建议一级分类';
+COMMENT ON COLUMN case_classify_record.model_suggested_category_l2 IS '模型建议二级分类';
 COMMENT ON COLUMN case_classify_record.risk_level IS '风险等级';
+COMMENT ON COLUMN case_classify_record.facts_summary IS '事实摘要';
+COMMENT ON COLUMN case_classify_record.judgement_basis IS '判断依据(JSON字符串)';
+COMMENT ON COLUMN case_classify_record.emotion_assessment IS '情绪评估(JSON字符串)';
+COMMENT ON COLUMN case_classify_record.is_in_client_taxonomy IS '是否在客户分类体系内';
+COMMENT ON COLUMN case_classify_record.parse_error IS '解析错误信息';
 COMMENT ON COLUMN case_classify_record.created_at IS '创建时间';
 
 CREATE INDEX IF NOT EXISTS idx_case_classify_record_case_id ON case_classify_record(case_id);

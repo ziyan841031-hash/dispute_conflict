@@ -62,7 +62,7 @@
 - 处理逻辑：调用 Dify 工作流（与要素提取一致），但使用独立的 `dify.classify-api-key`，且分类工作流入参键使用 `dispute_info`。
 - 分类回写：根据 Dify 输出回写 `case_record` 的 `dispute_type` 与 `risk_level`。
 - 映射规则：`dispute_category_l1 -> dispute_type`，`dispute_category_l2 -> dispute_sub_type`。
-- 同步落库：新增 `case_classify_record` 子表保存解析后的分类字段（`workflow_run_id`、`dispute_type`、`dispute_sub_type`、`risk_level`）。
+- 同步落库：新增 `case_classify_record` 子表按智能分类报文字段拆分落库（如 `dispute_category_l1`、`dispute_category_l2`、`model_suggested_category_l1`、`model_suggested_category_l2`、`risk_level`、`facts_summary`、`judgement_basis`、`emotion_assessment`、`is_in_client_taxonomy`、`parse_error` 等）。
 
 ### 3.2 案件查询接口
 - `GET /api/cases?keyword=纠纷&disputeType=邻里纠纷&eventSource=TEXT&riskLevel=中&pageNo=1&pageSize=10`

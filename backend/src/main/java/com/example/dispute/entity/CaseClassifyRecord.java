@@ -21,14 +21,35 @@ public class CaseClassifyRecord {
     @TableField("workflow_run_id")
     private String workflowRunId;
 
-    @TableField("dispute_type")
-    private String disputeType;
+    @TableField("dispute_category_l1")
+    private String disputeCategoryL1;
 
-    @TableField("dispute_sub_type")
-    private String disputeSubType;
+    @TableField("dispute_category_l2")
+    private String disputeCategoryL2;
+
+    @TableField("model_suggested_category_l1")
+    private String modelSuggestedCategoryL1;
+
+    @TableField("model_suggested_category_l2")
+    private String modelSuggestedCategoryL2;
 
     @TableField("risk_level")
     private String riskLevel;
+
+    @TableField("facts_summary")
+    private String factsSummary;
+
+    @TableField("judgement_basis")
+    private String judgementBasis;
+
+    @TableField("emotion_assessment")
+    private String emotionAssessment;
+
+    @TableField("is_in_client_taxonomy")
+    private Integer isInClientTaxonomy;
+
+    @TableField("parse_error")
+    private String parseError;
 
     @TableField("created_at")
     private LocalDateTime createdAt;

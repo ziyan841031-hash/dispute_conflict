@@ -11,6 +11,8 @@ import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -42,6 +44,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     private final DifyClient difyClient;
     // 定义分类结果Mapper对象。
     private final CaseClassifyRecordMapper caseClassifyRecordMapper;
+    // 定义JSON对象映射器。
+    private final ObjectMapper objectMapper = new ObjectMapper();
     /**
      * 构造函数。
      */
@@ -225,7 +229,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         result.put("classifyResult", classifyResult);
 
         // 保存案件分类子表记录。
-        saveCaseClassifyRecord(record.getId(), classifyResult, record.getDisputeType(), record.getDisputeSubType(), record.getRiskLevel());
+        saveCaseClassifyRecord(record.getId(), classifyResult);
         // 返回结果。
         return result;
     }
@@ -233,7 +237,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 保存案件分类子表记录。
      */
-    private void saveCaseClassifyRecord(Long caseId, Object classifyResult, String disputeType, String disputeSubType, String riskLevel) {
+    private void saveCaseClassifyRecord(Long caseId, Object classifyResult) {
         // 创建子表实体对象。
         CaseClassifyRecord classifyRecord = new CaseClassifyRecord();
         // 设置案件ID。
@@ -243,12 +247,17 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 pickRootValue(classifyResult, "workflow_run_id"),
                 pickNestedValue(classifyResult, "data", "workflow_run_id")
         ));
-        // 设置纠纷类型。
-        classifyRecord.setDisputeType(disputeType);
-        // 设置纠纷子类型。
-        classifyRecord.setDisputeSubType(disputeSubType);
-        // 设置风险等级。
-        classifyRecord.setRiskLevel(riskLevel);
+        // 按智能分类报文字段逐项入库。
+        classifyRecord.setDisputeCategoryL1(pickOutputValue(classifyResult, "dispute_category_l1"));
+        classifyRecord.setDisputeCategoryL2(pickOutputValue(classifyResult, "dispute_category_l2"));
+        classifyRecord.setModelSuggestedCategoryL1(pickOutputValue(classifyResult, "model_suggested_category_l1"));
+        classifyRecord.setModelSuggestedCategoryL2(pickOutputValue(classifyResult, "model_suggested_category_l2"));
+        classifyRecord.setRiskLevel(pickOutputValue(classifyResult, "risk_level"));
+        classifyRecord.setFactsSummary(pickOutputValue(classifyResult, "facts_summary"));
+        classifyRecord.setJudgementBasis(pickOutputJsonValue(classifyResult, "judgement_basis"));
+        classifyRecord.setEmotionAssessment(pickOutputJsonValue(classifyResult, "emotion_assessment"));
+        classifyRecord.setIsInClientTaxonomy(toInteger(pickOutputValue(classifyResult, "is_in_client_taxonomy")));
+        classifyRecord.setParseError(pickOutputValue(classifyResult, "parse_error"));
         // 设置创建时间。
         classifyRecord.setCreatedAt(LocalDateTime.now());
         // 执行插入。
@@ -368,6 +377,69 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         Object value = outputsMap.get(key);
         // 返回字符串值。
         return value == null ? null : String.valueOf(value);
+    }
+
+
+    /**
+     * 从Dify结果中提取outputs指定字段并转为JSON字符串。
+     */
+    private String pickOutputJsonValue(Object extractResult, String key) {
+        // 判断结果是否为Map。
+        if (!(extractResult instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转顶层Map。
+        Map<?, ?> rootMap = (Map<?, ?>) extractResult;
+        // 提取outputs对象。
+        Object outputsObj = rootMap.get("outputs");
+        // 判断outputs是否为Map。
+        if (!(outputsObj instanceof Map)) {
+            // 返回空值。
+            return null;
+        }
+        // 强转outputs对象。
+        Map<?, ?> outputsMap = (Map<?, ?>) outputsObj;
+        // 获取目标字段值。
+        Object value = outputsMap.get(key);
+        // 判断字段值是否为空。
+        if (value == null) {
+            // 返回空值。
+            return null;
+        }
+        // 序列化字段值。
+        return toJson(value);
+    }
+
+    /**
+     * 将对象转换为JSON字符串。
+     */
+    private String toJson(Object value) {
+        try {
+            // 返回JSON字符串。
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            // 返回兜底字符串。
+            return String.valueOf(value);
+        }
+    }
+
+    /**
+     * 将字符串转换为整数。
+     */
+    private Integer toInteger(String value) {
+        // 判断输入是否为空。
+        if (!StringUtils.hasText(value)) {
+            // 返回空值。
+            return null;
+        }
+        try {
+            // 返回整数值。
+            return Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            // 返回空值。
+            return null;
+        }
     }
 
 
