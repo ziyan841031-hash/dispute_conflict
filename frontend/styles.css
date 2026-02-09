@@ -24,74 +24,53 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 .status-icon.done { color: #16a34a; }
 .status-icon.loading { color: #f59e0b; }
 
-
-
+/* assistant layout */
 .assistant-header-card { margin-bottom: 16px; }
 .assistant-top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .assistant-main-grid { display: grid; grid-template-columns: 7fr 3fr; gap: 12px; align-items: stretch; }
 
-.flow-card { min-height: 660px; }
+.flow-card { min-height: 520px; }
 .flow-container {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: linear-gradient(180deg, #f8fbff 0%, #f3f7ff 100%);
-  overflow: auto;
-  padding: 12px;
+  padding: 10px;
 }
-.flow-board {
-  position: relative;
-  width: 1400px;
-  height: 620px;
+.workflow-canvas {
+  width: 100%;
+  height: 500px;
+  border: 1px solid #dbe4ff;
+  border-radius: 10px;
+  background: #f8fbff;
 }
-.flow-lines {
-  position: absolute;
-  inset: 0;
-  width: 1400px;
-  height: 620px;
-}
-.flow-line {
-  fill: none;
-  stroke: #94a3b8;
-  stroke-width: 2.6;
-  marker-end: url(#arrowGray);
-  transition: stroke .25s ease, stroke-width .25s ease;
-}
-.flow-line.active {
-  stroke: #16a34a;
-  stroke-width: 3.6;
-  marker-end: url(#arrowGreen);
-}
-.flow-node {
-  position: absolute;
-  min-width: 104px;
-  height: 54px;
-  border-radius: 14px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #0f172a;
-  font-size: 13px;
-  line-height: 1.2;
-  font-weight: 600;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, .08);
-}
-.flow-node small { font-weight: 500; color: #64748b; }
-.flow-node.active {
-  border-color: #16a34a;
-  background: #f0fdf4;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, .20);
-}
+.workflow-canvas .react-flow__pane { cursor: default; }
+.workflow-canvas .react-flow__controls { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.workflow-canvas .react-flow__attribution { display: none; }
+.workflow-canvas .react-flow__background path { stroke: #e2e8f0; }
+.rf-node-label { line-height: 1.15; }
 
-
-.side-card { min-height: 660px; display: flex; flex-direction: column; gap: 10px; }
+.side-card { min-height: 520px; display: flex; flex-direction: column; gap: 10px; }
+.bookmark-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+.bookmark-tab {
+  border: none;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 10px 10px 0 0;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.bookmark-tab.active { background: #265dff; color: #fff; }
 
 .guide-panel, .timeline-panel {
   border: 1px solid #e2e8f0;
+  border-top: 2px solid #265dff;
   border-radius: 10px;
   padding: 10px;
   background: #fff;
 }
-.guide-panel { flex: 1; min-height: 320px; }
-.timeline-panel { flex: 1; min-height: 260px; }
+.guide-panel { flex: 1; min-height: 280px; }
+.timeline-panel { flex: 1; min-height: 220px; }
+.timeline-panel.hidden, .guide-panel.hidden { display: none; }
 
 .scroll-box {
   height: 220px;
@@ -105,7 +84,7 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 .guide-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
 .guide-input-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
 
-.timeline-vertical { position: relative; padding-left: 18px; max-height: 240px; overflow-y: auto; }
+.timeline-vertical { position: relative; padding-left: 18px; max-height: 220px; overflow-y: auto; }
 .timeline-vertical::before {
   content: '';
   position: absolute;
@@ -140,62 +119,8 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 }
 .timeline-left strong, .timeline-right strong { display: block; color: #334155; margin-bottom: 4px; }
 
-
-.flow-card { min-height: 520px; }
-.flow-board { width: 1120px; height: 520px; }
-.flow-lines { width: 1120px; height: 520px; }
-.flow-node { min-width: 90px; height: 46px; font-size: 12px; border-radius: 12px; }
-
-.node-accept { left: 40px; top: 240px; }
-.node-mediation { left: 380px; top: 95px; }
-.node-huajie { left: 380px; top: 190px; }
-.node-huanjie { left: 380px; top: 285px; }
-.node-shujie { left: 380px; top: 380px; }
-.node-people { left: 600px; top: 115px; }
-.node-admin { left: 600px; top: 235px; }
-.node-professional { left: 600px; top: 355px; }
-.node-status { left: 860px; top: 225px; }
-.node-success { left: 1020px; top: 150px; }
-.node-failed { left: 1020px; top: 325px; }
-.node-archive { left: 980px; top: 245px; }
-
-.bookmark-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
-.bookmark-tab {
-  border: none;
-  background: #e2e8f0;
-  color: #334155;
-  border-radius: 10px 10px 0 0;
-  padding: 8px 12px;
-  font-size: 12px;
-}
-.bookmark-tab.active { background: #265dff; color: #fff; }
-
-.guide-panel, .timeline-panel { border-top: 2px solid #265dff; }
-.timeline-panel.hidden, .guide-panel.hidden { display: none; }
-
 @media (max-width: 900px) {
   .assistant-main-grid { grid-template-columns: 1fr; }
   .side-card { min-height: 420px; }
-  .flow-container { overflow: hidden; }
-  .flow-board {
-    width: 1120px;
-    height: 520px;
-    transform: scale(0.72);
-    transform-origin: top left;
-  }
-  .flow-container { height: 390px; }
-}
-
-/* React Flow workflow panel */
-.workflow-canvas {
-  width: 100%;
-  height: 520px;
-  border: 1px solid #dbe4ff;
-  border-radius: 10px;
-  background: #f8fbff;
-}
-.rf-node-label { line-height: 1.15; }
-
-@media (max-width: 900px) {
-  .workflow-canvas { height: 360px; }
+  .workflow-canvas { height: 350px; }
 }
