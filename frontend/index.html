@@ -34,6 +34,20 @@
     <pre id="result"></pre>
   </main>
 </div>
+
+<div id="parseModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>文件解析中...</h3>
+    <p>接口处理进度如下：</p>
+    <ul class="parse-list">
+      <li><span id="icon-text" class="status-icon">○</span> 文字案件接口</li>
+      <li><span id="icon-excel" class="status-icon">○</span> Excel案件接口</li>
+      <li><span id="icon-audio" class="status-icon">○</span> 音频转写接口</li>
+    </ul>
+    <button onclick="closeParseModal()">关闭</button>
+  </div>
+</div>
+
 <script src="main.js"></script>
 </body>
 </html>
