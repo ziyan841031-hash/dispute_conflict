@@ -73,7 +73,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 defaultVal(parsedSummary, request.getCaseText()), null, null,
                 defaultVal(parsedPartyName, request.getPartyName()),
                 defaultVal(parsedCounterpartyName, request.getCounterpartyName()),
-                request.getDisputeType(), request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver());
+                request.getDisputeType(), null, request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver());
         // 打印服务日志。
         log.info("服务层-文本入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -91,7 +91,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String parsedText = parseExcelToText(file);
         // 保存案件数据。
         CaseRecord record = saveCase("EXCEL", parsedText, file.getOriginalFilename(), null,
-                null, null, "未分类", "中", "待处理", "系统导入");
+                null, null, "未分类", null, "中", "待处理", "系统导入");
         // 打印服务日志。
         log.info("服务层-Excel入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -109,7 +109,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String parsedText = "[音频转写占位] 文件 " + file.getOriginalFilename() + " 已上传，待接入ASR模型后自动转写";
         // 保存案件数据。
         CaseRecord record = saveCase("AUDIO", parsedText, file.getOriginalFilename(), 0,
-                null, null, "未分类", "中", "待处理", "系统导入");
+                null, null, "未分类", null, "中", "待处理", "系统导入");
         // 打印服务日志。
         log.info("服务层-音频入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -176,6 +176,11 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 pickOutputValue(classifyResult, "dispute_type"),
                 pickOutputValue(classifyResult, "纠纷类型")
         );
+        // 提取纠纷子类型。
+        String disputeSubType = firstNonEmpty(
+                pickOutputValue(classifyResult, "dispute_sub_type"),
+                pickOutputValue(classifyResult, "纠纷子类型")
+        );
         // 提取风险等级。
         String riskLevel = firstNonEmpty(
                 pickOutputValue(classifyResult, "risk_level"),
@@ -190,6 +195,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         }
         // 回写纠纷类型。
         record.setDisputeType(defaultVal(disputeType, record.getDisputeType()));
+        // 回写纠纷子类型。
+        record.setDisputeSubType(defaultVal(disputeSubType, record.getDisputeSubType()));
         // 回写风险等级。
         record.setRiskLevel(defaultVal(riskLevel, record.getRiskLevel()));
         // 更新修改时间。
@@ -203,6 +210,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         result.put("caseId", record.getId());
         // 写入纠纷类型。
         result.put("disputeType", record.getDisputeType());
+        // 写入纠纷子类型。
+        result.put("disputeSubType", record.getDisputeSubType());
         // 写入风险等级。
         result.put("riskLevel", record.getRiskLevel());
         // 写入原始分类结果。
@@ -215,7 +224,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      * 统一保存案件数据。
      */
     private CaseRecord saveCase(String eventSource, String parsedText, String fileName, Integer audioDurationSec,
-                                String partyName, String counterpartyName, String disputeType,
+                                String partyName, String counterpartyName, String disputeType, String disputeSubType,
                                 String riskLevel, String handlingProgress, String receiver) {
         // 获取当前时间。
         LocalDateTime now = LocalDateTime.now();
@@ -229,6 +238,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         record.setCounterpartyName(defaultVal(counterpartyName, "未知对方当事人"));
         // 设置纠纷类型。
         record.setDisputeType(defaultVal(disputeType, ""));
+        // 设置纠纷子类型（可为空）。
+        record.setDisputeSubType(defaultVal(disputeSubType, null));
         // 设置事件来源。
         record.setEventSource(eventSource);
         // 设置风险等级。

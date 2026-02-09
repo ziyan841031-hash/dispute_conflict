@@ -27,6 +27,9 @@ public class CaseRecord {
     @TableField("dispute_type")
     private String disputeType;
 
+    @TableField("dispute_sub_type")
+    private String disputeSubType;
+
     @TableField("event_source")
     private String eventSource;
 

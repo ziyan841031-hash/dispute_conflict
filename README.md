@@ -77,6 +77,7 @@
 - 当事人 `party_name`
 - 对方当事人 `counterparty_name`
 - 纠纷类型 `dispute_type`
+- 纠纷子类型 `dispute_sub_type`（可为空）
 - 事件来源 `event_source`
 - 风险等级 `risk_level`
 - 办理进度 `handling_progress`

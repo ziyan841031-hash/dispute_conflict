@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS case_record (
     party_name VARCHAR(100) NOT NULL,
     counterparty_name VARCHAR(100) NOT NULL,
     dispute_type VARCHAR(50) NOT NULL,
+    dispute_sub_type VARCHAR(50),
     event_source VARCHAR(20) NOT NULL,
     risk_level VARCHAR(20) NOT NULL,
     handling_progress VARCHAR(50) NOT NULL,
@@ -22,6 +23,7 @@ COMMENT ON COLUMN case_record.case_no IS '案件编号';
 COMMENT ON COLUMN case_record.party_name IS '当事人';
 COMMENT ON COLUMN case_record.counterparty_name IS '对方当事人';
 COMMENT ON COLUMN case_record.dispute_type IS '纠纷类型';
+COMMENT ON COLUMN case_record.dispute_sub_type IS '纠纷子类型';
 COMMENT ON COLUMN case_record.event_source IS '事件来源';
 COMMENT ON COLUMN case_record.risk_level IS '风险等级';
 COMMENT ON COLUMN case_record.handling_progress IS '办理进度';
@@ -34,5 +36,6 @@ COMMENT ON COLUMN case_record.created_at IS '创建时间';
 COMMENT ON COLUMN case_record.updated_at IS '更新时间';
 
 CREATE INDEX IF NOT EXISTS idx_case_record_dispute_type ON case_record(dispute_type);
+CREATE INDEX IF NOT EXISTS idx_case_record_dispute_sub_type ON case_record(dispute_sub_type);
 CREATE INDEX IF NOT EXISTS idx_case_record_event_source ON case_record(event_source);
 CREATE INDEX IF NOT EXISTS idx_case_record_register_time ON case_record(register_time DESC);
