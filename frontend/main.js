@@ -216,7 +216,7 @@ async function loadCases() {
     // 生成操作按钮。
     const actionBtn = `<button onclick="viewCase('${item.caseNo}')">查看</button>`;
     // 填充行内容。
-    tr.innerHTML = `<td>${item.caseNo}</td><td>${item.partyName}</td><td>${item.counterpartyName}</td><td>${item.disputeType}</td><td>${item.eventSource}</td><td>${item.riskLevel}</td><td>${item.handlingProgress}</td><td>${item.receiver}</td><td>${item.registerTime}</td><td>${actionBtn}</td>`;
+    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td>${actionBtn}</td>`;
     // 挂载到表格。
     tbody.appendChild(tr);
   });
