@@ -1,10 +1,14 @@
 package com.example.dispute.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
+import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseRecord;
+import com.example.dispute.mapper.CaseClassifyRecordMapper;
+import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 案件控制器。
@@ -31,13 +37,21 @@ public class CaseController {
     private static final Logger log = LoggerFactory.getLogger(CaseController.class);
     // 定义案件服务对象。
     private final CaseRecordService caseRecordService;
+    // 定义案件Mapper对象。
+    private final CaseRecordMapper caseRecordMapper;
+    // 定义分类Mapper对象。
+    private final CaseClassifyRecordMapper caseClassifyRecordMapper;
 
     /**
      * 构造函数。
      */
-    public CaseController(CaseRecordService caseRecordService) {
+    public CaseController(CaseRecordService caseRecordService, CaseRecordMapper caseRecordMapper, CaseClassifyRecordMapper caseClassifyRecordMapper) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
+        // 注入案件Mapper。
+        this.caseRecordMapper = caseRecordMapper;
+        // 注入分类Mapper。
+        this.caseClassifyRecordMapper = caseClassifyRecordMapper;
     }
 
     /**
@@ -142,4 +156,46 @@ public class CaseController {
         // 返回统一成功响应。
         return ApiResponse.success(pageData);
     }
+
+    /**
+     * 查询智能助手详情。
+     */
+    @GetMapping("/assistant-detail")
+    public ApiResponse<Map<String, Object>> assistantDetail(@RequestParam("caseId") Long caseId) {
+        // 查询案件主记录。
+        CaseRecord record = caseRecordMapper.selectById(caseId);
+        // 判断案件是否存在。
+        if (record == null) {
+            throw new IllegalArgumentException("未找到案件记录: " + caseId);
+        }
+        // 查询最新分类记录。
+        CaseClassifyRecord classifyRecord = caseClassifyRecordMapper.selectOne(new LambdaQueryWrapper<CaseClassifyRecord>()
+                .eq(CaseClassifyRecord::getCaseId, caseId)
+                .orderByDesc(CaseClassifyRecord::getCreatedAt)
+                .last("limit 1"));
+
+        // 组装响应结果。
+        Map<String, Object> result = new HashMap<>();
+        result.put("caseId", record.getId());
+        result.put("caseNo", record.getCaseNo());
+        result.put("partyName", record.getPartyName());
+        result.put("counterpartyName", record.getCounterpartyName());
+        result.put("disputeType", record.getDisputeType());
+        result.put("disputeSubType", record.getDisputeSubType());
+        result.put("handlingProgress", record.getHandlingProgress());
+        result.put("riskLevel", record.getRiskLevel());
+        result.put("caseText", record.getCaseText());
+        result.put("registerTime", record.getRegisterTime());
+        result.put("updatedAt", record.getUpdatedAt());
+
+        if (classifyRecord != null) {
+            result.put("factsSummary", classifyRecord.getFactsSummary());
+            result.put("modelSuggestedCategoryL1", classifyRecord.getModelSuggestedCategoryL1());
+            result.put("modelSuggestedCategoryL2", classifyRecord.getModelSuggestedCategoryL2());
+            result.put("parseError", classifyRecord.getParseError());
+            result.put("classifyCreatedAt", classifyRecord.getCreatedAt());
+        }
+        return ApiResponse.success(result);
+    }
+
 }

@@ -23,3 +23,18 @@ th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vert
 .status-icon { display: inline-block; width: 24px; text-align: center; font-weight: bold; }
 .status-icon.done { color: #16a34a; }
 .status-icon.loading { color: #f59e0b; }
+
+.assistant-header-card { margin-bottom: 16px; }
+.assistant-top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.assistant-main-grid { display: grid; grid-template-columns: 7fr 3fr; gap: 12px; align-items: stretch; }
+.flow-card { min-height: 460px; }
+.flow-container { position: relative; height: 400px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafcff; }
+.flow-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.flow-line { stroke: #94a3b8; stroke-width: 2.2; }
+.flow-line.active { stroke: #16a34a; stroke-width: 3; }
+.flow-node { position: absolute; font-size: 12px; line-height: 1.2; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b; }
+.flow-node.active { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,.2); }
+.side-card { min-height: 460px; }
+.side-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 100%; }
+.scroll-box { height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #fff; }
+.timeline-item { border-bottom: 1px solid #f1f5f9; padding: 8px 2px; font-size: 13px; }

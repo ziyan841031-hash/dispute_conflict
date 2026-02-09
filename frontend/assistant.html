@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 智能助手</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">控台首页</a>
+    <a href="cases.html">案件管理</a>
+    <a class="active" href="assistant.html">智能助手</a>
+  </aside>
+  <main class="content">
+    <section class="card assistant-header-card">
+      <h2>智能助手</h2>
+      <div id="assistantTopInfo" class="assistant-top-grid"></div>
+    </section>
+
+    <section class="assistant-main-grid">
+      <div class="card flow-card">
+        <h3>调解流程图</h3>
+        <div class="flow-container" id="flowContainer">
+          <svg class="flow-lines" viewBox="0 0 1000 420" preserveAspectRatio="none">
+            <line id="l-accept-mediation" x1="120" y1="210" x2="260" y2="210" class="flow-line" />
+            <line id="l-mediation-huajie" x1="300" y1="210" x2="420" y2="150" class="flow-line" />
+            <line id="l-mediation-huanjie" x1="300" y1="210" x2="420" y2="210" class="flow-line" />
+            <line id="l-mediation-shujie" x1="300" y1="210" x2="420" y2="270" class="flow-line" />
+            <line id="l-mediation-people" x1="460" y1="150" x2="580" y2="90" class="flow-line" />
+            <line id="l-mediation-admin" x1="460" y1="150" x2="580" y2="150" class="flow-line" />
+            <line id="l-mediation-prof" x1="460" y1="150" x2="580" y2="210" class="flow-line" />
+            <line id="l-people-final" x1="620" y1="90" x2="760" y2="150" class="flow-line" />
+            <line id="l-admin-final" x1="620" y1="150" x2="760" y2="150" class="flow-line" />
+            <line id="l-prof-final" x1="620" y1="210" x2="760" y2="150" class="flow-line" />
+            <line id="l-final-success" x1="800" y1="150" x2="900" y2="110" class="flow-line" />
+            <line id="l-final-failed" x1="800" y1="150" x2="900" y2="220" class="flow-line" />
+          </svg>
+
+          <button class="flow-node" style="left:20px;top:180px" data-node="accept">受理<br><small id="acceptTime">--</small></button>
+          <button class="flow-node" style="left:240px;top:180px" data-node="mediation">调解</button>
+          <button class="flow-node" style="left:420px;top:120px" data-node="huajie">化解</button>
+          <button class="flow-node" style="left:420px;top:180px" data-node="huanjie">缓解</button>
+          <button class="flow-node" style="left:420px;top:240px" data-node="shujie">疏解</button>
+          <button class="flow-node" style="left:580px;top:60px" data-node="people">人民调解</button>
+          <button class="flow-node" style="left:580px;top:120px" data-node="admin">行政调解</button>
+          <button class="flow-node" style="left:580px;top:180px" data-node="professional">专业调解</button>
+          <button class="flow-node" style="left:740px;top:120px" data-node="finalMediation">调解节点</button>
+          <button class="flow-node" style="left:900px;top:80px" data-node="success">归档成功</button>
+          <button class="flow-node" style="left:900px;top:190px" data-node="failed">归档失败</button>
+        </div>
+      </div>
+
+      <div class="card side-card">
+        <div class="side-split">
+          <div>
+            <h3>智能指导</h3>
+            <div id="guideList" class="scroll-box"></div>
+          </div>
+          <div>
+            <h3>案件时间</h3>
+            <div id="timelineList" class="scroll-box"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="main.js"></script>
+<script>loadAssistantPage();</script>
+</body>
+</html>
