@@ -37,6 +37,7 @@
 }
 ```
 - 处理逻辑：入库前先调用 Dify 要素提取工作流（`/workflows/run`）再执行落库。
+- Dify 请求体按规范传递：`inputs`（必填对象）、`response_mode=streaming`、`user=abc-123`，并附带可选 `files` 与 `trace_id`。
 
 2) Excel 案件入库
 - `POST /api/cases/ingest/excel`
