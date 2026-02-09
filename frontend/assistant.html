@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>矛盾纠纷系统管理 - 智能助手</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/reactflow/dist/style.css">
 </head>
 <body>
 <div class="layout">
@@ -22,55 +23,9 @@
 
     <section class="assistant-main-grid">
       <div class="card flow-card">
-        <h3>调解流程图（移动端优化）</h3>
+        <h3>智能工作流</h3>
         <div class="flow-container">
-          <div class="flow-board" id="flowContainer">
-            <svg class="flow-lines" viewBox="0 0 1120 520" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                  <path d="M0,0 L8,4 L0,8 z" fill="#94a3b8"></path>
-                </marker>
-                <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                  <path d="M0,0 L8,4 L0,8 z" fill="#16a34a"></path>
-                </marker>
-              </defs>
-
-              <path id="l-accept-mediation" class="flow-line" d="M130,255 C220,200 300,155 380,118"/>
-              <path id="l-accept-huajie" class="flow-line" d="M130,262 C220,235 300,210 380,212"/>
-              <path id="l-accept-huanjie" class="flow-line" d="M130,270 C220,285 300,300 380,308"/>
-              <path id="l-accept-shujie" class="flow-line" d="M130,278 C220,335 300,390 380,404"/>
-
-              <path id="l-mediation-people" class="flow-line" d="M470,118 C530,125 565,130 600,138"/>
-              <path id="l-mediation-admin" class="flow-line" d="M470,118 C530,180 565,225 600,258"/>
-              <path id="l-mediation-prof" class="flow-line" d="M470,118 C530,245 565,320 600,378"/>
-
-              <path id="l-people-status" class="flow-line" d="M690,138 C760,160 810,195 860,248"/>
-              <path id="l-admin-status" class="flow-line" d="M690,258 C760,258 810,255 860,252"/>
-              <path id="l-prof-status" class="flow-line" d="M690,378 C760,350 810,300 860,270"/>
-
-              <path id="l-status-success" class="flow-line" d="M950,248 C980,220 1000,200 1020,180"/>
-              <path id="l-status-failed" class="flow-line" d="M950,272 C980,300 1000,320 1020,352"/>
-
-              <path id="l-success-archive" class="flow-line" d="M1030,175 C1060,205 1060,250 1010,270"/>
-              <path id="l-failed-archive" class="flow-line" d="M1030,350 C1060,330 1060,300 1010,280"/>
-            </svg>
-
-            <button class="flow-node node-accept" data-node="accept">已受理<br><small id="acceptTime">--</small></button>
-
-            <button class="flow-node node-mediation" data-node="mediation">调解</button>
-            <button class="flow-node node-huajie" data-node="huajie">化解</button>
-            <button class="flow-node node-huanjie" data-node="huanjie">缓解</button>
-            <button class="flow-node node-shujie" data-node="shujie">疏解</button>
-
-            <button class="flow-node node-people" data-node="people">人民调解</button>
-            <button class="flow-node node-admin" data-node="admin">行政调解</button>
-            <button class="flow-node node-professional" data-node="professional">专业调解</button>
-
-            <button class="flow-node node-status" data-node="mediationStatus">调解状态</button>
-            <button class="flow-node node-success" data-node="success">调解成功</button>
-            <button class="flow-node node-failed" data-node="failed">调解失败</button>
-            <button class="flow-node node-archive" data-node="archive">案件归档</button>
-          </div>
+          <div id="reactWorkflowRoot" class="workflow-canvas"></div>
         </div>
       </div>
 
@@ -97,6 +52,162 @@
     </section>
   </main>
 </div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/reactflow/dist/umd/index.js"></script>
+<script>
+  (function () {
+    if (!window.React || !window.ReactDOM || !window.ReactFlow) {
+      return;
+    }
+
+    const h = window.React.createElement;
+    const useMemo = window.React.useMemo;
+    const useState = window.React.useState;
+
+    const RF = window.ReactFlow;
+    const ReactFlowComp = RF.ReactFlow;
+    const Background = RF.Background;
+    const Controls = RF.Controls;
+    const MarkerType = RF.MarkerType;
+
+    const initialNodes = [
+      { id: 'accept', position: { x: 10, y: 210 }, data: { label: '已受理\n--' }, type: 'default' },
+      { id: 'mediation', position: { x: 250, y: 60 }, data: { label: '调解' }, type: 'default' },
+      { id: 'huajie', position: { x: 250, y: 160 }, data: { label: '化解' }, type: 'default' },
+      { id: 'huanjie', position: { x: 250, y: 260 }, data: { label: '缓解' }, type: 'default' },
+      { id: 'shujie', position: { x: 250, y: 360 }, data: { label: '疏解' }, type: 'default' },
+      { id: 'people', position: { x: 520, y: 120 }, data: { label: '人民调解' }, type: 'default' },
+      { id: 'admin', position: { x: 520, y: 230 }, data: { label: '行政调解' }, type: 'default' },
+      { id: 'professional', position: { x: 520, y: 340 }, data: { label: '专业调解' }, type: 'default' },
+      { id: 'status', position: { x: 780, y: 220 }, data: { label: '调解状态' }, type: 'default' },
+      { id: 'success', position: { x: 1020, y: 150 }, data: { label: '调解成功' }, type: 'default' },
+      { id: 'failed', position: { x: 1020, y: 300 }, data: { label: '调解失败' }, type: 'default' },
+      { id: 'archive', position: { x: 1200, y: 225 }, data: { label: '案件归档' }, type: 'default' }
+    ];
+
+    const initialEdges = [
+      { id: 'e-accept-mediation', source: 'accept', target: 'mediation' },
+      { id: 'e-accept-huajie', source: 'accept', target: 'huajie' },
+      { id: 'e-accept-huanjie', source: 'accept', target: 'huanjie' },
+      { id: 'e-accept-shujie', source: 'accept', target: 'shujie' },
+      { id: 'e-mediation-people', source: 'mediation', target: 'people' },
+      { id: 'e-mediation-admin', source: 'mediation', target: 'admin' },
+      { id: 'e-mediation-professional', source: 'mediation', target: 'professional' },
+      { id: 'e-people-status', source: 'people', target: 'status' },
+      { id: 'e-admin-status', source: 'admin', target: 'status' },
+      { id: 'e-professional-status', source: 'professional', target: 'status' },
+      { id: 'e-status-success', source: 'status', target: 'success' },
+      { id: 'e-status-failed', source: 'status', target: 'failed' },
+      { id: 'e-success-archive', source: 'success', target: 'archive' },
+      { id: 'e-failed-archive', source: 'failed', target: 'archive' }
+    ];
+
+    function collectPath(targetId, parentMap, edgeSet, nodeSet) {
+      nodeSet.add(targetId);
+      if (targetId === 'accept') return;
+      const edges = parentMap[targetId] || [];
+      edges.forEach((edge) => {
+        edgeSet.add(edge.id);
+        collectPath(edge.source, parentMap, edgeSet, nodeSet);
+      });
+    }
+
+    function WorkflowApp() {
+      const [activeNode, setActiveNode] = useState('accept');
+      const [acceptTime, setAcceptTime] = useState('--');
+
+      window.updateWorkflowAcceptTime = function (timeText) {
+        setAcceptTime(timeText || '--');
+      };
+
+      const parentMap = useMemo(() => {
+        const map = {};
+        initialEdges.forEach((edge) => {
+          if (!map[edge.target]) map[edge.target] = [];
+          map[edge.target].push(edge);
+        });
+        return map;
+      }, []);
+
+      const activeEdgeIds = useMemo(() => {
+        const eSet = new Set();
+        const nSet = new Set();
+        collectPath(activeNode, parentMap, eSet, nSet);
+        return eSet;
+      }, [activeNode, parentMap]);
+
+      const activeNodeIds = useMemo(() => {
+        const eSet = new Set();
+        const nSet = new Set();
+        collectPath(activeNode, parentMap, eSet, nSet);
+        return nSet;
+      }, [activeNode, parentMap]);
+
+      const nodes = useMemo(() => {
+        return initialNodes.map((node) => {
+          const isActive = activeNodeIds.has(node.id);
+          const isAccept = node.id === 'accept';
+          const labelText = isAccept ? `已受理\n${acceptTime}` : node.data.label;
+          return {
+            ...node,
+            data: {
+              label: h('div', { className: 'rf-node-label' },
+                labelText.split('\n').map((line, i) => h('div', { key: i }, line))
+              )
+            },
+            style: {
+              borderRadius: '12px',
+              border: isActive ? '2px solid #16a34a' : '1px solid #cbd5e1',
+              background: isActive ? '#f0fdf4' : '#ffffff',
+              color: '#0f172a',
+              fontSize: '12px',
+              fontWeight: 600,
+              padding: '6px 10px',
+              width: 104,
+              textAlign: 'center',
+              boxShadow: isActive ? '0 0 0 2px rgba(22,163,74,.15)' : '0 1px 6px rgba(15,23,42,.1)'
+            }
+          };
+        });
+      }, [activeNodeIds, acceptTime]);
+
+      const edges = useMemo(() => {
+        return initialEdges.map((edge) => {
+          const active = activeEdgeIds.has(edge.id);
+          return {
+            ...edge,
+            type: 'step',
+            animated: false,
+            style: { stroke: active ? '#16a34a' : '#94a3b8', strokeWidth: active ? 3 : 2 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: active ? '#16a34a' : '#94a3b8'
+            }
+          };
+        });
+      }, [activeEdgeIds]);
+
+      return h(ReactFlowComp, {
+        nodes,
+        edges,
+        fitView: true,
+        fitViewOptions: { padding: 0.1 },
+        nodesDraggable: false,
+        nodesConnectable: false,
+        elementsSelectable: false,
+        onNodeClick: (_, node) => setActiveNode(node.id)
+      },
+      h(Background, { gap: 20, size: 1, color: '#e2e8f0' }),
+      h(Controls, { showInteractive: false }));
+    }
+
+    const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
+    root.render(h(WorkflowApp));
+  })();
+</script>
+
 <script src="main.js"></script>
 <script>loadAssistantPage();</script>
 </body>

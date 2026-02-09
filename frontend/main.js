@@ -188,9 +188,8 @@ function renderAssistantTop(data) {
     <div><strong>纠纷分类：</strong>${dispute}</div>
     <div><strong>当事人案件摘要：</strong>${summary}</div>
   `;
-  const acceptTime = document.getElementById('acceptTime');
-  if (acceptTime) {
-    acceptTime.textContent = data.registerTime || '--';
+  if (window.updateWorkflowAcceptTime) {
+    window.updateWorkflowAcceptTime(data.registerTime || '--');
   }
 }
 
