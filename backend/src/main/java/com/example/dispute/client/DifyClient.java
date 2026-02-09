@@ -95,7 +95,7 @@ public class DifyClient {
      */
     public Object runExtractWorkflow(String caseText) {
         // 使用要素提取密钥调用工作流。
-        return runWorkflowByApiKey(caseText, apiKey, "要素提取");
+        return runWorkflowByApiKey(caseText, apiKey, "要素提取", "material_text");
     }
 
     /**
@@ -103,13 +103,13 @@ public class DifyClient {
      */
     public Object runClassifyWorkflow(String caseText) {
         // 使用智能分类专用密钥调用工作流。
-        return runWorkflowByApiKey(caseText, classifyApiKey, "智能分类");
+        return runWorkflowByApiKey(caseText, classifyApiKey, "智能分类", "dispute_info");
     }
 
     /**
      * 按指定密钥调用同一工作流并解析SSE报文。
      */
-    private Object runWorkflowByApiKey(String caseText, String currentApiKey, String scene) {
+    private Object runWorkflowByApiKey(String caseText, String currentApiKey, String scene, String inputKey) {
         // 拼接请求地址。
         String url = difyBaseUrl + extractWorkflowEndpoint;
         // 生成链路追踪ID。
@@ -127,7 +127,7 @@ public class DifyClient {
         Map<String, Object> inputs = new HashMap<>();
         // 按App变量定义传值，文本为空则不设置具体变量，仅保留空对象。
         if (StringUtils.hasText(caseText)) {
-            inputs.put("material_text", caseText);
+            inputs.put(inputKey, caseText);
         }
 
         // 创建请求体Map。
@@ -144,7 +144,7 @@ public class DifyClient {
         body.put("trace_id", traceId);
 
         // 打印请求日志。
-        log.info("Dify{}请求: url={}, textLength={}, traceId={}", scene, url, caseText == null ? 0 : caseText.length(), traceId);
+        log.info("Dify{}请求: url={}, inputKey={}, textLength={}, traceId={}", scene, url, inputKey, caseText == null ? 0 : caseText.length(), traceId);
         // 构造请求实体。
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         // 发起POST请求。

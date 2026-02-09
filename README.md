@@ -59,7 +59,7 @@
   "caseText": "邻里因噪音产生纠纷..."
 }
 ```
-- 处理逻辑：调用 Dify 工作流（与要素提取一致），但使用独立的 `dify.classify-api-key`。
+- 处理逻辑：调用 Dify 工作流（与要素提取一致），但使用独立的 `dify.classify-api-key`，且分类工作流入参键使用 `dispute_info`。
 - 分类回写：根据 Dify 输出回写 `case_record` 的 `dispute_type` 与 `risk_level`。
 
 ### 3.2 案件查询接口
