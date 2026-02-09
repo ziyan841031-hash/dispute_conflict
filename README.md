@@ -55,10 +55,12 @@
 - Body:
 ```json
 {
+  "caseId": 1,
   "caseText": "邻里因噪音产生纠纷..."
 }
 ```
 - 处理逻辑：调用 Dify 工作流（与要素提取一致），但使用独立的 `dify.classify-api-key`。
+- 分类回写：根据 Dify 输出回写 `case_record` 的 `dispute_type` 与 `risk_level`。
 
 ### 3.2 案件查询接口
 - `GET /api/cases?keyword=纠纷&disputeType=邻里纠纷&eventSource=TEXT&riskLevel=中&pageNo=1&pageSize=10`

@@ -15,4 +15,6 @@ public interface CaseRecordService {
     CaseRecord ingestAudio(MultipartFile file);
 
     IPage<CaseRecord> queryCases(CaseQueryRequest request);
+
+    Object intelligentClassify(TextIngestRequest request);
 }

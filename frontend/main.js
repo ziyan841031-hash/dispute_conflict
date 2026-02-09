@@ -32,10 +32,15 @@ async function submitText() {
     // 指定请求体。
     body: JSON.stringify(payload)
   });
+  // 解析文字接口响应。
+  const textJson = await res.json();
   // 渲染返回结果。
-  renderResult(await res.json());
+  renderResult(textJson);
   // 标记要素提取接口完成。
   markDone('text');
+
+  // 提取案件ID。
+  const caseId = textJson && textJson.data ? textJson.data.id : null;
 
   // 标记智能分类接口处理中。
   setLoading('excel');
@@ -45,8 +50,8 @@ async function submitText() {
     method: 'POST',
     // 指定请求头。
     headers: {'Content-Type': 'application/json'},
-    // 指定请求体（只需要案件描述）。
-    body: JSON.stringify({caseText: payload.caseText})
+    // 指定请求体（案件ID+案件描述）。
+    body: JSON.stringify({caseId, caseText: payload.caseText})
   });
   // 渲染智能分类响应结果。
   renderResult(await classifyRes.json());

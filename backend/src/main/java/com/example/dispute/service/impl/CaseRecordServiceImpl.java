@@ -157,6 +157,60 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         return result;
     }
 
+
+
+    /**
+     * 智能分类并回写案件。
+     */
+    @Override // 重写接口方法。
+    public Object intelligentClassify(TextIngestRequest request) {
+        // 校验案件ID。
+        if (request.getCaseId() == null) {
+            // 抛出参数异常。
+            throw new IllegalArgumentException("caseId不能为空");
+        }
+        // 调用Dify智能分类工作流。
+        Object classifyResult = difyClient.runClassifyWorkflow(request.getCaseText());
+        // 提取纠纷类型。
+        String disputeType = firstNonEmpty(
+                pickOutputValue(classifyResult, "dispute_type"),
+                pickOutputValue(classifyResult, "纠纷类型")
+        );
+        // 提取风险等级。
+        String riskLevel = firstNonEmpty(
+                pickOutputValue(classifyResult, "risk_level"),
+                pickOutputValue(classifyResult, "风险等级")
+        );
+        // 查询案件记录。
+        CaseRecord record = caseRecordMapper.selectById(request.getCaseId());
+        // 判断记录是否存在。
+        if (record == null) {
+            // 抛出参数异常。
+            throw new IllegalArgumentException("未找到案件记录: " + request.getCaseId());
+        }
+        // 回写纠纷类型。
+        record.setDisputeType(defaultVal(disputeType, record.getDisputeType()));
+        // 回写风险等级。
+        record.setRiskLevel(defaultVal(riskLevel, record.getRiskLevel()));
+        // 更新修改时间。
+        record.setUpdatedAt(LocalDateTime.now());
+        // 执行更新。
+        caseRecordMapper.updateById(record);
+
+        // 组装返回对象。
+        Map<String, Object> result = new java.util.HashMap<>();
+        // 写入案件ID。
+        result.put("caseId", record.getId());
+        // 写入纠纷类型。
+        result.put("disputeType", record.getDisputeType());
+        // 写入风险等级。
+        result.put("riskLevel", record.getRiskLevel());
+        // 写入原始分类结果。
+        result.put("classifyResult", classifyResult);
+        // 返回结果。
+        return result;
+    }
+
     /**
      * 统一保存案件数据。
      */
@@ -225,6 +279,24 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         Object value = outputsMap.get(key);
         // 返回字符串值。
         return value == null ? null : String.valueOf(value);
+    }
+
+
+
+    /**
+     * 返回第一个非空字符串。
+     */
+    private String firstNonEmpty(String... values) {
+        // 遍历字符串数组。
+        for (String value : values) {
+            // 判断是否有文本。
+            if (StringUtils.hasText(value)) {
+                // 返回命中的值。
+                return value;
+            }
+        }
+        // 无可用值返回空。
+        return null;
     }
 
     /**

@@ -17,4 +17,5 @@ public class TextIngestRequest {
     private String handlingProgress;
     private String receiver;
     private String eventSource;
+    private Long caseId;
 }
