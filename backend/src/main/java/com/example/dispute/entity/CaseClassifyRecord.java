@@ -21,8 +21,14 @@ public class CaseClassifyRecord {
     @TableField("workflow_run_id")
     private String workflowRunId;
 
-    @TableField("classify_payload")
-    private String classifyPayload;
+    @TableField("dispute_type")
+    private String disputeType;
+
+    @TableField("dispute_sub_type")
+    private String disputeSubType;
+
+    @TableField("risk_level")
+    private String riskLevel;
 
     @TableField("created_at")
     private LocalDateTime createdAt;

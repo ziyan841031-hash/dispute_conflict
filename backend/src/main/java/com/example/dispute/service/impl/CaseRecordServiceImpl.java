@@ -11,8 +11,6 @@ import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -44,9 +42,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     private final DifyClient difyClient;
     // 定义分类结果Mapper对象。
     private final CaseClassifyRecordMapper caseClassifyRecordMapper;
-    // 定义JSON转换对象。
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     /**
      * 构造函数。
      */
@@ -230,7 +225,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         result.put("classifyResult", classifyResult);
 
         // 保存案件分类子表记录。
-        saveCaseClassifyRecord(record.getId(), classifyResult);
+        saveCaseClassifyRecord(record.getId(), classifyResult, record.getDisputeType(), record.getDisputeSubType(), record.getRiskLevel());
         // 返回结果。
         return result;
     }
@@ -238,7 +233,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 保存案件分类子表记录。
      */
-    private void saveCaseClassifyRecord(Long caseId, Object classifyResult) {
+    private void saveCaseClassifyRecord(Long caseId, Object classifyResult, String disputeType, String disputeSubType, String riskLevel) {
         // 创建子表实体对象。
         CaseClassifyRecord classifyRecord = new CaseClassifyRecord();
         // 设置案件ID。
@@ -248,8 +243,12 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 pickRootValue(classifyResult, "workflow_run_id"),
                 pickNestedValue(classifyResult, "data", "workflow_run_id")
         ));
-        // 设置分类原始结果。
-        classifyRecord.setClassifyPayload(toJson(classifyResult));
+        // 设置纠纷类型。
+        classifyRecord.setDisputeType(disputeType);
+        // 设置纠纷子类型。
+        classifyRecord.setDisputeSubType(disputeSubType);
+        // 设置风险等级。
+        classifyRecord.setRiskLevel(riskLevel);
         // 设置创建时间。
         classifyRecord.setCreatedAt(LocalDateTime.now());
         // 执行插入。
@@ -297,19 +296,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         Object value = nested.get(key);
         // 返回字符串值。
         return value == null ? null : String.valueOf(value);
-    }
-
-    /**
-     * 将对象转为JSON字符串。
-     */
-    private String toJson(Object value) {
-        try {
-            // 返回JSON文本。
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException ex) {
-            // 回退字符串形式。
-            return String.valueOf(value);
-        }
     }
 
     /**

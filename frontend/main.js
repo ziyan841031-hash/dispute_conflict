@@ -1,19 +1,9 @@
 // 定义后端接口基础地址。
 const API_BASE = 'http://localhost:8080/api';
 
-// 定义解析状态。
-const parseStatus = {
-  text: false,
-  excel: false,
-  audio: false
-};
 
 // 提交文字案件。
 async function submitText() {
-  // 打开解析弹窗。
-  openParseModal();
-  // 标记文字接口处理中。
-  setLoading('text');
 
   // 组装请求载荷。
   const payload = {
@@ -34,16 +24,10 @@ async function submitText() {
   });
   // 解析文字接口响应。
   const textJson = await res.json();
-  // 渲染返回结果。
-  renderResult(textJson);
-  // 标记要素提取接口完成。
-  markDone('text');
 
   // 提取案件ID。
   const caseId = textJson && textJson.data ? textJson.data.id : null;
 
-  // 标记智能分类接口处理中。
-  setLoading('excel');
   // 调用智能分类接口。
   const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
     // 指定请求方法。
@@ -53,19 +37,12 @@ async function submitText() {
     // 指定请求体（案件ID+案件描述）。
     body: JSON.stringify({caseId, caseText: payload.caseText})
   });
-  // 渲染智能分类响应结果。
-  renderResult(await classifyRes.json());
-  // 标记智能分类接口完成。
-  markDone('excel');
+  // 消费智能分类响应。
+  await classifyRes.json();
 }
 
 // 提交Excel案件。
 async function submitExcel() {
-  // 打开解析弹窗。
-  openParseModal();
-  // 标记Excel接口处理中。
-  setLoading('excel');
-
   // 获取文件对象。
   const file = document.getElementById('excelFile').files[0];
   // 创建form-data对象。
@@ -74,19 +51,12 @@ async function submitExcel() {
   form.append('file', file);
   // 发起POST请求。
   const res = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
-  // 渲染返回结果。
-  renderResult(await res.json());
-  // 标记Excel接口完成。
-  markDone('excel');
+  // 消费接口响应。
+  await res.json();
 }
 
 // 提交音频案件。
 async function submitAudio() {
-  // 打开解析弹窗。
-  openParseModal();
-  // 标记音频接口处理中。
-  setLoading('audio');
-
   // 获取文件对象。
   const file = document.getElementById('audioFile').files[0];
   // 创建form-data对象。
@@ -95,97 +65,8 @@ async function submitAudio() {
   form.append('file', file);
   // 发起POST请求。
   const res = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
-  // 渲染返回结果。
-  renderResult(await res.json());
-  // 标记音频接口完成。
-  markDone('audio');
-}
-
-// 打开解析弹窗。
-function openParseModal() {
-  // 获取弹窗节点。
-  const modal = document.getElementById('parseModal');
-  // 移除隐藏样式。
-  modal.classList.remove('hidden');
-  // 刷新图标状态。
-  refreshAllIcons();
-}
-
-// 关闭解析弹窗。
-function closeParseModal() {
-  // 获取弹窗节点。
-  const modal = document.getElementById('parseModal');
-  // 添加隐藏样式。
-  modal.classList.add('hidden');
-}
-
-// 设置某接口为处理中。
-function setLoading(type) {
-  // 获取图标节点。
-  const icon = document.getElementById(`icon-${type}`);
-  // 更新图标为处理中。
-  icon.textContent = '◔';
-  // 添加处理中样式。
-  icon.classList.add('loading');
-  // 去除完成样式。
-  icon.classList.remove('done');
-}
-
-// 标记某接口完成。
-function markDone(type) {
-  // 写入完成状态。
-  parseStatus[type] = true;
-  // 获取图标节点。
-  const icon = document.getElementById(`icon-${type}`);
-  // 更新图标为完成。
-  icon.textContent = '✔';
-  // 添加完成样式。
-  icon.classList.add('done');
-  // 去除处理中样式。
-  icon.classList.remove('loading');
-}
-
-// 刷新全部图标。
-function refreshAllIcons() {
-  // 刷新文字图标。
-  refreshOneIcon('text');
-  // 刷新Excel图标。
-  refreshOneIcon('excel');
-  // 刷新音频图标。
-  refreshOneIcon('audio');
-}
-
-// 刷新单个图标。
-function refreshOneIcon(type) {
-  // 获取图标节点。
-  const icon = document.getElementById(`icon-${type}`);
-  // 判断是否完成。
-  if (parseStatus[type]) {
-    // 设置完成图标。
-    icon.textContent = '✔';
-    // 增加完成样式。
-    icon.classList.add('done');
-    // 移除处理中样式。
-    icon.classList.remove('loading');
-  } else {
-    // 设置未完成图标。
-    icon.textContent = '○';
-    // 移除完成样式。
-    icon.classList.remove('done');
-    // 移除处理中样式。
-    icon.classList.remove('loading');
-  }
-}
-
-// 显示响应结果。
-function renderResult(data) {
-  // 获取结果节点。
-  const result = document.getElementById('result');
-  // 判断节点是否存在。
-  if (result) {
-    // 写入JSON文本。
-    result.textContent = JSON.stringify(data, null, 2);
-  }
+  // 消费接口响应。
+  await res.json();
 }
 
 // 查询案件列表。
