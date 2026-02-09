@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 案件管理</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">控台首页</a>
+    <a class="active" href="cases.html">案件管理</a>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h2>案件管理</h2>
+      <div class="filter-row">
+        <input id="keyword" placeholder="关键词搜索">
+        <select id="sourceType">
+          <option value="">全部来源</option>
+          <option value="TEXT">TEXT</option>
+          <option value="EXCEL">EXCEL</option>
+          <option value="AUDIO">AUDIO</option>
+        </select>
+        <button onclick="loadCases()">查询</button>
+      </div>
+      <table>
+        <thead>
+        <tr>
+          <th>案件编号</th><th>来源</th><th>状态</th><th>内容</th><th>创建时间</th>
+        </tr>
+        </thead>
+        <tbody id="caseTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+<script src="main.js"></script>
+<script>loadCases();</script>
+</body>
+</html>
