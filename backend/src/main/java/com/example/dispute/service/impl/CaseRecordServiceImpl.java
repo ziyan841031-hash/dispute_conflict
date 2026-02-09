@@ -3,6 +3,7 @@ package com.example.dispute.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseRecord;
@@ -34,13 +35,17 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     private static final Logger log = LoggerFactory.getLogger(CaseRecordServiceImpl.class);
     // 定义Mapper对象。
     private final CaseRecordMapper caseRecordMapper;
+    // 定义Dify客户端对象。
+    private final DifyClient difyClient;
 
     /**
      * 构造函数。
      */
-    public CaseRecordServiceImpl(CaseRecordMapper caseRecordMapper) {
+    public CaseRecordServiceImpl(CaseRecordMapper caseRecordMapper, DifyClient difyClient) {
         // 注入Mapper。
         this.caseRecordMapper = caseRecordMapper;
+        // 注入Dify客户端。
+        this.difyClient = difyClient;
     }
 
     /**
@@ -50,6 +55,10 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     public CaseRecord ingestText(TextIngestRequest request) {
         // 打印服务日志。
         log.info("服务层-文本入库开始: partyName={}, disputeType={}", request.getPartyName(), request.getDisputeType());
+        // 调用Dify要素提取智能体。
+        Object extractResult = difyClient.runExtractWorkflow(request.getCaseText());
+        // 打印要素提取响应日志。
+        log.info("服务层-Dify要素提取完成: resultType={}", extractResult == null ? "null" : extractResult.getClass().getSimpleName());
         // 保存案件数据。
         CaseRecord record = saveCase("TEXT", request.getCaseText(), null, null,
                 request.getPartyName(), request.getCounterpartyName(), request.getDisputeType(),

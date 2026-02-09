@@ -36,6 +36,7 @@
   "caseText": "邻里因噪音产生纠纷..."
 }
 ```
+- 处理逻辑：入库前先调用 Dify 要素提取工作流（`/workflows/run`）再执行落库。
 
 2) Excel 案件入库
 - `POST /api/cases/ingest/excel`

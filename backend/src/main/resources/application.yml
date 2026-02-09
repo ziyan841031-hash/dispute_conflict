@@ -19,5 +19,8 @@ mybatis-plus:
 
 # 预留Dify配置
 dify:
-  base-url: http://localhost:5001/v1
+  base-url: http://172.21.70.142/v1
   api-key: replace-with-real-key
+
+  extract-workflow-endpoint: /workflows/run
+  extract-user: abc-123
