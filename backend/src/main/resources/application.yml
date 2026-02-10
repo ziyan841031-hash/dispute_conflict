@@ -26,3 +26,4 @@ dify:
   extract-user: abc-123
 
   classify-api-key: replace-with-classify-key
+  disposal-api-key: replace-with-disposal-key

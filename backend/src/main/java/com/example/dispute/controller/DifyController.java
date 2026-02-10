@@ -3,6 +3,7 @@ package com.example.dispute.controller;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.DifyInvokeRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,10 @@ public class DifyController {
     // 定义Dify客户端。
     private final DifyClient difyClient;
 
+    // 纠纷处置工作流密钥。
+    @Value("${dify.disposal-api-key:replace-with-disposal-key}")
+    private String disposalApiKey;
+
     /**
      * 构造函数。
      */
@@ -38,7 +43,7 @@ public class DifyController {
         // 打印请求日志。
         log.info("Dify workflow 请求: query={}", request.getQuery());
         // 发起远程调用。
-        Object data = difyClient.invoke("/workflows/run", request);
+        Object data = difyClient.invoke("/workflows/run", request, disposalApiKey);
         // 打印响应日志。
         log.info("Dify workflow 响应成功");
         // 返回统一成功响应。

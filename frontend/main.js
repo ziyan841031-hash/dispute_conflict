@@ -210,11 +210,35 @@ async function loadAssistantPage() {
   assistantDataCache = detailData || {};
   disposalOrgOptions = orgData || [];
 
+  triggerDisposalWorkflow(assistantDataCache);
+
   renderAssistantTop(assistantDataCache);
   renderGuide(assistantDataCache);
   renderTimeline(assistantDataCache);
   switchAssistantTab('guide');
   bindFlowInteraction();
+}
+
+
+async function triggerDisposalWorkflow(detailData) {
+  const payload = {
+    query: '1',
+    variables: {
+      dispute_text: detailData.factsSummary || '',
+      category_level_1: detailData.modelSuggestedCategoryL1 || '',
+      category_level_2: detailData.modelSuggestedCategoryL2 || ''
+    }
+  };
+
+  try {
+    await fetch(`${API_BASE}/dify/workflow-run`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.warn('纠纷处置workflow调用失败', error);
+  }
 }
 
 // 风险等级说明映射。

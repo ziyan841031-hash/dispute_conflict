@@ -57,7 +57,7 @@ public class DifyClient {
     /**
      * 调用Dify接口。
      */
-    public Object invoke(String endpoint, DifyInvokeRequest request) {
+    public Object invoke(String endpoint, DifyInvokeRequest request, String currentApiKey) {
         // 拼接请求地址。
         String url = difyBaseUrl + endpoint;
         // 创建请求头。
@@ -65,7 +65,7 @@ public class DifyClient {
         // 设置内容类型。
         headers.setContentType(MediaType.APPLICATION_JSON);
         // 设置认证令牌。
-        headers.setBearerAuth(apiKey);
+        headers.setBearerAuth(currentApiKey);
 
         // 创建请求体Map。
         Map<String, Object> body = new HashMap<>();
@@ -88,6 +88,14 @@ public class DifyClient {
         log.info("DifyClient响应: status={}", response.getStatusCodeValue());
         // 返回响应体。
         return response.getBody();
+    }
+
+
+    /**
+     * 调用Dify接口（默认密钥）。
+     */
+    public Object invoke(String endpoint, DifyInvokeRequest request) {
+        return invoke(endpoint, request, apiKey);
     }
 
     /**
