@@ -525,6 +525,19 @@ function switchAssistantTab(tabName) {
   });
 }
 
+function buildMediationAdviceBlock(adviceHtml) {
+  const html = (adviceHtml || '').toString().trim();
+  if (!html) {
+    return '';
+  }
+  return `
+    <div class="guide-advice-block">
+      <div class="guide-advice-title">调解建议</div>
+      <div class="guide-advice-html">${html}</div>
+    </div>
+  `;
+}
+
 // 渲染智能指引。
 function renderGuide(data) {
   const box = document.getElementById('guideList');
@@ -536,6 +549,7 @@ function renderGuide(data) {
   const mediationCategory = THIRD_LEVEL_NODE_MAP[currentNode] || '';
 
   if (!mediationCategory) {
+    const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
     const basics = [
       ['当前节点', hasMediationStatusLocked() ? '调解状态' : '已受理'],
       ['案件编号', data.caseNo || '-'],
@@ -552,7 +566,7 @@ function renderGuide(data) {
         <span class="guide-key">${item[0]}</span>
         <span class="guide-value">${item[1]}</span>
       </div>
-    `).join('');
+    `).join('') + buildMediationAdviceBlock(mediationAdviceHtml);
     return;
   }
 
@@ -573,6 +587,7 @@ function renderGuide(data) {
 
   const statusLocked = hasMediationStatusLocked();
   const mediationStatusText = getMediationStatusText();
+  const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
 
   const detailRows = currentOrg ? [
     ['机构电话', currentOrg.orgPhone],
@@ -619,6 +634,7 @@ function renderGuide(data) {
         <span class="guide-value">${item[1] ?? '-'}</span>
       </div>
     `).join('')}
+    ${buildMediationAdviceBlock(mediationAdviceHtml)}
   `;
 }
 
@@ -681,6 +697,7 @@ async function onGuideNodeConfirm() {
     if (record) {
       workflowAdviceRecord = record;
       assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
+      assistantDataCache.mediationAdvice = record.mediationAdvice || assistantDataCache.mediationAdvice || '';
       workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
       currentWorkflowNodeId = 'status';
       syncWorkflowLockMeta();

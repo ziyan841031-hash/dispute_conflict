@@ -289,3 +289,37 @@ table { width: 100%; border-collapse: collapse; }
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+
+.guide-advice-block {
+  margin-top: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+}
+.guide-advice-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+}
+.guide-advice-html {
+  color: #0f172a;
+  line-height: 1.65;
+  font-size: 13px;
+}
+.guide-advice-html h2, .guide-advice-html h3 {
+  margin: 8px 0 6px;
+  color: #0f172a;
+}
+.guide-advice-html p {
+  margin: 0 0 8px;
+}
+.guide-advice-html ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+.guide-advice-html li {
+  margin-bottom: 6px;
+}

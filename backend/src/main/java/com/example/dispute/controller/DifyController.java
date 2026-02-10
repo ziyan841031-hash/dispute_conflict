@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -107,10 +106,7 @@ public class DifyController {
         record.setMediationAdvice(extractHtmlAdvice(mediatorAdvice));
         caseDisposalWorkflowRecordMapper.updateById(record);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("record", record);
-        result.put("mediatorAdvice", mediatorAdvice);
-        return ApiResponse.success(result);
+        return ApiResponse.success(record);
     }
 
     private String extractHtmlAdvice(Object mediatorAdvice) {

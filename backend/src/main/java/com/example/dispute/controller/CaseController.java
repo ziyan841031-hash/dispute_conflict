@@ -214,6 +214,7 @@ public class CaseController {
             result.put("flowLevel3", workflowRecord.getFlowLevel3());
             result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
             result.put("recommendedMediationType", workflowRecord.getRecommendedMediationType());
+            result.put("mediationAdvice", workflowRecord.getMediationAdvice());
         }
 
         if (classifyRecord != null) {
