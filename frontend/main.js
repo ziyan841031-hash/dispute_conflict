@@ -569,6 +569,7 @@ function renderGuide(data) {
   const currentNode = currentWorkflowNodeId || 'accept';
   const mediationCategory = THIRD_LEVEL_NODE_MAP[currentNode] || '';
   const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
+  const isThirdNodeSelected = ['people', 'admin', 'professional'].includes(currentNode);
 
   if (currentNode === 'status' && getMediationStatusText() === '调解中') {
     box.classList.add('guide-advice-only');
@@ -661,7 +662,7 @@ function renderGuide(data) {
         <span class="guide-value">${item[1] ?? '-'}</span>
       </div>
     `).join('')}
-    ${buildMediationAdviceBlock(mediationAdviceHtml)}
+    ${isThirdNodeSelected ? '' : buildMediationAdviceBlock(mediationAdviceHtml)}
   `;
 }
 
