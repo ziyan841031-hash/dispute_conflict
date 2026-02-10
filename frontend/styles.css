@@ -150,6 +150,23 @@ table { width: 100%; border-collapse: collapse; }
 }
 .guide-key { color: #475569; font-weight: 600; }
 .guide-value { color: #1e293b; line-height: 1.5; word-break: break-word; }
+
+.guide-current-node-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.guide-confirm-btn {
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: 999px;
+}
+.guide-confirm-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
 .guide-row-select select {
   border: 1px solid #cbd5e1;
   border-radius: 6px;

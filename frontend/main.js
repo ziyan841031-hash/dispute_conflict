@@ -155,6 +155,7 @@ const caseListCache = {};
 let disposalOrgOptions = [];
 let currentWorkflowNodeId = 'accept';
 const selectedOrgByCategory = {};
+const confirmedNodeByCategory = {};
 let workflowAdviceRecord = null;
 let workflowAdviceLoading = false;
 const THIRD_LEVEL_NODE_MAP = {
@@ -490,10 +491,20 @@ function renderGuide(data) {
     detailRows.push(['判断依据', formatRuleHintsHit(workflowAdviceRecord.ruleHintsHit)]);
   }
 
+  const nodeConfirmed = Boolean(confirmedNodeByCategory[mediationCategory]);
+
   box.innerHTML = `
     <div class="guide-row">
       <span class="guide-key">当前节点</span>
-      <span class="guide-value">${mediationCategory}</span>
+      <span class="guide-value guide-current-node-line">
+        <span>${mediationCategory}</span>
+        <button
+          type="button"
+          class="guide-confirm-btn"
+          onclick="onGuideNodeConfirm()"
+          ${nodeConfirmed ? 'disabled' : ''}
+        >${nodeConfirmed ? '已确认' : '确认'}</button>
+      </span>
     </div>
     <div class="guide-row guide-row-select">
       <span class="guide-key">推荐部门</span>
@@ -538,6 +549,15 @@ function formatRuleHintsHit(ruleHintsHit) {
   }
 
   return rawText;
+}
+
+function onGuideNodeConfirm() {
+  const mediationCategory = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
+  if (!mediationCategory) {
+    return;
+  }
+  confirmedNodeByCategory[mediationCategory] = true;
+  renderGuide(assistantDataCache);
 }
 
 function onGuideOrgChange(orgName) {
