@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,10 @@ public class DifyController {
     // 纠纷处置工作流密钥。
     @Value("${dify.disposal-api-key:replace-with-disposal-key}")
     private String disposalApiKey;
+
+    // 纠纷调解员建议API密钥。
+    @Value("${dify.mediator-suggestion-api-key:replace-with-mediator-suggestion-key}")
+    private String mediatorSuggestionApiKey;
 
     /**
      * 构造函数。
@@ -92,7 +97,24 @@ public class DifyController {
         }
         record.setMediationStatus("调解中");
         caseDisposalWorkflowRecordMapper.updateById(record);
-        return ApiResponse.success(record);
+
+        Map<String, Object> variables = request.getVariables() == null ? new HashMap<>() : new HashMap<>(request.getVariables());
+        DifyInvokeRequest mediatorRequest = new DifyInvokeRequest();
+        mediatorRequest.setCaseId(caseId);
+        mediatorRequest.setQuery(StringUtils.hasText(request.getQuery()) ? request.getQuery() : "纠纷调解员建议");
+        mediatorRequest.setVariables(variables);
+
+        Object mediatorAdvice = null;
+        try {
+            mediatorAdvice = difyClient.invoke("/chat-messages", mediatorRequest, mediatorSuggestionApiKey);
+        } catch (Exception ex) {
+            log.warn("纠纷调解员建议调用失败: {}", ex.getMessage());
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("record", record);
+        result.put("mediatorAdvice", mediatorAdvice);
+        return ApiResponse.success(result);
     }
 
     /**

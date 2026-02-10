@@ -145,7 +145,13 @@ function openAssistant(caseId) {
   if (rowData) {
     sessionStorage.setItem('assistantPrefill', JSON.stringify(rowData));
   }
-  window.location.href = `assistant.html?caseId=${caseId}`;
+  const waitingModal = document.getElementById('assistantEnterWaitingModal');
+  if (waitingModal) {
+    waitingModal.classList.remove('hidden');
+  }
+  setTimeout(() => {
+    window.location.href = `assistant.html?caseId=${caseId}`;
+  }, 220);
 }
 
 // 智能指引补充记录。
@@ -283,10 +289,15 @@ async function loadAssistantPage() {
   disposalOrgOptions = orgData || [];
 
   workflowAdviceLoading = true;
+  showWorkflowWaitingModal();
   syncWorkflowLockMeta();
   renderGuide(assistantDataCache);
-  workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
-  workflowAdviceLoading = false;
+  try {
+    workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
+  } finally {
+    workflowAdviceLoading = false;
+    hideWorkflowWaitingModal();
+  }
 
   if (!workflowAdviceRecord && assistantDataCache && assistantDataCache.caseId) {
     workflowAdviceRecord = {
@@ -655,10 +666,18 @@ async function onGuideNodeConfirm() {
     const res = await fetch(`${API_BASE}/dify/workflow-confirm`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({caseId})
+      body: JSON.stringify({
+        caseId,
+        variables: {
+          case_summary: assistantDataCache.factsSummary || '',
+          case_category: assistantDataCache.modelSuggestedCategoryL2 || assistantDataCache.disputeSubType || '',
+          department_name: (workflowAdviceRecord && workflowAdviceRecord.recommendReason) || ''
+        }
+      })
     });
     const json = await res.json();
-    const record = json && json.data ? json.data : null;
+    const payload = json && json.data ? json.data : null;
+    const record = payload && payload.record ? payload.record : payload;
     if (record) {
       workflowAdviceRecord = record;
       assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
