@@ -111,19 +111,19 @@
     const baseNodes = [
       { id: 'accept', position: { x: 20, y: 240 }, data: { title: '已受理', subtitle: '--' }, type: 'workflow' },
 
-      { id: 'mediation', position: { x: 240, y: 70 }, data: { title: '调解', subtitle: '二级节点' }, type: 'workflow' },
-      { id: 'huajie', position: { x: 240, y: 190 }, data: { title: '化解', subtitle: '二级节点' }, type: 'workflow' },
-      { id: 'huanjie', position: { x: 240, y: 310 }, data: { title: '缓解', subtitle: '二级节点' }, type: 'workflow' },
-      { id: 'shujie', position: { x: 240, y: 430 }, data: { title: '疏解', subtitle: '二级节点' }, type: 'workflow' },
+      { id: 'mediation', position: { x: 240, y: 70 }, data: { title: '调解', subtitle: '' }, type: 'workflow' },
+      { id: 'huajie', position: { x: 240, y: 190 }, data: { title: '化解', subtitle: '' }, type: 'workflow' },
+      { id: 'huanjie', position: { x: 240, y: 310 }, data: { title: '缓解', subtitle: '' }, type: 'workflow' },
+      { id: 'shujie', position: { x: 240, y: 430 }, data: { title: '疏解', subtitle: '' }, type: 'workflow' },
 
-      { id: 'people', position: { x: 500, y: 140 }, data: { title: '人民调解', subtitle: '三级节点' }, type: 'workflow' },
-      { id: 'admin', position: { x: 500, y: 260 }, data: { title: '行政调解', subtitle: '三级节点' }, type: 'workflow' },
-      { id: 'professional', position: { x: 500, y: 380 }, data: { title: '专业调解', subtitle: '三级节点' }, type: 'workflow' },
+      { id: 'people', position: { x: 500, y: 140 }, data: { title: '人民调解', subtitle: '' }, type: 'workflow' },
+      { id: 'admin', position: { x: 500, y: 260 }, data: { title: '行政调解', subtitle: '' }, type: 'workflow' },
+      { id: 'professional', position: { x: 500, y: 380 }, data: { title: '专业调解', subtitle: '' }, type: 'workflow' },
 
-      { id: 'status', position: { x: 760, y: 260 }, data: { title: '调解状态', subtitle: '四级节点' }, type: 'workflow' },
-      { id: 'success', position: { x: 980, y: 180 }, data: { title: '调解成功', subtitle: '结果分支' }, type: 'workflow' },
-      { id: 'failed', position: { x: 980, y: 340 }, data: { title: '调解失败', subtitle: '结果分支' }, type: 'workflow' },
-      { id: 'archive', position: { x: 1180, y: 260 }, data: { title: '案件归档', subtitle: '五级节点' }, type: 'workflow' }
+      { id: 'status', position: { x: 760, y: 260 }, data: { title: '调解状态', subtitle: '' }, type: 'workflow' },
+      { id: 'success', position: { x: 980, y: 180 }, data: { title: '调解成功', subtitle: '' }, type: 'workflow' },
+      { id: 'failed', position: { x: 980, y: 340 }, data: { title: '调解失败', subtitle: '' }, type: 'workflow' },
+      { id: 'archive', position: { x: 1180, y: 260 }, data: { title: '案件归档', subtitle: '' }, type: 'workflow' }
     ];
 
     const baseEdges = [
@@ -146,21 +146,41 @@
       { id: 'e-failed-archive', source: 'failed', target: 'archive' }
     ];
 
-    function walkUpstream(targetId, parentMap, edgeSet, nodeSet) {
+    function getParentEdge(targetId, parentMap, preferMap) {
+      const incoming = parentMap[targetId] || [];
+      if (!incoming.length) {
+        return null;
+      }
+      const preferredSource = preferMap[targetId];
+      if (preferredSource) {
+        const matched = incoming.find((edge) => edge.source === preferredSource);
+        if (matched) {
+          return matched;
+        }
+      }
+      return incoming[0];
+    }
+
+    function walkUpstream(targetId, parentMap, preferMap, edgeSet, nodeSet) {
       nodeSet.add(targetId);
       if (targetId === 'accept') {
         return;
       }
-      const incoming = parentMap[targetId] || [];
-      incoming.forEach((edge) => {
-        edgeSet.add(edge.id);
-        walkUpstream(edge.source, parentMap, edgeSet, nodeSet);
-      });
+      const parentEdge = getParentEdge(targetId, parentMap, preferMap);
+      if (!parentEdge) {
+        return;
+      }
+      edgeSet.add(parentEdge.id);
+      walkUpstream(parentEdge.source, parentMap, preferMap, edgeSet, nodeSet);
     }
 
     function WorkflowApp() {
       const [activeNodeId, setActiveNodeId] = useState('accept');
       const [acceptTime, setAcceptTime] = useState('--');
+      const [preferredParents, setPreferredParents] = useState({
+        status: 'people',
+        archive: 'success'
+      });
 
       window.updateWorkflowAcceptTime = function (timeText) {
         setAcceptTime(timeText || '--');
@@ -180,9 +200,9 @@
       const pathState = useMemo(() => {
         const edgeSet = new Set();
         const nodeSet = new Set();
-        walkUpstream(activeNodeId, parentMap, edgeSet, nodeSet);
+        walkUpstream(activeNodeId, parentMap, preferredParents, edgeSet, nodeSet);
         return { edgeSet, nodeSet };
-      }, [activeNodeId, parentMap]);
+      }, [activeNodeId, parentMap, preferredParents]);
 
       const nodes = useMemo(() => {
         return baseNodes.map((node) => {
@@ -239,7 +259,16 @@
         panOnDrag: true,
         minZoom: 0.45,
         maxZoom: 1.8,
-        onNodeClick: (_, node) => setActiveNodeId(node.id)
+        onNodeClick: (_, node) => {
+          const nextId = node.id;
+          setActiveNodeId(nextId);
+          if (nextId === 'people' || nextId === 'admin' || nextId === 'professional') {
+            setPreferredParents((prev) => ({ ...prev, status: nextId }));
+          }
+          if (nextId === 'success' || nextId === 'failed') {
+            setPreferredParents((prev) => ({ ...prev, archive: nextId }));
+          }
+        }
       },
       h(Background, { gap: 18, size: 1, color: '#e5e7eb' }),
       h(Controls, { showInteractive: true }));

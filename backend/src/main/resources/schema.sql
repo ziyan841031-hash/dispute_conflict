@@ -76,3 +76,65 @@ COMMENT ON COLUMN case_classify_record.created_at IS '创建时间';
 
 CREATE INDEX IF NOT EXISTS idx_case_classify_record_case_id ON case_classify_record(case_id);
 CREATE INDEX IF NOT EXISTS idx_case_classify_record_workflow_run_id ON case_classify_record(workflow_run_id);
+
+CREATE TABLE IF NOT EXISTS disposal_org_dict (
+    id BIGSERIAL PRIMARY KEY,
+    org_name VARCHAR(128) NOT NULL,
+    org_phone VARCHAR(32) NOT NULL UNIQUE,
+    org_address VARCHAR(255) NOT NULL,
+    active_case_count INTEGER NOT NULL,
+    success_rate NUMERIC(5,2) NOT NULL,
+    duty_person VARCHAR(64) NOT NULL,
+    leader_name VARCHAR(64) NOT NULL,
+    duty_phone VARCHAR(32) NOT NULL,
+    mediation_category VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE disposal_org_dict IS '处置机构码表';
+COMMENT ON COLUMN disposal_org_dict.org_name IS '处置机构名称';
+COMMENT ON COLUMN disposal_org_dict.org_phone IS '处置机构电话';
+COMMENT ON COLUMN disposal_org_dict.org_address IS '处置机构地址';
+COMMENT ON COLUMN disposal_org_dict.active_case_count IS '当前处置中案件';
+COMMENT ON COLUMN disposal_org_dict.success_rate IS '处置成功率';
+COMMENT ON COLUMN disposal_org_dict.duty_person IS '当前值班人员';
+COMMENT ON COLUMN disposal_org_dict.leader_name IS '分管领导';
+COMMENT ON COLUMN disposal_org_dict.duty_phone IS '值班人联系电话';
+COMMENT ON COLUMN disposal_org_dict.mediation_category IS '调解归类';
+
+CREATE INDEX IF NOT EXISTS idx_disposal_org_dict_category ON disposal_org_dict(mediation_category);
+
+INSERT INTO disposal_org_dict (org_name, org_phone, org_address, active_case_count, success_rate, duty_person, leader_name, duty_phone, mediation_category) VALUES
+('人民法院','68000000','上海市黄浦区xx路xx号',185,37.06,'张三','李四','15800000000','专业调解'),
+('人民检察院','68000001','上海市黄浦区xx路xx号',170,37.64,'张三','李四','15800000000','专业调解'),
+('公安部门','68000002','上海市黄浦区xx路xx号',107,49.28,'张三','李四','15800000000','行政调解'),
+('民政部门','68000003','上海市黄浦区xx路xx号',62,40.20,'张三','李四','15800000000','行政调解'),
+('司法行政部门','68000004','上海市黄浦区xx路xx号',185,46.51,'张三','李四','15800000000','行政调解'),
+('人社部门','68000005','上海市黄浦区xx路xx号',185,30.20,'张三','李四','15800000000','行政调解'),
+('住建部门','68000006','上海市黄浦区xx路xx号',164,59.28,'张三','李四','15800000000','行政调解'),
+('卫健部门','68000007','上海市黄浦区xx路xx号',17,51.16,'张三','李四','15800000000','行政调解'),
+('总工会','68000008','上海市黄浦区xx路xx号',107,38.46,'张三','李四','15800000000','人民调解'),
+('妇联','68000009','上海市黄浦区xx路xx号',133,33.94,'张三','李四','15800000000','人民调解'),
+('信访部门','68000010','上海市黄浦区xx路xx号',130,41.33,'张三','李四','15800000000','行政调解'),
+('教育部门','68000011','上海市黄浦区xx路xx号',23,37.87,'张三','李四','15800000000','行政调解'),
+('市场监管部门','68000012','上海市黄浦区xx路xx号',134,31.59,'张三','李四','15800000000','行政调解'),
+('规划资源部门','68000013','上海市黄浦区xx路xx号',57,50.85,'张三','李四','15800000000','行政调解'),
+('生态环境部门','68000014','上海市黄浦区xx路xx号',37,50.61,'张三','李四','15800000000','行政调解'),
+('农业农村部门','68000015','上海市黄浦区xx路xx号',46,30.85,'张三','李四','15800000000','行政调解'),
+('退役军人部门','68000016','上海市黄浦区xx路xx号',137,48.73,'张三','李四','15800000000','行政调解'),
+('市场监管部门','68000017','上海市黄浦区xx路xx号',32,32.79,'张三','李四','15800000000','行政调解'),
+('法学会','68000018','上海市黄浦区xx路xx号',195,57.28,'张三','李四','15800000000','专业调解'),
+('人民调解委员会/行业专业调解委员会','68000019','上海市黄浦区xx路xx号',150,36.35,'张三','李四','15800000000','专业调解'),
+('律所','68000020','上海市黄浦区xx路xx号',197,52.00,'张三','李四','15800000000','专业调解'),
+('心理咨询公司','68000021','上海市黄浦区xx路xx号',121,30.74,'张三','李四','15800000000','专业调解')
+ON CONFLICT (org_phone) DO UPDATE SET
+    org_phone = EXCLUDED.org_phone,
+    org_address = EXCLUDED.org_address,
+    active_case_count = EXCLUDED.active_case_count,
+    success_rate = EXCLUDED.success_rate,
+    duty_person = EXCLUDED.duty_person,
+    leader_name = EXCLUDED.leader_name,
+    duty_phone = EXCLUDED.duty_phone,
+    mediation_category = EXCLUDED.mediation_category,
+    updated_at = CURRENT_TIMESTAMP;
