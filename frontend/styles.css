@@ -139,6 +139,25 @@ table { width: 100%; border-collapse: collapse; }
   background: #f8fafc;
 }
 .timeline-item { border-bottom: 1px solid #e2e8f0; padding: 8px 4px; font-size: 13px; }
+
+.guide-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  align-items: start;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 4px;
+  font-size: 13px;
+}
+.guide-key { color: #475569; font-weight: 600; }
+.guide-value { color: #1e293b; line-height: 1.5; word-break: break-word; }
+.guide-row-select select {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: #fff;
+}
 .guide-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
 .guide-input-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
 

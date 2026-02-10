@@ -37,10 +37,6 @@
 
         <div class="guide-panel" data-panel="guide">
           <div id="guideList" class="scroll-box"></div>
-          <div class="guide-input-row">
-            <input id="guideInput" placeholder="输入补充指引信息..." />
-            <button onclick="addGuideNote()">添加</button>
-          </div>
         </div>
 
         <div class="timeline-panel hidden" data-panel="timeline">
@@ -262,6 +258,9 @@
           if (nextId === 'success' || nextId === 'failed') {
             setPreferredParents((prev) => ({ ...prev, archive: nextId }));
           }
+          if (window.onWorkflowNodeChange) {
+            window.onWorkflowNodeChange(nextId);
+          }
         }
       },
       h(Background, { gap: 18, size: 1, color: '#e5e7eb' }),
@@ -270,6 +269,9 @@
 
     const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
     root.render(h(WorkflowApp));
+    if (window.onWorkflowNodeChange) {
+      window.onWorkflowNodeChange('accept');
+    }
   }
 
   setTimeout(() => {

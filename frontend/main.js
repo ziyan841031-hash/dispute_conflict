@@ -152,12 +152,26 @@ function openAssistant(caseId) {
 const assistantGuideNotes = [];
 let assistantDataCache = {};
 const caseListCache = {};
+let disposalOrgOptions = [];
+let currentWorkflowNodeId = 'accept';
+const selectedOrgByCategory = {};
+const THIRD_LEVEL_NODE_MAP = {
+  people: '人民调解',
+  admin: '行政调解',
+  professional: '专业调解'
+};
 
 // 加载智能助手页面。
 async function loadAssistantPage() {
   if (!document.getElementById('assistantTopInfo')) {
     return;
   }
+
+  window.onWorkflowNodeChange = function (nodeId) {
+    currentWorkflowNodeId = nodeId || 'accept';
+    renderGuide(assistantDataCache);
+  };
+
   const caseId = new URLSearchParams(window.location.search).get('caseId');
   if (!caseId) {
     document.getElementById('assistantTopInfo').innerHTML = '<p>缺少 caseId 参数。</p>';
@@ -174,16 +188,28 @@ async function loadAssistantPage() {
     } catch (e) {}
   }
 
-  let data = {};
+  let detailData = {};
+  let orgData = [];
+
   try {
-    const res = await fetch(`${API_BASE}/cases/assistant-detail?caseId=${caseId}`);
-    const json = await res.json();
-    data = (json && json.data) ? json.data : {};
+    const [detailRes, orgRes] = await Promise.all([
+      fetch(`${API_BASE}/cases/assistant-detail?caseId=${caseId}`),
+      fetch(`${API_BASE}/disposal-orgs`)
+    ]);
+
+    const detailJson = await detailRes.json();
+    detailData = (detailJson && detailJson.data) ? detailJson.data : {};
+
+    const orgJson = await orgRes.json();
+    orgData = (orgJson && orgJson.data) ? orgJson.data : [];
   } catch (error) {
-    data = {parseError: '智能助手数据加载失败，请检查后端服务。'};
+    detailData = {parseError: '智能助手数据加载失败，请检查后端服务。'};
+    orgData = [];
   }
 
-  assistantDataCache = data || {};
+  assistantDataCache = detailData || {};
+  disposalOrgOptions = orgData || [];
+
   renderAssistantTop(assistantDataCache);
   renderGuide(assistantDataCache);
   renderTimeline(assistantDataCache);
@@ -272,14 +298,80 @@ function switchAssistantTab(tabName) {
 // 渲染智能指引。
 function renderGuide(data) {
   const box = document.getElementById('guideList');
-  const guides = [
-    `风险等级：${data.riskLevel || '-'}`,
-    `建议优先路径：${data.modelSuggestedCategoryL1 || data.disputeType || '-'} / ${data.modelSuggestedCategoryL2 || data.disputeSubType || '-'}`,
-    '优先核对案件事实摘要与诉求，再选择化解/缓解/疏解策略。',
-    '调解分流优先顺序：人民调解 -> 行政调解 -> 专业调解。',
-    data.parseError ? `解析提示：${data.parseError}` : '解析状态：正常'
-  ].concat(assistantGuideNotes.map((item, idx) => `自定义指引${idx + 1}：${item}`));
-  box.innerHTML = guides.map(g => `<div class="timeline-item">${g}</div>`).join('');
+  if (!box) {
+    return;
+  }
+
+  const currentNode = currentWorkflowNodeId || 'accept';
+  const mediationCategory = THIRD_LEVEL_NODE_MAP[currentNode] || '';
+
+  if (!mediationCategory) {
+    const basics = [
+      ['当前节点', '已受理'],
+      ['案件编号', data.caseNo || '-'],
+      ['当事人', `${data.partyName || '-'}（对方：${data.counterpartyName || '-'}）`],
+      ['纠纷类型', `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`],
+      ['风险等级', data.riskLevel || '-'],
+      ['办理进度', data.handlingProgress || '-']
+    ];
+    box.innerHTML = basics.map(item => `
+      <div class="guide-row">
+        <span class="guide-key">${item[0]}</span>
+        <span class="guide-value">${item[1]}</span>
+      </div>
+    `).join('');
+    return;
+  }
+
+  const candidates = disposalOrgOptions.filter(item => item.mediationCategory === mediationCategory);
+  const preferredPhone = selectedOrgByCategory[mediationCategory];
+  const currentOrg = candidates.find(item => item.orgPhone === preferredPhone) || candidates[0] || null;
+
+  if (currentOrg) {
+    selectedOrgByCategory[mediationCategory] = currentOrg.orgPhone;
+  }
+
+  const optionsHtml = candidates.map(item => `
+    <option value="${item.orgPhone}" ${currentOrg && item.orgPhone === currentOrg.orgPhone ? 'selected' : ''}>${item.orgName || '-'}</option>
+  `).join('');
+
+  const detailRows = currentOrg ? [
+    ['机构电话', currentOrg.orgPhone],
+    ['机构地址', currentOrg.orgAddress],
+    ['处置中案件', currentOrg.activeCaseCount],
+    ['处置成功率', `${currentOrg.successRate}%`],
+    ['分管领导', currentOrg.leaderName],
+    ['值班人员', currentOrg.dutyPerson],
+    ['值班联系电话', currentOrg.dutyPhone]
+  ] : [];
+
+  box.innerHTML = `
+    <div class="guide-row">
+      <span class="guide-key">当前节点</span>
+      <span class="guide-value">${mediationCategory}</span>
+    </div>
+    <div class="guide-row guide-row-select">
+      <span class="guide-key">推荐部门</span>
+      <select id="guideOrgSelect" onchange="onGuideOrgChange(this.value)">
+        ${optionsHtml || '<option value="">暂无可选机构</option>'}
+      </select>
+    </div>
+    ${detailRows.map(item => `
+      <div class="guide-row">
+        <span class="guide-key">${item[0]}</span>
+        <span class="guide-value">${item[1] ?? '-'}</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+function onGuideOrgChange(orgPhone) {
+  const mediationCategory = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
+  if (!mediationCategory) {
+    return;
+  }
+  selectedOrgByCategory[mediationCategory] = orgPhone;
+  renderGuide(assistantDataCache);
 }
 
 // 添加智能指引补充内容。
