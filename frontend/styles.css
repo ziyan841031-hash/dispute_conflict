@@ -152,9 +152,14 @@ table { width: 100%; border-collapse: collapse; }
 .guide-value { color: #1e293b; line-height: 1.5; word-break: break-word; }
 
 .guide-current-node-line {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  width: 100%;
+}
+.guide-current-node-name {
+  flex: 1;
 }
 .guide-confirm-btn {
   padding: 2px 10px;

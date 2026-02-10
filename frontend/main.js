@@ -155,7 +155,6 @@ const caseListCache = {};
 let disposalOrgOptions = [];
 let currentWorkflowNodeId = 'accept';
 const selectedOrgByCategory = {};
-const confirmedNodeByCategory = {};
 let workflowAdviceRecord = null;
 let workflowAdviceLoading = false;
 const THIRD_LEVEL_NODE_MAP = {
@@ -163,6 +162,12 @@ const THIRD_LEVEL_NODE_MAP = {
   admin: '行政调解',
   professional: '专业调解'
 };
+
+function hasMediationStatusLocked() {
+  const status = (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || assistantDataCache.mediationStatus || '';
+  return Boolean(String(status).trim());
+}
+
 
 // 加载智能助手页面。
 async function loadAssistantPage() {
@@ -175,6 +180,10 @@ async function loadAssistantPage() {
 
     const mediationType = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
     if (mediationType) {
+      if (hasMediationStatusLocked()) {
+        renderGuide(assistantDataCache);
+        return;
+      }
       workflowAdviceLoading = true;
       showWorkflowWaitingModal();
       try {
@@ -234,6 +243,17 @@ async function loadAssistantPage() {
   workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
   workflowAdviceLoading = false;
 
+  if (!workflowAdviceRecord && assistantDataCache && assistantDataCache.caseId) {
+    workflowAdviceRecord = {
+      caseId: assistantDataCache.caseId,
+      flowLevel1: assistantDataCache.flowLevel1 || '',
+      flowLevel2: assistantDataCache.flowLevel2 || '',
+      flowLevel3: assistantDataCache.flowLevel3 || '',
+      recommendedDepartment: assistantDataCache.recommendedDepartment || '',
+      mediationStatus: assistantDataCache.mediationStatus || ''
+    };
+  }
+
   syncWorkflowSelectionFromAdvice(workflowAdviceRecord);
 
   renderAssistantTop(assistantDataCache);
@@ -273,7 +293,7 @@ async function triggerDisposalWorkflow(detailData, mediationType = "") {
   }
 }
 
-function mapFlowLevelToNodeId(level1, level2, level3) {
+function mapFlowLevelToNodeId(level1, level2, level3, mediationStatus) {
   const l1 = (level1 || '').trim();
   const l2 = (level2 || '').trim();
   const l3 = (level3 || '').trim();
@@ -282,6 +302,10 @@ function mapFlowLevelToNodeId(level1, level2, level3) {
   }
   if (l2 !== '调解') {
     return 'accept';
+  }
+  const statusText = (mediationStatus || '').trim();
+  if (statusText) {
+    return 'status';
   }
   if (l3 === '人民调解') {
     return 'people';
@@ -299,7 +323,7 @@ function syncWorkflowSelectionFromAdvice(record) {
   if (!record) {
     return;
   }
-  const nodeId = mapFlowLevelToNodeId(record.flowLevel1, record.flowLevel2, record.flowLevel3);
+  const nodeId = mapFlowLevelToNodeId(record.flowLevel1, record.flowLevel2, record.flowLevel3, record.mediationStatus);
   currentWorkflowNodeId = nodeId;
   window.initialWorkflowNodeId = nodeId;
   if (record.recommendedDepartment && record.flowLevel3) {
@@ -443,13 +467,16 @@ function renderGuide(data) {
 
   if (!mediationCategory) {
     const basics = [
-      ['当前节点', '已受理'],
+      ['当前节点', hasMediationStatusLocked() ? '调解状态' : '已受理'],
       ['案件编号', data.caseNo || '-'],
       ['当事人', `${data.partyName || '-'}（对方：${data.counterpartyName || '-'}）`],
       ['纠纷类型', `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`],
       ['风险等级', data.riskLevel || '-'],
       ['办理进度', data.handlingProgress || '-']
     ];
+    if (hasMediationStatusLocked()) {
+      basics.push(['调解状态', (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || data.mediationStatus || '-']);
+    }
     box.innerHTML = basics.map(item => `
       <div class="guide-row">
         <span class="guide-key">${item[0]}</span>
@@ -474,6 +501,9 @@ function renderGuide(data) {
     <option value="${item.orgName}" ${currentOrg && item.orgName === currentOrg.orgName ? 'selected' : ''}>${item.orgName || '-'}</option>
   `).join('');
 
+  const statusLocked = hasMediationStatusLocked();
+  const mediationStatusText = (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || assistantDataCache.mediationStatus || '';
+
   const detailRows = currentOrg ? [
     ['机构电话', currentOrg.orgPhone],
     ['机构地址', currentOrg.orgAddress],
@@ -484,31 +514,32 @@ function renderGuide(data) {
     ['值班联系电话', currentOrg.dutyPhone]
   ] : [];
 
-
   if (workflowAdviceRecord && mediationCategory === (workflowAdviceRecord.flowLevel3 || '')) {
     detailRows.push(['推荐原因', workflowAdviceRecord.recommendReason || '-']);
     detailRows.push(['备选建议', workflowAdviceRecord.backupSuggestion || '-']);
     detailRows.push(['判断依据', formatRuleHintsHit(workflowAdviceRecord.ruleHintsHit)]);
   }
 
-  const nodeConfirmed = Boolean(confirmedNodeByCategory[mediationCategory]);
+  if (mediationStatusText) {
+    detailRows.push(['调解状态', mediationStatusText]);
+  }
 
   box.innerHTML = `
     <div class="guide-row">
       <span class="guide-key">当前节点</span>
       <span class="guide-value guide-current-node-line">
-        <span>${mediationCategory}</span>
+        <span class="guide-current-node-name">${mediationCategory}</span>
         <button
           type="button"
           class="guide-confirm-btn"
           onclick="onGuideNodeConfirm()"
-          ${nodeConfirmed ? 'disabled' : ''}
-        >${nodeConfirmed ? '已确认' : '确认'}</button>
+          ${statusLocked ? 'disabled' : ''}
+        >确认</button>
       </span>
     </div>
     <div class="guide-row guide-row-select">
       <span class="guide-key">推荐部门</span>
-      <select id="guideOrgSelect" onchange="onGuideOrgChange(this.value)">
+      <select id="guideOrgSelect" onchange="onGuideOrgChange(this.value)" ${statusLocked ? 'disabled' : ''}>
         ${optionsHtml || '<option value="">暂无可选机构</option>'}
       </select>
     </div>
@@ -520,7 +551,6 @@ function renderGuide(data) {
     `).join('')}
   `;
 }
-
 
 function formatRuleHintsHit(ruleHintsHit) {
   if (Array.isArray(ruleHintsHit)) {
@@ -551,18 +581,45 @@ function formatRuleHintsHit(ruleHintsHit) {
   return rawText;
 }
 
-function onGuideNodeConfirm() {
+async function onGuideNodeConfirm() {
   const mediationCategory = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
-  if (!mediationCategory) {
+  if (!mediationCategory || hasMediationStatusLocked()) {
     return;
   }
-  confirmedNodeByCategory[mediationCategory] = true;
-  renderGuide(assistantDataCache);
+  const caseId = (assistantDataCache && assistantDataCache.caseId) || (workflowAdviceRecord && workflowAdviceRecord.caseId);
+  if (!caseId) {
+    return;
+  }
+
+  try {
+    showWorkflowWaitingModal();
+    const res = await fetch(`${API_BASE}/dify/workflow-confirm`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({caseId})
+    });
+    const json = await res.json();
+    const record = json && json.data ? json.data : null;
+    if (record) {
+      workflowAdviceRecord = record;
+      assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
+      currentWorkflowNodeId = 'status';
+      if (window.setWorkflowActiveNode) {
+        window.setWorkflowActiveNode('status');
+      }
+    }
+  } finally {
+    hideWorkflowWaitingModal();
+    renderGuide(assistantDataCache);
+  }
 }
 
 function onGuideOrgChange(orgName) {
   const mediationCategory = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
   if (!mediationCategory) {
+    return;
+  }
+  if (hasMediationStatusLocked()) {
     return;
   }
   selectedOrgByCategory[mediationCategory] = orgName;

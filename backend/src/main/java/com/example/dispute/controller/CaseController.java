@@ -6,8 +6,10 @@ import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseClassifyRecord;
+import com.example.dispute.entity.CaseDisposalWorkflowRecord;
 import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
+import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
 import org.slf4j.Logger;
@@ -46,19 +48,25 @@ public class CaseController {
     private final CaseRecordMapper caseRecordMapper;
     // 定义分类Mapper对象。
     private final CaseClassifyRecordMapper caseClassifyRecordMapper;
+    // 定义纠纷处置工作流Mapper对象。
+    private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * 构造函数。
      */
-    public CaseController(CaseRecordService caseRecordService, CaseRecordMapper caseRecordMapper, CaseClassifyRecordMapper caseClassifyRecordMapper) {
+    public CaseController(CaseRecordService caseRecordService, CaseRecordMapper caseRecordMapper,
+                          CaseClassifyRecordMapper caseClassifyRecordMapper,
+                          CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
         // 注入案件Mapper。
         this.caseRecordMapper = caseRecordMapper;
         // 注入分类Mapper。
         this.caseClassifyRecordMapper = caseClassifyRecordMapper;
+        // 注入工作流Mapper。
+        this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
     }
 
     /**
@@ -180,6 +188,10 @@ public class CaseController {
                 .eq(CaseClassifyRecord::getCaseId, caseId)
                 .orderByDesc(CaseClassifyRecord::getCreatedAt)
                 .last("limit 1"));
+        CaseDisposalWorkflowRecord workflowRecord = caseDisposalWorkflowRecordMapper.selectOne(new LambdaQueryWrapper<CaseDisposalWorkflowRecord>()
+                .eq(CaseDisposalWorkflowRecord::getCaseId, caseId)
+                .orderByDesc(CaseDisposalWorkflowRecord::getCreatedAt)
+                .last("limit 1"));
 
         // 组装响应结果。
         Map<String, Object> result = new HashMap<>();
@@ -194,6 +206,14 @@ public class CaseController {
         result.put("caseText", record.getCaseText());
         result.put("registerTime", record.getRegisterTime());
         result.put("updatedAt", record.getUpdatedAt());
+
+        if (workflowRecord != null) {
+            result.put("mediationStatus", workflowRecord.getMediationStatus());
+            result.put("flowLevel1", workflowRecord.getFlowLevel1());
+            result.put("flowLevel2", workflowRecord.getFlowLevel2());
+            result.put("flowLevel3", workflowRecord.getFlowLevel3());
+            result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
+        }
 
         if (classifyRecord != null) {
             result.put("factsSummary", classifyRecord.getFactsSummary());

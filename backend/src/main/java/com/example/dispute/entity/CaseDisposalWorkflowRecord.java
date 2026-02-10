@@ -54,6 +54,9 @@ public class CaseDisposalWorkflowRecord {
     @TableField("flow_level_3")
     private String flowLevel3;
 
+    @TableField("mediation_status")
+    private String mediationStatus;
+
     @TableField("raw_response")
     private String rawResponse;
 

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -58,6 +59,14 @@ public class DifyController {
     public ApiResponse<Object> runWorkflow(@RequestBody DifyInvokeRequest request) {
         // 打印请求日志。
         log.info("Dify workflow 请求: caseId={}, query={}", request.getCaseId(), request.getQuery());
+
+        CaseDisposalWorkflowRecord latestRecord = findLatestRecordByCaseId(request.getCaseId());
+        if (latestRecord != null && StringUtils.hasText(latestRecord.getMediationStatus())) {
+            log.info("Dify workflow 命中已存在调解状态，直接返回库中记录: caseId={}, mediationStatus={}",
+                    request.getCaseId(), latestRecord.getMediationStatus());
+            return ApiResponse.success(latestRecord);
+        }
+
         // 发起远程调用。
         Object data = difyClient.invoke("/chat-messages", request, disposalApiKey);
         // 落库流水并返回表记录。
@@ -65,6 +74,24 @@ public class DifyController {
         // 打印响应日志。
         log.info("Dify workflow 响应成功");
         // 返回统一成功响应。
+        return ApiResponse.success(record);
+    }
+
+    /**
+     * 确认调解状态为调解中。
+     */
+    @PostMapping("/workflow-confirm")
+    public ApiResponse<Object> confirmWorkflow(@RequestBody DifyInvokeRequest request) {
+        Long caseId = request.getCaseId();
+        if (caseId == null) {
+            throw new IllegalArgumentException("caseId不能为空");
+        }
+        CaseDisposalWorkflowRecord record = findLatestRecordByCaseId(caseId);
+        if (record == null) {
+            throw new IllegalArgumentException("未找到workflow记录: " + caseId);
+        }
+        record.setMediationStatus("调解中");
+        caseDisposalWorkflowRecordMapper.updateById(record);
         return ApiResponse.success(record);
     }
 
@@ -111,12 +138,7 @@ public class DifyController {
             Map<String, Object> flowMap = parseMap(answerMap.get("dispute_flow_nodes"));
             List<Object> ruleHints = parseList(answerMap.get("rule_hints_hit"));
 
-            CaseDisposalWorkflowRecord record = caseDisposalWorkflowRecordMapper.selectOne(
-                    new LambdaQueryWrapper<CaseDisposalWorkflowRecord>()
-                            .eq(CaseDisposalWorkflowRecord::getCaseId, caseId)
-                            .orderByDesc(CaseDisposalWorkflowRecord::getCreatedAt)
-                            .last("limit 1")
-            );
+            CaseDisposalWorkflowRecord record = findLatestRecordByCaseId(caseId);
 
             boolean exists = record != null;
             if (!exists) {
@@ -148,6 +170,18 @@ public class DifyController {
             log.warn("Dify workflow 流水落库失败: {}", ex.getMessage());
             return null;
         }
+    }
+
+    private CaseDisposalWorkflowRecord findLatestRecordByCaseId(Long caseId) {
+        if (caseId == null) {
+            return null;
+        }
+        return caseDisposalWorkflowRecordMapper.selectOne(
+                new LambdaQueryWrapper<CaseDisposalWorkflowRecord>()
+                        .eq(CaseDisposalWorkflowRecord::getCaseId, caseId)
+                        .orderByDesc(CaseDisposalWorkflowRecord::getCreatedAt)
+                        .last("limit 1")
+        );
     }
 
     /**
