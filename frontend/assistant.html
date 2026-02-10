@@ -83,7 +83,6 @@
     const RF = window.ReactFlow;
     const ReactFlowComp = RF.ReactFlow;
     const Background = RF.Background;
-    const Controls = RF.Controls;
     const Handle = RF.Handle;
     const Position = RF.Position;
 
@@ -263,8 +262,7 @@
           }
         }
       },
-      h(Background, { gap: 18, size: 1, color: '#e5e7eb' }),
-      h(Controls, { showInteractive: true }));
+      h(Background, { gap: 18, size: 1, color: '#e5e7eb' }));
     }
 
     const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
