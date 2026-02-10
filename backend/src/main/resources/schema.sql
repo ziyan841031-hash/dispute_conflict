@@ -138,3 +138,40 @@ ON CONFLICT (org_phone) DO UPDATE SET
     duty_phone = EXCLUDED.duty_phone,
     mediation_category = EXCLUDED.mediation_category,
     updated_at = CURRENT_TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
+    id BIGSERIAL PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    task_id VARCHAR(64),
+    message_id VARCHAR(64),
+    conversation_id VARCHAR(64),
+    recommended_department VARCHAR(100),
+    recommended_mediation_type VARCHAR(100),
+    recommend_reason TEXT,
+    backup_suggestion TEXT,
+    rule_hints_hit TEXT,
+    flow_level_1 VARCHAR(50),
+    flow_level_2 VARCHAR(50),
+    flow_level_3 VARCHAR(50),
+    raw_response TEXT,
+    created_at TIMESTAMP NOT NULL
+);
+
+COMMENT ON TABLE case_disposal_workflow_record IS '纠纷处置workflow流水表';
+COMMENT ON COLUMN case_disposal_workflow_record.case_id IS '案件ID';
+COMMENT ON COLUMN case_disposal_workflow_record.task_id IS 'Dify任务ID';
+COMMENT ON COLUMN case_disposal_workflow_record.message_id IS 'Dify消息ID';
+COMMENT ON COLUMN case_disposal_workflow_record.conversation_id IS 'Dify会话ID';
+COMMENT ON COLUMN case_disposal_workflow_record.recommended_department IS '推荐部门';
+COMMENT ON COLUMN case_disposal_workflow_record.recommended_mediation_type IS '推荐调解类型';
+COMMENT ON COLUMN case_disposal_workflow_record.recommend_reason IS '推荐原因';
+COMMENT ON COLUMN case_disposal_workflow_record.backup_suggestion IS '备选建议';
+COMMENT ON COLUMN case_disposal_workflow_record.rule_hints_hit IS '命中规则提示(JSON字符串)';
+COMMENT ON COLUMN case_disposal_workflow_record.flow_level_1 IS '纠纷流转一级节点';
+COMMENT ON COLUMN case_disposal_workflow_record.flow_level_2 IS '纠纷流转二级节点';
+COMMENT ON COLUMN case_disposal_workflow_record.flow_level_3 IS '纠纷流转三级节点';
+COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '原始响应报文(JSON字符串)';
+COMMENT ON COLUMN case_disposal_workflow_record.created_at IS '创建时间';
+
+CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_case_id ON case_disposal_workflow_record(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_created_at ON case_disposal_workflow_record(created_at DESC);

@@ -222,6 +222,7 @@ async function loadAssistantPage() {
 
 async function triggerDisposalWorkflow(detailData) {
   const payload = {
+    caseId: detailData.caseId || null,
     query: '1',
     variables: {
       dispute_text: detailData.factsSummary || '',

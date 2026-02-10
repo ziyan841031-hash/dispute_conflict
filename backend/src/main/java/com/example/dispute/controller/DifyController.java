@@ -3,6 +3,10 @@ package com.example.dispute.controller;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.DifyInvokeRequest;
+import com.example.dispute.entity.CaseDisposalWorkflowRecord;
+import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +14,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Dify预留控制器。
@@ -22,6 +31,10 @@ public class DifyController {
     private static final Logger log = LoggerFactory.getLogger(DifyController.class);
     // 定义Dify客户端。
     private final DifyClient difyClient;
+    // 定义流水记录Mapper。
+    private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
+    // 定义JSON工具。
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 纠纷处置工作流密钥。
     @Value("${dify.disposal-api-key:replace-with-disposal-key}")
@@ -30,9 +43,11 @@ public class DifyController {
     /**
      * 构造函数。
      */
-    public DifyController(DifyClient difyClient) {
+    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper) {
         // 注入Dify客户端。
         this.difyClient = difyClient;
+        // 注入流水Mapper。
+        this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
     }
 
     /**
@@ -41,9 +56,11 @@ public class DifyController {
     @PostMapping("/workflow-run") // 映射工作流接口。
     public ApiResponse<Object> runWorkflow(@RequestBody DifyInvokeRequest request) {
         // 打印请求日志。
-        log.info("Dify workflow 请求: query={}", request.getQuery());
+        log.info("Dify workflow 请求: caseId={}, query={}", request.getCaseId(), request.getQuery());
         // 发起远程调用。
         Object data = difyClient.invoke("/workflows/run", request, disposalApiKey);
+        // 落库流水。
+        saveWorkflowRecord(request.getCaseId(), data);
         // 打印响应日志。
         log.info("Dify workflow 响应成功");
         // 返回统一成功响应。
@@ -78,5 +95,98 @@ public class DifyController {
         log.info("Dify completion 响应成功");
         // 返回统一成功响应。
         return ApiResponse.success(data);
+    }
+
+    /**
+     * 保存纠纷处置工作流流水记录。
+     */
+    private void saveWorkflowRecord(Long caseId, Object responseObj) {
+        if (caseId == null || responseObj == null) {
+            return;
+        }
+        try {
+            Map<String, Object> response = objectMapper.convertValue(responseObj, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> answerMap = parseAnswerMap(response.get("answer"));
+            Map<String, Object> flowMap = parseMap(answerMap.get("dispute_flow_nodes"));
+            List<Object> ruleHints = parseList(answerMap.get("rule_hints_hit"));
+
+            CaseDisposalWorkflowRecord record = new CaseDisposalWorkflowRecord();
+            record.setCaseId(caseId);
+            record.setTaskId(toStringValue(response.get("task_id")));
+            record.setMessageId(toStringValue(firstNonNull(response.get("message_id"), response.get("id"))));
+            record.setConversationId(toStringValue(response.get("conversation_id")));
+            record.setRecommendedDepartment(toStringValue(answerMap.get("recommended_department")));
+            record.setRecommendedMediationType(toStringValue(answerMap.get("recommended_mediation_type")));
+            record.setRecommendReason(toStringValue(answerMap.get("recommend_reason")));
+            record.setBackupSuggestion(toStringValue(answerMap.get("backup_suggestion")));
+            record.setRuleHintsHit(ruleHints == null ? null : objectMapper.writeValueAsString(ruleHints));
+            record.setFlowLevel1(toStringValue(flowMap.get("level1")));
+            record.setFlowLevel2(toStringValue(flowMap.get("level2")));
+            record.setFlowLevel3(toStringValue(flowMap.get("level3")));
+            record.setRawResponse(objectMapper.writeValueAsString(responseObj));
+            record.setCreatedAt(LocalDateTime.now());
+            caseDisposalWorkflowRecordMapper.insert(record);
+        } catch (Exception ex) {
+            log.warn("Dify workflow 流水落库失败: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 解析answer为Map。
+     */
+    private Map<String, Object> parseAnswerMap(Object answerObj) {
+        if (answerObj == null) {
+            return Collections.emptyMap();
+        }
+        try {
+            if (answerObj instanceof String) {
+                return objectMapper.readValue((String) answerObj, new TypeReference<Map<String, Object>>() {});
+            }
+            return objectMapper.convertValue(answerObj, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception ex) {
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 解析对象为Map。
+     */
+    private Map<String, Object> parseMap(Object obj) {
+        if (obj == null) {
+            return Collections.emptyMap();
+        }
+        try {
+            return objectMapper.convertValue(obj, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception ex) {
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 解析对象为列表。
+     */
+    private List<Object> parseList(Object obj) {
+        if (obj == null) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.convertValue(obj, new TypeReference<List<Object>>() {});
+        } catch (Exception ex) {
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 获取首个非空值。
+     */
+    private Object firstNonNull(Object a, Object b) {
+        return a != null ? a : b;
+    }
+
+    /**
+     * 安全转字符串。
+     */
+    private String toStringValue(Object val) {
+        return val == null ? null : String.valueOf(val);
     }
 }
