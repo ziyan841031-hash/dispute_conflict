@@ -189,6 +189,7 @@
     function WorkflowApp() {
       const [activeNodeId, setActiveNodeId] = useState(window.initialWorkflowNodeId || 'accept');
       const [acceptTime, setAcceptTime] = useState('--');
+      const [mediationStatusText, setMediationStatusText] = useState('调解状态');
       const [preferredParents, setPreferredParents] = useState({
         status: 'people',
         archive: 'success'
@@ -196,6 +197,10 @@
 
       window.updateWorkflowAcceptTime = function (timeText) {
         setAcceptTime(timeText || '--');
+      };
+
+      window.updateWorkflowMediationStatus = function (statusText) {
+        setMediationStatusText(statusText || '调解状态');
       };
 
       window.setWorkflowActiveNode = function (nodeId) {
@@ -227,17 +232,18 @@
       const nodes = useMemo(() => {
         return baseNodes.map((node) => {
           const isAccept = node.id === 'accept';
+          const isStatus = node.id === 'status';
           const isInPath = pathState.nodeSet.has(node.id);
           return {
             ...node,
             data: {
               ...node.data,
-              subtitle: isAccept ? acceptTime : node.data.subtitle
+              subtitle: isAccept ? acceptTime : (isStatus ? mediationStatusText : node.data.subtitle)
             },
             selected: isInPath
           };
         });
-      }, [acceptTime, pathState.nodeSet]);
+      }, [acceptTime, mediationStatusText, pathState.nodeSet]);
 
       const edges = useMemo(() => {
         return baseEdges.map((edge) => {
@@ -277,13 +283,27 @@
         maxZoom: 1.8,
         onNodeClick: (_, node) => {
           const nextId = node.id;
-          setActiveNodeId(nextId);
-          if (nextId === 'people' || nextId === 'admin' || nextId === 'professional') {
+          if (window.canWorkflowNodeClick && !window.canWorkflowNodeClick(nextId)) {
+            return;
+          }
+
+          const lockMeta = window.workflowLockMeta || {};
+          const isThirdNode = nextId === 'people' || nextId === 'admin' || nextId === 'professional';
+          const keepStatusActive = Boolean(lockMeta.locked) && isThirdNode;
+
+          if (keepStatusActive) {
             setPreferredParents((prev) => ({ ...prev, status: nextId }));
+            setActiveNodeId('status');
+          } else {
+            setActiveNodeId(nextId);
+            if (isThirdNode) {
+              setPreferredParents((prev) => ({ ...prev, status: nextId }));
+            }
+            if (nextId === 'success' || nextId === 'failed') {
+              setPreferredParents((prev) => ({ ...prev, archive: nextId }));
+            }
           }
-          if (nextId === 'success' || nextId === 'failed') {
-            setPreferredParents((prev) => ({ ...prev, archive: nextId }));
-          }
+
           if (window.onWorkflowNodeChange) {
             window.onWorkflowNodeChange(nextId);
           }

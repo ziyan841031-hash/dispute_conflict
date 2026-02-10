@@ -163,8 +163,47 @@ const THIRD_LEVEL_NODE_MAP = {
   professional: '专业调解'
 };
 
+function mapMediationCategoryToNodeId(category) {
+  const value = (category || '').trim();
+  if (value === '人民调解') {
+    return 'people';
+  }
+  if (value === '行政调解') {
+    return 'admin';
+  }
+  if (value === '专业调解') {
+    return 'professional';
+  }
+  return '';
+}
+
+function getMediationStatusText() {
+  return (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || assistantDataCache.mediationStatus || '';
+}
+
+function syncWorkflowLockMeta() {
+  const locked = hasMediationStatusLocked();
+  const selectedThirdNodeId = mapMediationCategoryToNodeId((workflowAdviceRecord && workflowAdviceRecord.flowLevel3) || assistantDataCache.flowLevel3 || '');
+  window.workflowLockMeta = {locked, selectedThirdNodeId};
+  if (window.updateWorkflowMediationStatus) {
+    window.updateWorkflowMediationStatus(getMediationStatusText() || '调解状态');
+  }
+}
+
+window.canWorkflowNodeClick = function (nodeId) {
+  const meta = window.workflowLockMeta || {};
+  if (!meta.locked) {
+    return true;
+  }
+  const thirdNodes = ['people', 'admin', 'professional'];
+  if (thirdNodes.includes(nodeId)) {
+    return nodeId === meta.selectedThirdNodeId;
+  }
+  return true;
+};
+
 function hasMediationStatusLocked() {
-  const status = (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || assistantDataCache.mediationStatus || '';
+  const status = getMediationStatusText();
   return Boolean(String(status).trim());
 }
 
@@ -190,6 +229,7 @@ async function loadAssistantPage() {
         const nextAdvice = await triggerDisposalWorkflow(assistantDataCache, mediationType);
         if (nextAdvice) {
           workflowAdviceRecord = nextAdvice;
+          syncWorkflowLockMeta();
         }
       } finally {
         workflowAdviceLoading = false;
@@ -197,6 +237,7 @@ async function loadAssistantPage() {
       }
     }
 
+    syncWorkflowLockMeta();
     renderGuide(assistantDataCache);
   };
 
@@ -239,6 +280,7 @@ async function loadAssistantPage() {
   disposalOrgOptions = orgData || [];
 
   workflowAdviceLoading = true;
+  syncWorkflowLockMeta();
   renderGuide(assistantDataCache);
   workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
   workflowAdviceLoading = false;
@@ -255,6 +297,7 @@ async function loadAssistantPage() {
   }
 
   syncWorkflowSelectionFromAdvice(workflowAdviceRecord);
+  syncWorkflowLockMeta();
 
   renderAssistantTop(assistantDataCache);
   renderGuide(assistantDataCache);
@@ -329,6 +372,7 @@ function syncWorkflowSelectionFromAdvice(record) {
   if (record.recommendedDepartment && record.flowLevel3) {
     selectedOrgByCategory[record.flowLevel3] = record.recommendedDepartment;
   }
+  syncWorkflowLockMeta();
   if (window.setWorkflowActiveNode) {
     window.setWorkflowActiveNode(nodeId);
   } else if (window.onWorkflowNodeChange) {
@@ -475,7 +519,7 @@ function renderGuide(data) {
       ['办理进度', data.handlingProgress || '-']
     ];
     if (hasMediationStatusLocked()) {
-      basics.push(['调解状态', (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || data.mediationStatus || '-']);
+      basics.push(['调解状态', getMediationStatusText() || data.mediationStatus || '-']);
     }
     box.innerHTML = basics.map(item => `
       <div class="guide-row">
@@ -502,7 +546,7 @@ function renderGuide(data) {
   `).join('');
 
   const statusLocked = hasMediationStatusLocked();
-  const mediationStatusText = (workflowAdviceRecord && workflowAdviceRecord.mediationStatus) || assistantDataCache.mediationStatus || '';
+  const mediationStatusText = getMediationStatusText();
 
   const detailRows = currentOrg ? [
     ['机构电话', currentOrg.orgPhone],
@@ -534,7 +578,7 @@ function renderGuide(data) {
           class="guide-confirm-btn"
           onclick="onGuideNodeConfirm()"
           ${statusLocked ? 'disabled' : ''}
-        >确认</button>
+>${statusLocked ? '已确认' : '确认'}</button>
       </span>
     </div>
     <div class="guide-row guide-row-select">
@@ -603,13 +647,16 @@ async function onGuideNodeConfirm() {
     if (record) {
       workflowAdviceRecord = record;
       assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
+      workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
       currentWorkflowNodeId = 'status';
+      syncWorkflowLockMeta();
       if (window.setWorkflowActiveNode) {
         window.setWorkflowActiveNode('status');
       }
     }
   } finally {
     hideWorkflowWaitingModal();
+    syncWorkflowLockMeta();
     renderGuide(assistantDataCache);
   }
 }

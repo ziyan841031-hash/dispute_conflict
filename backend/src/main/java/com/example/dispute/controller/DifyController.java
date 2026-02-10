@@ -158,6 +158,7 @@ public class DifyController {
             record.setFlowLevel1(toStringValue(flowMap.get("level1")));
             record.setFlowLevel2(toStringValue(flowMap.get("level2")));
             record.setFlowLevel3(toStringValue(flowMap.get("level3")));
+            record.setMediationStatus(resolveMediationStatus(answerMap, flowMap));
             record.setRawResponse(objectMapper.writeValueAsString(responseObj));
 
             if (exists) {
@@ -170,6 +171,14 @@ public class DifyController {
             log.warn("Dify workflow 流水落库失败: {}", ex.getMessage());
             return null;
         }
+    }
+
+    private String resolveMediationStatus(Map<String, Object> answerMap, Map<String, Object> flowMap) {
+        String status = toStringValue(firstNonNull(answerMap.get("mediation_status"), answerMap.get("mediationStatus")));
+        if (StringUtils.hasText(status)) {
+            return status;
+        }
+        return toStringValue(firstNonNull(flowMap.get("level4"), flowMap.get("mediation_status")));
     }
 
     private CaseDisposalWorkflowRecord findLatestRecordByCaseId(Long caseId) {
