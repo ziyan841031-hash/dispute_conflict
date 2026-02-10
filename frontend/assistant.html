@@ -127,10 +127,10 @@
     ];
 
     const baseEdges = [
-      { id: 'e-accept-mediation', source: 'accept', target: 'mediation', label: '分流' },
-      { id: 'e-accept-huajie', source: 'accept', target: 'huajie', label: '分流' },
-      { id: 'e-accept-huanjie', source: 'accept', target: 'huanjie', label: '分流' },
-      { id: 'e-accept-shujie', source: 'accept', target: 'shujie', label: '分流' },
+      { id: 'e-accept-mediation', source: 'accept', target: 'mediation' },
+      { id: 'e-accept-huajie', source: 'accept', target: 'huajie' },
+      { id: 'e-accept-huanjie', source: 'accept', target: 'huanjie' },
+      { id: 'e-accept-shujie', source: 'accept', target: 'shujie' },
 
       { id: 'e-mediation-people', source: 'mediation', target: 'people' },
       { id: 'e-mediation-admin', source: 'mediation', target: 'admin' },
@@ -229,6 +229,8 @@
             type: 'smoothstep',
             pathOptions: { borderRadius: 16 },
             animated: false,
+            className: active ? 'rf-edge-active' : 'rf-edge-default',
+            zIndex: active ? 1000 : 1,
             style: {
               stroke: active ? '#22c55e' : '#d4d4d8',
               strokeWidth: active ? 3 : 2

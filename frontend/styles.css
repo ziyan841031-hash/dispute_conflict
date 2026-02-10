@@ -101,6 +101,9 @@ table { width: 100%; border-collapse: collapse; }
 .workflow-canvas .react-flow__attribution { display: none; }
 .workflow-canvas .react-flow__background path { stroke: #e5e7eb; }
 .workflow-canvas .react-flow__edge-path { transition: stroke .2s ease, stroke-width .2s ease; }
+
+.workflow-canvas .react-flow__edge.rf-edge-active { z-index: 1000; }
+.workflow-canvas .react-flow__edge.rf-edge-active .react-flow__edge-path { stroke-linecap: round; }
 .rf-node-label { line-height: 1.15; }
 
 .side-card { min-height: 560px; display: flex; flex-direction: column; gap: 10px; }
