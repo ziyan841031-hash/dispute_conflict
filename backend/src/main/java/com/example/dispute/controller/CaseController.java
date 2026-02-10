@@ -21,8 +21,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import javax.validation.Valid;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,6 +46,8 @@ public class CaseController {
     private final CaseRecordMapper caseRecordMapper;
     // 定义分类Mapper对象。
     private final CaseClassifyRecordMapper caseClassifyRecordMapper;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * 构造函数。
@@ -190,12 +197,58 @@ public class CaseController {
 
         if (classifyRecord != null) {
             result.put("factsSummary", classifyRecord.getFactsSummary());
+            result.put("judgementBasis", classifyRecord.getJudgementBasis());
+            result.put("judgementBasisText", buildJudgementBasisText(classifyRecord.getJudgementBasis()));
+            result.put("emotionAssessment", classifyRecord.getEmotionAssessment());
+            result.put("emotionAssessmentText", buildEmotionAssessmentText(classifyRecord.getEmotionAssessment()));
             result.put("modelSuggestedCategoryL1", classifyRecord.getModelSuggestedCategoryL1());
             result.put("modelSuggestedCategoryL2", classifyRecord.getModelSuggestedCategoryL2());
             result.put("parseError", classifyRecord.getParseError());
             result.put("classifyCreatedAt", classifyRecord.getCreatedAt());
         }
         return ApiResponse.success(result);
+    }
+
+
+    private String buildJudgementBasisText(String judgementBasis) {
+        if (judgementBasis == null || judgementBasis.trim().isEmpty()) {
+            return "";
+        }
+        try {
+            List<String> items = OBJECT_MAPPER.readValue(judgementBasis, new TypeReference<List<String>>() {});
+            if (items == null || items.isEmpty()) {
+                return judgementBasis;
+            }
+            return String.join("，", items);
+        } catch (Exception ex) {
+            log.warn("解析 judgement_basis 失败，返回原值: {}", ex.getMessage());
+            return judgementBasis;
+        }
+    }
+
+    private String buildEmotionAssessmentText(String emotionAssessment) {
+        if (emotionAssessment == null || emotionAssessment.trim().isEmpty()) {
+            return "";
+        }
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(emotionAssessment);
+            JsonNode overall = root.path("overall");
+            String label = overall.path("label").asText("");
+            String evidence = overall.path("evidence").asText("");
+            if (label.isEmpty() && evidence.isEmpty()) {
+                return emotionAssessment;
+            }
+            if (evidence.isEmpty()) {
+                return label;
+            }
+            if (label.isEmpty()) {
+                return evidence;
+            }
+            return label + "：" + evidence;
+        } catch (Exception ex) {
+            log.warn("解析 emotion_assessment 失败，返回原值: {}", ex.getMessage());
+            return emotionAssessment;
+        }
     }
 
 }

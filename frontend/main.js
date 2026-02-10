@@ -140,7 +140,7 @@ async function loadCases() {
 
 // 打开智能助手页面。
 function openAssistant(caseId) {
-  window.open(`assistant.html?caseId=${caseId}`, '_blank');
+  window.location.href = `assistant.html?caseId=${caseId}`;
 }
 
 // 智能指引补充记录。
@@ -199,10 +199,11 @@ function renderAssistantTop(data) {
   const top = document.getElementById('assistantTopInfo');
   const party = data.partyName || '-';
   const counterparty = data.counterpartyName || '-';
-  const summary = data.factsSummary || data.caseText || '-';
+  const summary = data.judgementBasisText || data.factsSummary || data.caseText || '-';
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
   const riskCode = normalizeRiskLevel(data.riskLevel);
   const riskDesc = riskCode ? `${riskCode}：${RISK_LEVEL_DESC[riskCode]}` : (data.riskLevel || '-');
+  const emotionText = data.emotionAssessmentText || '-';
   top.innerHTML = `
     <div class="assistant-info-row assistant-info-title">
       <strong>案件信息</strong>
@@ -213,6 +214,7 @@ function renderAssistantTop(data) {
       <div><strong>纠纷类型：</strong>${dispute}</div>
       <div><strong>风险等级：</strong>${riskDesc}</div>
     </div>
+    <div class="assistant-info-row"><strong>当事人情绪分析：</strong>${emotionText}</div>
     <div class="assistant-info-row assistant-info-summary">
       <div class="assistant-summary-text"><strong>案件智能摘要：</strong>${summary}</div>
       <button id="caseDetailBtn" type="button">案件详情</button>

@@ -1,6 +1,6 @@
 body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fa; }
 .layout { display: flex; min-height: 100vh; }
-.sidebar { width: 240px; background: #1f2a44; color: #fff; padding: 20px; }
+.sidebar { width: 240px; background: #1f2a44; color: #fff; padding: 20px; flex-shrink: 0; }
 .sidebar h1 { font-size: 18px; margin-bottom: 20px; }
 .sidebar a { display: block; color: #cfd8ea; padding: 10px; text-decoration: none; border-radius: 6px; }
 .sidebar a.active, .sidebar a:hover { background: #31466f; color: #fff; }
@@ -13,9 +13,10 @@ button:hover { background: #1b49ce; }
 pre { white-space: pre-wrap; word-wrap: break-word; }
 .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .table-wrap { width: 100%; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
-table { width: 100%; border-collapse: collapse; min-width: 1360px; }
-th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: middle; white-space: nowrap; }
-th { background: #f8fafc; font-weight: 600; color: #334155; }
+table { width: 100%; border-collapse: collapse; }
+.cases-table { min-width: 1360px; }
+.cases-table th, .cases-table td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: middle; white-space: nowrap; }
+.cases-table th { background: #f8fafc; font-weight: 600; color: #334155; }
 
 .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); display: flex; align-items: center; justify-content: center; z-index: 999; }
 .modal.hidden { display: none; }
