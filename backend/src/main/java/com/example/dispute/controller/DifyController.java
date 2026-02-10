@@ -1,5 +1,6 @@
 package com.example.dispute.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.DifyInvokeRequest;
@@ -58,7 +59,7 @@ public class DifyController {
         // 打印请求日志。
         log.info("Dify workflow 请求: caseId={}, query={}", request.getCaseId(), request.getQuery());
         // 发起远程调用。
-        Object data = difyClient.invoke("/workflows/run", request, disposalApiKey);
+        Object data = difyClient.invoke("/chat-messages", request, disposalApiKey);
         // 落库流水。
         saveWorkflowRecord(request.getCaseId(), data);
         // 打印响应日志。
@@ -110,8 +111,20 @@ public class DifyController {
             Map<String, Object> flowMap = parseMap(answerMap.get("dispute_flow_nodes"));
             List<Object> ruleHints = parseList(answerMap.get("rule_hints_hit"));
 
-            CaseDisposalWorkflowRecord record = new CaseDisposalWorkflowRecord();
-            record.setCaseId(caseId);
+            CaseDisposalWorkflowRecord record = caseDisposalWorkflowRecordMapper.selectOne(
+                    new LambdaQueryWrapper<CaseDisposalWorkflowRecord>()
+                            .eq(CaseDisposalWorkflowRecord::getCaseId, caseId)
+                            .orderByDesc(CaseDisposalWorkflowRecord::getCreatedAt)
+                            .last("limit 1")
+            );
+
+            boolean exists = record != null;
+            if (!exists) {
+                record = new CaseDisposalWorkflowRecord();
+                record.setCaseId(caseId);
+                record.setCreatedAt(LocalDateTime.now());
+            }
+
             record.setTaskId(toStringValue(response.get("task_id")));
             record.setMessageId(toStringValue(firstNonNull(response.get("message_id"), response.get("id"))));
             record.setConversationId(toStringValue(response.get("conversation_id")));
@@ -124,8 +137,12 @@ public class DifyController {
             record.setFlowLevel2(toStringValue(flowMap.get("level2")));
             record.setFlowLevel3(toStringValue(flowMap.get("level3")));
             record.setRawResponse(objectMapper.writeValueAsString(responseObj));
-            record.setCreatedAt(LocalDateTime.now());
-            caseDisposalWorkflowRecordMapper.insert(record);
+
+            if (exists) {
+                caseDisposalWorkflowRecordMapper.updateById(record);
+            } else {
+                caseDisposalWorkflowRecordMapper.insert(record);
+            }
         } catch (Exception ex) {
             log.warn("Dify workflow 流水落库失败: {}", ex.getMessage());
         }
