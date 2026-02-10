@@ -191,7 +191,7 @@
       const [acceptTime, setAcceptTime] = useState('--');
       const [mediationStatusText, setMediationStatusText] = useState('');
       const [preferredParents, setPreferredParents] = useState({
-        status: 'people',
+        status: window.initialWorkflowPreferredStatusParent || 'people',
         archive: 'success'
       });
 

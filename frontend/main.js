@@ -299,6 +299,10 @@ async function loadAssistantPage() {
     };
   }
 
+  if (!window.initialWorkflowPreferredStatusParent && assistantDataCache && assistantDataCache.flowLevel3) {
+    window.initialWorkflowPreferredStatusParent = mapMediationCategoryToNodeId(assistantDataCache.flowLevel3);
+  }
+
   syncWorkflowSelectionFromAdvice(workflowAdviceRecord);
   syncWorkflowLockMeta();
 
@@ -370,9 +374,13 @@ function syncWorkflowSelectionFromAdvice(record) {
     return;
   }
   const nodeId = mapFlowLevelToNodeId(record.flowLevel1, record.flowLevel2, record.flowLevel3, record.mediationStatus);
+  const hasFullFlowLevel = Boolean((record.flowLevel1 || '').trim() && (record.flowLevel2 || '').trim() && (record.flowLevel3 || '').trim());
   const thirdNodeId = mapMediationCategoryToNodeId(record.flowLevel3 || '');
   currentWorkflowNodeId = nodeId;
   window.initialWorkflowNodeId = nodeId;
+  if (hasFullFlowLevel && thirdNodeId) {
+    window.initialWorkflowPreferredStatusParent = thirdNodeId;
+  }
   if (record.recommendedDepartment && record.flowLevel3) {
     selectedOrgByCategory[record.flowLevel3] = record.recommendedDepartment;
   }
