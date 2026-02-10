@@ -89,7 +89,6 @@
     const ReactFlowComp = RF.ReactFlow;
     const Background = RF.Background;
     const Controls = RF.Controls;
-    const MarkerType = RF.MarkerType;
     const Handle = RF.Handle;
     const Position = RF.Position;
 
@@ -229,15 +228,9 @@
             type: 'smoothstep',
             pathOptions: { borderRadius: 16 },
             animated: false,
-            className: active ? 'rf-edge-active' : 'rf-edge-default',
-            zIndex: active ? 1000 : 1,
             style: {
               stroke: active ? '#22c55e' : '#d4d4d8',
               strokeWidth: active ? 3 : 2
-            },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: active ? '#22c55e' : '#d4d4d8'
             },
             labelBgStyle: { fill: '#ffffff', color: '#52525b', fillOpacity: 1 },
             labelBgPadding: [8, 3],
