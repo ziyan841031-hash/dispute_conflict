@@ -218,8 +218,12 @@ function renderAssistantTop(data) {
   const summary = data.judgementBasisText || data.factsSummary || data.caseText || '-';
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
   const riskCode = normalizeRiskLevel(data.riskLevel);
-  const riskDesc = riskCode ? `${riskCode}：${RISK_LEVEL_DESC[riskCode]}` : (data.riskLevel || '-');
-  const emotionText = data.emotionAssessmentText || '-';
+  const riskDesc = riskCode ? `${riskCode}(${RISK_LEVEL_DESC[riskCode]})` : (data.riskLevel || '-');
+  const riskClass = riskCode ? `risk-${riskCode.toLowerCase()}` : '';
+  const emotionTextRaw = data.emotionAssessmentText || '-';
+  const emotionText = emotionTextRaw.includes('：')
+    ? `${emotionTextRaw.split('：')[0]}(${emotionTextRaw.split('：').slice(1).join('：')})`
+    : emotionTextRaw;
   top.innerHTML = `
     <div class="assistant-info-row assistant-info-title">
       <strong>案件信息</strong>
@@ -228,7 +232,7 @@ function renderAssistantTop(data) {
     <div class="assistant-info-row assistant-info-meta">
       <div><strong>当事人信息：</strong>${party}（对方：${counterparty}）</div>
       <div><strong>纠纷类型：</strong>${dispute}</div>
-      <div><strong>风险等级：</strong>${riskDesc}</div>
+      <div><strong>风险等级：</strong><span class="risk-level ${riskClass}">${riskDesc}</span></div>
     </div>
     <div class="assistant-info-row"><strong>当事人情绪分析：</strong>${emotionText}</div>
     <div class="assistant-info-row assistant-info-summary">

@@ -1,10 +1,10 @@
 body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fa; }
-.layout { display: flex; min-height: 100vh; }
+.layout { display: flex; min-height: 100vh; overflow-x: hidden; }
 .sidebar { width: 240px; background: #1f2a44; color: #fff; padding: 20px; flex-shrink: 0; }
 .sidebar h1 { font-size: 18px; margin-bottom: 20px; }
 .sidebar a { display: block; color: #cfd8ea; padding: 10px; text-decoration: none; border-radius: 6px; }
 .sidebar a.active, .sidebar a:hover { background: #31466f; color: #fff; }
-.content { flex: 1; padding: 24px; }
+.content { flex: 1; min-width: 0; padding: 24px; overflow-x: hidden; }
 .card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
 textarea { width: 100%; min-height: 120px; margin-bottom: 10px; }
 button { background: #265dff; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
@@ -76,6 +76,10 @@ table { width: 100%; border-collapse: collapse; }
 .assistant-info-meta { display: grid; grid-template-columns: 1.2fr 1fr 2fr; gap: 10px; font-size: 13px; }
 .assistant-info-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .assistant-summary-text { flex: 1; line-height: 1.5; }
+
+.risk-level.risk-r0, .risk-level.risk-r1 { color: #16a34a; font-weight: 600; }
+.risk-level.risk-r2, .risk-level.risk-r3 { color: #ea580c; font-weight: 600; }
+.risk-level.risk-r4 { color: #dc2626; font-weight: 600; }
 .assistant-main-grid { display: grid; grid-template-columns: 7fr 3fr; gap: 12px; align-items: stretch; }
 
 .flow-card { min-height: 560px; }
