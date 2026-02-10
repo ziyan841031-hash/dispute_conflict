@@ -168,8 +168,17 @@ async function loadAssistantPage() {
     return;
   }
 
-  window.onWorkflowNodeChange = function (nodeId) {
+  window.onWorkflowNodeChange = async function (nodeId) {
     currentWorkflowNodeId = nodeId || 'accept';
+
+    const mediationType = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
+    if (mediationType) {
+      const nextAdvice = await triggerDisposalWorkflow(assistantDataCache, mediationType);
+      if (nextAdvice) {
+        workflowAdviceRecord = nextAdvice;
+      }
+    }
+
     renderGuide(assistantDataCache);
   };
 
@@ -223,16 +232,20 @@ async function loadAssistantPage() {
 }
 
 
-async function triggerDisposalWorkflow(detailData) {
+async function triggerDisposalWorkflow(detailData, mediationType = "") {
   const payload = {
     caseId: detailData.caseId || null,
     query: '1',
     variables: {
       dispute_text: detailData.factsSummary || '',
-      category_level_1: detailData.modelSuggestedCategoryL1 || '',
-      category_level_2: detailData.modelSuggestedCategoryL2 || ''
+      category_level_1: detailData.disputeType || '',
+      category_level_2: detailData.disputeSubType || ''
     }
   };
+
+  if (mediationType) {
+    payload.variables.mediation_type = mediationType;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/dify/workflow-run`, {
