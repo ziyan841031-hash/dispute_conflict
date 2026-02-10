@@ -98,15 +98,9 @@ public class DifyController {
         record.setMediationStatus("调解中");
         caseDisposalWorkflowRecordMapper.updateById(record);
 
-        Map<String, Object> variables = request.getVariables() == null ? new HashMap<>() : new HashMap<>(request.getVariables());
-        DifyInvokeRequest mediatorRequest = new DifyInvokeRequest();
-        mediatorRequest.setCaseId(caseId);
-        mediatorRequest.setQuery(StringUtils.hasText(request.getQuery()) ? request.getQuery() : "纠纷调解员建议");
-        mediatorRequest.setVariables(variables);
-
         Object mediatorAdvice = null;
         try {
-            mediatorAdvice = difyClient.invoke("/chat-messages", mediatorRequest, mediatorSuggestionApiKey);
+            mediatorAdvice = difyClient.invoke("/workflows/run", request, mediatorSuggestionApiKey);
         } catch (Exception ex) {
             log.warn("纠纷调解员建议调用失败: {}", ex.getMessage());
         }
