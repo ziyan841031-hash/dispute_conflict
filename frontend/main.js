@@ -163,6 +163,8 @@ let currentWorkflowNodeId = 'accept';
 const selectedOrgByCategory = {};
 let workflowAdviceRecord = null;
 let workflowAdviceLoading = false;
+let assistantInitialWorkflowDone = false;
+let assistantCanvasReady = false;
 const THIRD_LEVEL_NODE_MAP = {
   people: '人民调解',
   admin: '行政调解',
@@ -222,6 +224,12 @@ async function loadAssistantPage() {
   if (!document.getElementById('assistantTopInfo')) {
     return;
   }
+
+  resetAssistantInitialWaitingState();
+  window.onAssistantCanvasReady = function () {
+    assistantCanvasReady = true;
+    tryHideAssistantInitialWaiting();
+  };
 
   window.onWorkflowNodeChange = async function (nodeId) {
     currentWorkflowNodeId = nodeId || 'accept';
@@ -296,7 +304,8 @@ async function loadAssistantPage() {
     workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
   } finally {
     workflowAdviceLoading = false;
-    hideWorkflowWaitingModal();
+    assistantInitialWorkflowDone = true;
+    tryHideAssistantInitialWaiting();
   }
 
   if (!workflowAdviceRecord && assistantDataCache && assistantDataCache.caseId) {
@@ -513,6 +522,18 @@ function hideWorkflowWaitingModal() {
   if (modal) {
     modal.classList.add('hidden');
   }
+}
+
+
+function tryHideAssistantInitialWaiting() {
+  if (assistantInitialWorkflowDone && assistantCanvasReady) {
+    hideWorkflowWaitingModal();
+  }
+}
+
+function resetAssistantInitialWaitingState() {
+  assistantInitialWorkflowDone = false;
+  assistantCanvasReady = false;
 }
 
 // 切换智能助手右侧书签页签。

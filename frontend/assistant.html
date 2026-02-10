@@ -323,6 +323,11 @@
 
     const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
     root.render(h(WorkflowApp));
+    requestAnimationFrame(() => {
+      if (window.onAssistantCanvasReady) {
+        window.onAssistantCanvasReady();
+      }
+    });
     if (window.onWorkflowNodeChange) {
       window.onWorkflowNodeChange(window.initialWorkflowNodeId || 'accept');
     }
