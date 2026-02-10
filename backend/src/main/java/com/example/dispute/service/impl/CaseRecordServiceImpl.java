@@ -1,5 +1,8 @@
 package com.example.dispute.service.impl;
 
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,10 +24,12 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -35,6 +40,21 @@ import java.util.UUID;
  */
 @Service // 声明为服务组件。
 public class CaseRecordServiceImpl implements CaseRecordService {
+
+    @Value("${oss.endpoint:}")
+    private String ossEndpoint;
+
+    @Value("${oss.bucket-name:}")
+    private String ossBucketName;
+
+    @Value("${oss.access-key-id:}")
+    private String ossAccessKeyId;
+
+    @Value("${oss.access-key-secret:}")
+    private String ossAccessKeySecret;
+
+    @Value("${oss.url-prefix:}")
+    private String ossUrlPrefix;
 
     // 定义日志对象。
     private static final Logger log = LoggerFactory.getLogger(CaseRecordServiceImpl.class);
@@ -114,13 +134,15 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     public CaseRecord ingestAudio(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-音频入库开始: fileName={}", file.getOriginalFilename());
+        // 上传音频到OSS并获取URL。
+        String audioUrl = uploadAudioToOss(file);
         // 构建占位转写文本。
-        String parsedText = "[音频转写占位] 文件 " + file.getOriginalFilename() + " 已上传，待接入ASR模型后自动转写";
-        // 保存案件数据。
-        CaseRecord record = saveCase("AUDIO", parsedText, file.getOriginalFilename(), 0,
+        String parsedText = "[音频转写占位] 文件已上传至OSS：" + audioUrl + "，待接入ASR模型后自动转写";
+        // 保存案件数据（source_file_name 记录OSS地址）。
+        CaseRecord record = saveCase("AUDIO", parsedText, audioUrl, 0,
                 null, null, "未分类", null, "中", "已受理", "系统导入");
         // 打印服务日志。
-        log.info("服务层-音频入库完成: caseNo={}", record.getCaseNo());
+        log.info("服务层-音频入库完成: caseNo={}, audioUrl={}", record.getCaseNo(), audioUrl);
         // 返回结果对象。
         return record;
     }
@@ -351,6 +373,38 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         caseRecordMapper.insert(record);
         // 返回实体对象。
         return record;
+    }
+
+    /**
+     * 上传音频文件至OSS并返回访问URL。
+     */
+    private String uploadAudioToOss(MultipartFile file) {
+        if (!StringUtils.hasText(ossEndpoint) || !StringUtils.hasText(ossBucketName)
+                || !StringUtils.hasText(ossAccessKeyId) || !StringUtils.hasText(ossAccessKeySecret)) {
+            throw new IllegalStateException("OSS配置不完整，无法上传音频文件");
+        }
+        String originalName = defaultVal(file.getOriginalFilename(), "audio.dat");
+        String objectKey = "audio/" + UUID.randomUUID().toString().replace("-", "") + "-" + originalName;
+
+        OSS ossClient = null;
+        try (InputStream inputStream = file.getInputStream()) {
+            ossClient = new OSSClientBuilder().build(ossEndpoint, ossAccessKeyId, ossAccessKeySecret);
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength(file.getSize());
+            metadata.setContentType(defaultVal(file.getContentType(), "application/octet-stream"));
+            ossClient.putObject(ossBucketName, objectKey, inputStream, metadata);
+
+            if (StringUtils.hasText(ossUrlPrefix)) {
+                return ossUrlPrefix.replaceAll("/$", "") + "/" + objectKey;
+            }
+            return "https://" + ossBucketName + "." + ossEndpoint.replaceFirst("^https?://", "") + "/" + objectKey;
+        } catch (Exception ex) {
+            throw new IllegalStateException("音频上传OSS失败: " + ex.getMessage(), ex);
+        } finally {
+            if (ossClient != null) {
+                ossClient.shutdown();
+            }
+        }
     }
 
     /**
