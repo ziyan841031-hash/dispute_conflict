@@ -323,3 +323,15 @@ table { width: 100%; border-collapse: collapse; }
 .guide-advice-html li {
   margin-bottom: 6px;
 }
+
+.guide-advice-only {
+  overflow-y: auto;
+}
+.guide-advice-only .guide-advice-block {
+  margin-top: 0;
+}
+.guide-advice-html {
+  max-height: 56vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}

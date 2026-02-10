@@ -547,9 +547,16 @@ function renderGuide(data) {
 
   const currentNode = currentWorkflowNodeId || 'accept';
   const mediationCategory = THIRD_LEVEL_NODE_MAP[currentNode] || '';
+  const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
+
+  if (currentNode === 'status' && getMediationStatusText() === '调解中') {
+    box.classList.add('guide-advice-only');
+    box.innerHTML = buildMediationAdviceBlock(mediationAdviceHtml || '<p>暂无调解建议</p>');
+    return;
+  }
+  box.classList.remove('guide-advice-only');
 
   if (!mediationCategory) {
-    const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
     const basics = [
       ['当前节点', hasMediationStatusLocked() ? '调解状态' : '已受理'],
       ['案件编号', data.caseNo || '-'],
@@ -587,7 +594,6 @@ function renderGuide(data) {
 
   const statusLocked = hasMediationStatusLocked();
   const mediationStatusText = getMediationStatusText();
-  const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
 
   const detailRows = currentOrg ? [
     ['机构电话', currentOrg.orgPhone],
