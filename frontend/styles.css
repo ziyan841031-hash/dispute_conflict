@@ -206,3 +206,32 @@ table { width: 100%; border-collapse: collapse; }
   .side-card { min-height: 420px; }
   .workflow-canvas { height: 380px; }
 }
+
+
+.case-material-modal-content {
+  width: min(760px, 88vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.case-material-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.case-material-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+.case-material-content {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  overflow-y: auto;
+  min-height: 200px;
+}

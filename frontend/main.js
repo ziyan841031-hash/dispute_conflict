@@ -156,6 +156,7 @@ let disposalOrgOptions = [];
 let currentWorkflowNodeId = 'accept';
 const selectedOrgByCategory = {};
 let workflowAdviceRecord = null;
+let workflowAdviceLoading = false;
 const THIRD_LEVEL_NODE_MAP = {
   people: '人民调解',
   admin: '行政调解',
@@ -173,10 +174,13 @@ async function loadAssistantPage() {
 
     const mediationType = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
     if (mediationType) {
+      workflowAdviceLoading = true;
+      renderGuide(assistantDataCache);
       const nextAdvice = await triggerDisposalWorkflow(assistantDataCache, mediationType);
       if (nextAdvice) {
         workflowAdviceRecord = nextAdvice;
       }
+      workflowAdviceLoading = false;
     }
 
     renderGuide(assistantDataCache);
@@ -220,7 +224,10 @@ async function loadAssistantPage() {
   assistantDataCache = detailData || {};
   disposalOrgOptions = orgData || [];
 
+  workflowAdviceLoading = true;
+  renderGuide(assistantDataCache);
   workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
+  workflowAdviceLoading = false;
 
   syncWorkflowSelectionFromAdvice(workflowAdviceRecord);
 
@@ -363,8 +370,33 @@ function renderAssistantTop(data) {
 
 // 展示案件原始材料。
 function showCaseMaterial(text) {
+  const modal = document.getElementById('caseMaterialModal');
+  const contentBox = document.getElementById('caseMaterialContent');
+  const closeBtn = document.getElementById('closeCaseMaterialBtn');
+  if (!modal || !contentBox) {
+    return;
+  }
+
   const content = (text || '暂无原始材料').toString();
-  window.alert(content);
+  contentBox.textContent = content;
+  modal.classList.remove('hidden');
+
+  if (closeBtn) {
+    closeBtn.onclick = closeCaseMaterial;
+  }
+  modal.onclick = function (event) {
+    if (event.target === modal) {
+      closeCaseMaterial();
+    }
+  };
+}
+
+// 关闭案件原始材料弹框。
+function closeCaseMaterial() {
+  const modal = document.getElementById('caseMaterialModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
 }
 
 
@@ -431,10 +463,14 @@ function renderGuide(data) {
     ['值班联系电话', currentOrg.dutyPhone]
   ] : [];
 
+  if (workflowAdviceLoading) {
+    detailRows.push(['智能体状态', '智能体推荐中']);
+  }
+
   if (workflowAdviceRecord && mediationCategory === (workflowAdviceRecord.flowLevel3 || '')) {
     detailRows.push(['推荐原因', workflowAdviceRecord.recommendReason || '-']);
     detailRows.push(['备选建议', workflowAdviceRecord.backupSuggestion || '-']);
-    detailRows.push(['判断依据', workflowAdviceRecord.ruleHintsHit || '-']);
+    detailRows.push(['判断依据', formatRuleHintsHit(workflowAdviceRecord.ruleHintsHit)]);
   }
 
   box.innerHTML = `
@@ -455,6 +491,36 @@ function renderGuide(data) {
       </div>
     `).join('')}
   `;
+}
+
+
+function formatRuleHintsHit(ruleHintsHit) {
+  if (Array.isArray(ruleHintsHit)) {
+    return ruleHintsHit.filter(Boolean).join(',') || '-';
+  }
+
+  const rawText = (ruleHintsHit || '').toString().trim();
+  if (!rawText) {
+    return '-';
+  }
+
+  if (rawText.startsWith('[') && rawText.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(rawText);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).join(',') || '-';
+      }
+    } catch (error) {
+      return rawText
+        .replace(/^\[/, '')
+        .replace(/\]$/, '')
+        .replace(/"\s*,\s*"/g, ',')
+        .replace(/^"|"$/g, '')
+        .trim() || '-';
+    }
+  }
+
+  return rawText;
 }
 
 function onGuideOrgChange(orgName) {
