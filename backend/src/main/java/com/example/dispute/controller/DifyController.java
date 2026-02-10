@@ -96,7 +96,6 @@ public class DifyController {
             throw new IllegalArgumentException("未找到workflow记录: " + caseId);
         }
         record.setMediationStatus("调解中");
-        caseDisposalWorkflowRecordMapper.updateById(record);
 
         Object mediatorAdvice = null;
         try {
@@ -105,10 +104,43 @@ public class DifyController {
             log.warn("纠纷调解员建议调用失败: {}", ex.getMessage());
         }
 
+        record.setMediationAdvice(extractHtmlAdvice(mediatorAdvice));
+        caseDisposalWorkflowRecordMapper.updateById(record);
+
         Map<String, Object> result = new HashMap<>();
         result.put("record", record);
         result.put("mediatorAdvice", mediatorAdvice);
         return ApiResponse.success(result);
+    }
+
+    private String extractHtmlAdvice(Object mediatorAdvice) {
+        if (mediatorAdvice == null) {
+            return null;
+        }
+        try {
+            Map<String, Object> root = objectMapper.convertValue(mediatorAdvice, new TypeReference<Map<String, Object>>() {});
+            Object direct = root.get("html_advice");
+            if (direct != null) {
+                return String.valueOf(direct);
+            }
+            Object dataObj = root.get("data");
+            if (dataObj instanceof Map) {
+                Object nested = ((Map<?, ?>) dataObj).get("html_advice");
+                if (nested != null) {
+                    return String.valueOf(nested);
+                }
+                Object outputs = ((Map<?, ?>) dataObj).get("outputs");
+                if (outputs instanceof Map) {
+                    Object outAdvice = ((Map<?, ?>) outputs).get("html_advice");
+                    if (outAdvice != null) {
+                        return String.valueOf(outAdvice);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("解析html_advice失败: {}", ex.getMessage());
+        }
+        return null;
     }
 
     /**

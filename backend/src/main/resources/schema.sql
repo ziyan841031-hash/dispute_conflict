@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
     flow_level_2 VARCHAR(50),
     flow_level_3 VARCHAR(50),
     mediation_status VARCHAR(50),
+    mediation_advice TEXT,
     raw_response TEXT,
     created_at TIMESTAMP NOT NULL
 );
@@ -172,6 +173,7 @@ COMMENT ON COLUMN case_disposal_workflow_record.flow_level_1 IS '纠纷流转一
 COMMENT ON COLUMN case_disposal_workflow_record.flow_level_2 IS '纠纷流转二级节点';
 COMMENT ON COLUMN case_disposal_workflow_record.flow_level_3 IS '纠纷流转三级节点';
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_status IS '调解状态';
+COMMENT ON COLUMN case_disposal_workflow_record.mediation_advice IS '调解建议';
 COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '原始响应报文(JSON字符串)';
 COMMENT ON COLUMN case_disposal_workflow_record.created_at IS '创建时间';
 
@@ -179,3 +181,5 @@ CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_case_id ON case_dis
 CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_created_at ON case_disposal_workflow_record(created_at DESC);
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_status VARCHAR(50);
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_advice TEXT;
