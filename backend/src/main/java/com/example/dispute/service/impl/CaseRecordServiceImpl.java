@@ -100,7 +100,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String parsedText = parseExcelToText(file);
         // 保存案件数据。
         CaseRecord record = saveCase("EXCEL", parsedText, file.getOriginalFilename(), null,
-                null, null, "未分类", null, "中", "待处理", "系统导入");
+                null, null, "未分类", null, "中", "已受理", "系统导入");
         // 打印服务日志。
         log.info("服务层-Excel入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -118,7 +118,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String parsedText = "[音频转写占位] 文件 " + file.getOriginalFilename() + " 已上传，待接入ASR模型后自动转写";
         // 保存案件数据。
         CaseRecord record = saveCase("AUDIO", parsedText, file.getOriginalFilename(), 0,
-                null, null, "未分类", null, "中", "待处理", "系统导入");
+                null, null, "未分类", null, "中", "已受理", "系统导入");
         // 打印服务日志。
         log.info("服务层-音频入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -332,7 +332,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         // 设置风险等级。
         record.setRiskLevel(defaultVal(riskLevel, ""));
         // 设置办理进度。
-        record.setHandlingProgress(defaultVal(handlingProgress, "待处理"));
+        record.setHandlingProgress(defaultVal(handlingProgress, "已受理"));
         // 设置接待人。
         record.setReceiver(defaultVal(receiver, "张三"));
         // 设置登记时间。
