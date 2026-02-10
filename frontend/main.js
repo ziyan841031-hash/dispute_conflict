@@ -175,6 +175,25 @@ async function loadAssistantPage() {
   bindFlowInteraction();
 }
 
+// 风险等级说明映射。
+const RISK_LEVEL_DESC = {
+  R0: '仅咨询/信息不足/冲突极轻微，无升级迹象',
+  R1: '轻度纠纷，可调解，情绪可控，无威胁无暴力',
+  R2: '矛盾较尖锐或反复发生；涉及重要权益或金额较大；辱骂指责明显但无明确暴力威胁',
+  R3: '存在升级风险：明确威胁、跟踪骚扰、聚众冲突苗头；或涉未成年人/老人等脆弱群体且对抗尖锐；或疑似违法犯罪线索',
+  R4: '紧急高危：正在/近期暴力伤害、持械、明确人身伤害/自杀他杀威胁、严重家暴、重大公共安全风险'
+};
+
+// 归一化风险等级。
+function normalizeRiskLevel(level) {
+  const raw = (level || '').toString().trim().toUpperCase();
+  if (RISK_LEVEL_DESC[raw]) {
+    return raw;
+  }
+  const map = { '低': 'R1', '中': 'R2', '高': 'R3' };
+  return map[level] || '';
+}
+
 // 渲染顶部案件信息。
 function renderAssistantTop(data) {
   const top = document.getElementById('assistantTopInfo');
@@ -182,15 +201,39 @@ function renderAssistantTop(data) {
   const counterparty = data.counterpartyName || '-';
   const summary = data.factsSummary || data.caseText || '-';
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
+  const riskCode = normalizeRiskLevel(data.riskLevel);
+  const riskDesc = riskCode ? `${riskCode}：${RISK_LEVEL_DESC[riskCode]}` : (data.riskLevel || '-');
   top.innerHTML = `
-    <div><strong>当事人信息：</strong>${party}（对方：${counterparty}）</div>
-    <div><strong>案件编号：</strong>${data.caseNo || '-'}</div>
-    <div><strong>纠纷分类：</strong>${dispute}</div>
-    <div><strong>当事人案件摘要：</strong>${summary}</div>
+    <div class="assistant-info-row assistant-info-title">
+      <strong>案件信息</strong>
+      <span>案件编号：${data.caseNo || '-'}</span>
+    </div>
+    <div class="assistant-info-row assistant-info-meta">
+      <div><strong>当事人信息：</strong>${party}（对方：${counterparty}）</div>
+      <div><strong>纠纷类型：</strong>${dispute}</div>
+      <div><strong>风险等级：</strong>${riskDesc}</div>
+    </div>
+    <div class="assistant-info-row assistant-info-summary">
+      <div class="assistant-summary-text"><strong>案件智能摘要：</strong>${summary}</div>
+      <button id="caseDetailBtn" type="button">案件详情</button>
+    </div>
   `;
+  const btn = document.getElementById('caseDetailBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const rawMaterial = data.caseText || data.materialText || data.rawMaterial || '暂无原始材料';
+      showCaseMaterial(rawMaterial);
+    });
+  }
   if (window.updateWorkflowAcceptTime) {
     window.updateWorkflowAcceptTime(data.registerTime || '--');
   }
+}
+
+// 展示案件原始材料。
+function showCaseMaterial(text) {
+  const content = (text || '暂无原始材料').toString();
+  window.alert(content);
 }
 
 
