@@ -203,18 +203,21 @@
         setMediationStatusText(statusText || '');
       };
 
+      window.setWorkflowPreferredStatusParent = function (nodeId) {
+        const target = nodeId || '';
+        if (!target) {
+          return;
+        }
+        setPreferredParents((prev) => ({ ...prev, status: target }));
+      };
+
       window.setWorkflowActiveNode = function (nodeId) {
         const nextId = nodeId || 'accept';
         setActiveNodeId(nextId);
         if (nextId === 'people' || nextId === 'admin' || nextId === 'professional') {
           setPreferredParents((prev) => ({ ...prev, status: nextId }));
         }
-        if (nextId === 'status') {
-          const lockMeta = window.workflowLockMeta || {};
-          if (lockMeta.selectedThirdNodeId) {
-            setPreferredParents((prev) => ({ ...prev, status: lockMeta.selectedThirdNodeId }));
-          }
-        }
+
       };
 
       const parentMap = useMemo(() => {
