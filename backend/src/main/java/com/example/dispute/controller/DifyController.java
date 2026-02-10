@@ -60,12 +60,12 @@ public class DifyController {
         log.info("Dify workflow 请求: caseId={}, query={}", request.getCaseId(), request.getQuery());
         // 发起远程调用。
         Object data = difyClient.invoke("/chat-messages", request, disposalApiKey);
-        // 落库流水。
-        saveWorkflowRecord(request.getCaseId(), data);
+        // 落库流水并返回表记录。
+        CaseDisposalWorkflowRecord record = saveWorkflowRecord(request.getCaseId(), data);
         // 打印响应日志。
         log.info("Dify workflow 响应成功");
         // 返回统一成功响应。
-        return ApiResponse.success(data);
+        return ApiResponse.success(record);
     }
 
     /**
@@ -101,9 +101,9 @@ public class DifyController {
     /**
      * 保存纠纷处置工作流流水记录。
      */
-    private void saveWorkflowRecord(Long caseId, Object responseObj) {
+    private CaseDisposalWorkflowRecord saveWorkflowRecord(Long caseId, Object responseObj) {
         if (caseId == null || responseObj == null) {
-            return;
+            return null;
         }
         try {
             Map<String, Object> response = objectMapper.convertValue(responseObj, new TypeReference<Map<String, Object>>() {});
@@ -143,8 +143,10 @@ public class DifyController {
             } else {
                 caseDisposalWorkflowRecordMapper.insert(record);
             }
+            return record;
         } catch (Exception ex) {
             log.warn("Dify workflow 流水落库失败: {}", ex.getMessage());
+            return null;
         }
     }
 

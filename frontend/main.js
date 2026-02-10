@@ -155,6 +155,7 @@ const caseListCache = {};
 let disposalOrgOptions = [];
 let currentWorkflowNodeId = 'accept';
 const selectedOrgByCategory = {};
+let workflowAdviceRecord = null;
 const THIRD_LEVEL_NODE_MAP = {
   people: '人民调解',
   admin: '行政调解',
@@ -210,7 +211,9 @@ async function loadAssistantPage() {
   assistantDataCache = detailData || {};
   disposalOrgOptions = orgData || [];
 
-  triggerDisposalWorkflow(assistantDataCache);
+  workflowAdviceRecord = await triggerDisposalWorkflow(assistantDataCache);
+
+  syncWorkflowSelectionFromAdvice(workflowAdviceRecord);
 
   renderAssistantTop(assistantDataCache);
   renderGuide(assistantDataCache);
@@ -232,13 +235,55 @@ async function triggerDisposalWorkflow(detailData) {
   };
 
   try {
-    await fetch(`${API_BASE}/dify/workflow-run`, {
+    const res = await fetch(`${API_BASE}/dify/workflow-run`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)
     });
+    const json = await res.json();
+    return (json && json.data) ? json.data : null;
   } catch (error) {
     console.warn('纠纷处置workflow调用失败', error);
+    return null;
+  }
+}
+
+function mapFlowLevelToNodeId(level1, level2, level3) {
+  const l1 = (level1 || '').trim();
+  const l2 = (level2 || '').trim();
+  const l3 = (level3 || '').trim();
+  if (l1 !== '已受理') {
+    return 'accept';
+  }
+  if (l2 !== '调解') {
+    return 'accept';
+  }
+  if (l3 === '人民调解') {
+    return 'people';
+  }
+  if (l3 === '行政调解') {
+    return 'admin';
+  }
+  if (l3 === '专业调解') {
+    return 'professional';
+  }
+  return 'mediation';
+}
+
+function syncWorkflowSelectionFromAdvice(record) {
+  if (!record) {
+    return;
+  }
+  const nodeId = mapFlowLevelToNodeId(record.flowLevel1, record.flowLevel2, record.flowLevel3);
+  currentWorkflowNodeId = nodeId;
+  window.initialWorkflowNodeId = nodeId;
+  if (record.recommendedDepartment && record.flowLevel3) {
+    selectedOrgByCategory[record.flowLevel3] = record.recommendedDepartment;
+  }
+  if (window.setWorkflowActiveNode) {
+    window.setWorkflowActiveNode(nodeId);
+  } else if (window.onWorkflowNodeChange) {
+    window.onWorkflowNodeChange(nodeId);
   }
 }
 
@@ -349,15 +394,18 @@ function renderGuide(data) {
   }
 
   const candidates = disposalOrgOptions.filter(item => item.mediationCategory === mediationCategory);
-  const preferredPhone = selectedOrgByCategory[mediationCategory];
-  const currentOrg = candidates.find(item => item.orgPhone === preferredPhone) || candidates[0] || null;
+  const preferredOrgName = selectedOrgByCategory[mediationCategory];
+  const adviceMatchedOrg = workflowAdviceRecord && workflowAdviceRecord.recommendedDepartment
+    ? candidates.find(item => item.orgName === workflowAdviceRecord.recommendedDepartment)
+    : null;
+  const currentOrg = candidates.find(item => item.orgName === preferredOrgName) || adviceMatchedOrg || candidates[0] || null;
 
   if (currentOrg) {
-    selectedOrgByCategory[mediationCategory] = currentOrg.orgPhone;
+    selectedOrgByCategory[mediationCategory] = currentOrg.orgName;
   }
 
   const optionsHtml = candidates.map(item => `
-    <option value="${item.orgPhone}" ${currentOrg && item.orgPhone === currentOrg.orgPhone ? 'selected' : ''}>${item.orgName || '-'}</option>
+    <option value="${item.orgName}" ${currentOrg && item.orgName === currentOrg.orgName ? 'selected' : ''}>${item.orgName || '-'}</option>
   `).join('');
 
   const detailRows = currentOrg ? [
@@ -369,6 +417,12 @@ function renderGuide(data) {
     ['值班人员', currentOrg.dutyPerson],
     ['值班联系电话', currentOrg.dutyPhone]
   ] : [];
+
+  if (workflowAdviceRecord && mediationCategory === (workflowAdviceRecord.flowLevel3 || '')) {
+    detailRows.push(['推荐原因', workflowAdviceRecord.recommendReason || '-']);
+    detailRows.push(['备选建议', workflowAdviceRecord.backupSuggestion || '-']);
+    detailRows.push(['判断依据', workflowAdviceRecord.ruleHintsHit || '-']);
+  }
 
   box.innerHTML = `
     <div class="guide-row">
@@ -390,27 +444,12 @@ function renderGuide(data) {
   `;
 }
 
-function onGuideOrgChange(orgPhone) {
+function onGuideOrgChange(orgName) {
   const mediationCategory = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
   if (!mediationCategory) {
     return;
   }
-  selectedOrgByCategory[mediationCategory] = orgPhone;
-  renderGuide(assistantDataCache);
-}
-
-// 添加智能指引补充内容。
-function addGuideNote() {
-  const input = document.getElementById('guideInput');
-  if (!input) {
-    return;
-  }
-  const text = (input.value || '').trim();
-  if (!text) {
-    return;
-  }
-  assistantGuideNotes.unshift(text);
-  input.value = '';
+  selectedOrgByCategory[mediationCategory] = orgName;
   renderGuide(assistantDataCache);
 }
 

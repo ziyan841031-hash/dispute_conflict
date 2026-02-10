@@ -168,7 +168,7 @@
     }
 
     function WorkflowApp() {
-      const [activeNodeId, setActiveNodeId] = useState('accept');
+      const [activeNodeId, setActiveNodeId] = useState(window.initialWorkflowNodeId || 'accept');
       const [acceptTime, setAcceptTime] = useState('--');
       const [preferredParents, setPreferredParents] = useState({
         status: 'people',
@@ -177,6 +177,14 @@
 
       window.updateWorkflowAcceptTime = function (timeText) {
         setAcceptTime(timeText || '--');
+      };
+
+      window.setWorkflowActiveNode = function (nodeId) {
+        const nextId = nodeId || 'accept';
+        setActiveNodeId(nextId);
+        if (nextId === 'people' || nextId === 'admin' || nextId === 'professional') {
+          setPreferredParents((prev) => ({ ...prev, status: nextId }));
+        }
       };
 
       const parentMap = useMemo(() => {
@@ -268,7 +276,7 @@
     const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
     root.render(h(WorkflowApp));
     if (window.onWorkflowNodeChange) {
-      window.onWorkflowNodeChange('accept');
+      window.onWorkflowNodeChange(window.initialWorkflowNodeId || 'accept');
     }
   }
 
