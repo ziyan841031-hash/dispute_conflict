@@ -183,10 +183,10 @@ function getMediationStatusText() {
 
 function syncWorkflowLockMeta() {
   const locked = hasMediationStatusLocked();
-  const selectedThirdNodeId = mapMediationCategoryToNodeId((workflowAdviceRecord && workflowAdviceRecord.flowLevel3) || assistantDataCache.flowLevel3 || '');
+  const selectedThirdNodeId = mapMediationCategoryToNodeId((workflowAdviceRecord && workflowAdviceRecord.flowLevel3) || (workflowAdviceRecord && workflowAdviceRecord.recommendedMediationType) || assistantDataCache.flowLevel3 || assistantDataCache.recommendedMediationType || '');
   window.workflowLockMeta = {locked, selectedThirdNodeId};
   if (window.updateWorkflowMediationStatus) {
-    window.updateWorkflowMediationStatus(getMediationStatusText() || '调解状态');
+    window.updateWorkflowMediationStatus(getMediationStatusText() || '');
   }
 }
 
@@ -292,6 +292,7 @@ async function loadAssistantPage() {
       flowLevel2: assistantDataCache.flowLevel2 || '',
       flowLevel3: assistantDataCache.flowLevel3 || '',
       recommendedDepartment: assistantDataCache.recommendedDepartment || '',
+      recommendedMediationType: assistantDataCache.recommendedMediationType || '',
       mediationStatus: assistantDataCache.mediationStatus || ''
     };
   }
@@ -648,6 +649,7 @@ async function onGuideNodeConfirm() {
       workflowAdviceRecord = record;
       assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
       workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
+      workflowAdviceRecord.recommendedMediationType = workflowAdviceRecord.recommendedMediationType || mediationCategory;
       currentWorkflowNodeId = 'status';
       syncWorkflowLockMeta();
       if (window.setWorkflowActiveNode) {

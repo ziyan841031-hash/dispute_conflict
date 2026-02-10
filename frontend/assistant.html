@@ -189,7 +189,7 @@
     function WorkflowApp() {
       const [activeNodeId, setActiveNodeId] = useState(window.initialWorkflowNodeId || 'accept');
       const [acceptTime, setAcceptTime] = useState('--');
-      const [mediationStatusText, setMediationStatusText] = useState('调解状态');
+      const [mediationStatusText, setMediationStatusText] = useState('');
       const [preferredParents, setPreferredParents] = useState({
         status: 'people',
         archive: 'success'
@@ -200,7 +200,7 @@
       };
 
       window.updateWorkflowMediationStatus = function (statusText) {
-        setMediationStatusText(statusText || '调解状态');
+        setMediationStatusText(statusText || '');
       };
 
       window.setWorkflowActiveNode = function (nodeId) {
@@ -208,6 +208,12 @@
         setActiveNodeId(nextId);
         if (nextId === 'people' || nextId === 'admin' || nextId === 'professional') {
           setPreferredParents((prev) => ({ ...prev, status: nextId }));
+        }
+        if (nextId === 'status') {
+          const lockMeta = window.workflowLockMeta || {};
+          if (lockMeta.selectedThirdNodeId) {
+            setPreferredParents((prev) => ({ ...prev, status: lockMeta.selectedThirdNodeId }));
+          }
         }
       };
 
