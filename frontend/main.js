@@ -132,20 +132,26 @@ async function loadCases() {
 
   (json.data.records || []).forEach(item => {
     const tr = document.createElement('tr');
+    caseListCache[item.id] = item;
     const actionBtn = `<button onclick="openAssistant(${item.id})">智能助手</button>`;
-    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td>${actionBtn}</td>`;
+    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
 }
 
 // 打开智能助手页面。
 function openAssistant(caseId) {
+  const rowData = caseListCache[caseId];
+  if (rowData) {
+    sessionStorage.setItem('assistantPrefill', JSON.stringify(rowData));
+  }
   window.location.href = `assistant.html?caseId=${caseId}`;
 }
 
 // 智能指引补充记录。
 const assistantGuideNotes = [];
 let assistantDataCache = {};
+const caseListCache = {};
 
 // 加载智能助手页面。
 async function loadAssistantPage() {
@@ -156,6 +162,16 @@ async function loadAssistantPage() {
   if (!caseId) {
     document.getElementById('assistantTopInfo').innerHTML = '<p>缺少 caseId 参数。</p>';
     return;
+  }
+
+  const prefill = sessionStorage.getItem('assistantPrefill');
+  if (prefill) {
+    try {
+      const prefillData = JSON.parse(prefill);
+      if (String(prefillData.id || '') === String(caseId)) {
+        renderAssistantTop(prefillData);
+      }
+    } catch (e) {}
   }
 
   let data = {};

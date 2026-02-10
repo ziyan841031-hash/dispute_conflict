@@ -6,7 +6,6 @@
   <title>矛盾纠纷系统管理 - 智能助手</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="vendor/reactflow.css">
-  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
 <div class="layout">
@@ -79,11 +78,11 @@
       const data = props.data || {};
       const selected = props.selected;
       return h('div', {
-          className: `bg-white rounded-xl border shadow-sm hover:shadow-md px-3 py-2 min-w-[108px] text-center transition-all ${selected ? 'border-green-500 ring-2 ring-green-100' : 'border-zinc-200'}`
+          className: `rf-node-card ${selected ? 'is-selected' : ''}`
         },
         h(Handle, { type: 'target', position: Position.Left, style: { opacity: 0, width: 8, height: 8 } }),
-        h('div', {className: 'text-sm font-semibold text-zinc-900'}, data.title || '-'),
-        h('div', {className: 'text-xs text-zinc-500 mt-1'}, data.subtitle || ''),
+        h('div', {className: 'rf-node-title'}, data.title || '-'),
+        h('div', {className: 'rf-node-subtitle'}, data.subtitle || ''),
         h(Handle, { type: 'source', position: Position.Right, style: { opacity: 0, width: 8, height: 8 } })
       );
     }
