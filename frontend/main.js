@@ -175,12 +175,16 @@ async function loadAssistantPage() {
     const mediationType = THIRD_LEVEL_NODE_MAP[currentWorkflowNodeId] || '';
     if (mediationType) {
       workflowAdviceLoading = true;
-      renderGuide(assistantDataCache);
-      const nextAdvice = await triggerDisposalWorkflow(assistantDataCache, mediationType);
-      if (nextAdvice) {
-        workflowAdviceRecord = nextAdvice;
+      showWorkflowWaitingModal();
+      try {
+        const nextAdvice = await triggerDisposalWorkflow(assistantDataCache, mediationType);
+        if (nextAdvice) {
+          workflowAdviceRecord = nextAdvice;
+        }
+      } finally {
+        workflowAdviceLoading = false;
+        hideWorkflowWaitingModal();
       }
-      workflowAdviceLoading = false;
     }
 
     renderGuide(assistantDataCache);
@@ -400,6 +404,22 @@ function closeCaseMaterial() {
 }
 
 
+// 展示工作流推荐等待弹框。
+function showWorkflowWaitingModal() {
+  const modal = document.getElementById('workflowWaitingModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
+// 关闭工作流推荐等待弹框。
+function hideWorkflowWaitingModal() {
+  const modal = document.getElementById('workflowWaitingModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
 // 切换智能助手右侧书签页签。
 function switchAssistantTab(tabName) {
   document.querySelectorAll('.bookmark-tab').forEach(tab => {
@@ -463,9 +483,6 @@ function renderGuide(data) {
     ['值班联系电话', currentOrg.dutyPhone]
   ] : [];
 
-  if (workflowAdviceLoading) {
-    detailRows.push(['智能体状态', '智能体推荐中']);
-  }
 
   if (workflowAdviceRecord && mediationCategory === (workflowAdviceRecord.flowLevel3 || '')) {
     detailRows.push(['推荐原因', workflowAdviceRecord.recommendReason || '-']);
