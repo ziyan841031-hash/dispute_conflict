@@ -106,7 +106,7 @@ table { width: 100%; border-collapse: collapse; }
 .rf-node-card {
   background: #ffffff;
   border-radius: 12px;
-  border: none;
+  border: 1px solid #94a3b8;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   padding: 8px 12px;
   min-width: 108px;
@@ -117,14 +117,17 @@ table { width: 100%; border-collapse: collapse; }
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 .rf-node-card.is-selected {
+  border-color: #16a34a;
   box-shadow: 0 0 0 2px #dcfce7;
 }
 .rf-node-card.is-history {
   background: #ecfdf3;
+  border-color: #15803d;
   box-shadow: 0 0 0 2px #bbf7d0;
 }
 .rf-node-card.is-active {
   background: #eff6ff;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 2px #bfdbfe;
 }
 .rf-node-title {
