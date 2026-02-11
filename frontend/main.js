@@ -625,8 +625,16 @@ function closeCaseMaterial() {
 
 
 // 展示工作流推荐等待弹框。
-function showWorkflowWaitingModal() {
+function showWorkflowWaitingModal(titleText = '智能体推荐中', descText = '正在结合案件特征匹配推荐部门，请稍候...') {
   const modal = document.getElementById('workflowWaitingModal');
+  const title = document.getElementById('workflowWaitingTitle');
+  const desc = document.getElementById('workflowWaitingDesc');
+  if (title) {
+    title.textContent = titleText;
+  }
+  if (desc) {
+    desc.textContent = descText;
+  }
   if (modal) {
     modal.classList.remove('hidden');
   }
@@ -822,7 +830,7 @@ async function onGuideNodeConfirm() {
   }
 
   try {
-    showWorkflowWaitingModal();
+    showWorkflowWaitingModal('智能体推荐中', '调解建议生成中');
     const res = await fetch(`${API_BASE}/dify/workflow-confirm`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},

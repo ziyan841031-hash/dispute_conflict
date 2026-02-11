@@ -27,15 +27,19 @@ table { width: 100%; border-collapse: collapse; }
   border-radius: 16px;
   border: 1px solid #dbeafe;
   animation: parse-modal-pop .25s ease-out;
+  text-align: center;
 }
-.parse-modal-content h3 { margin: 0; }
+.parse-modal-content h3 { margin: 8px 0 8px; }
 .parse-modal-subtitle {
-  margin-top: 6px;
-  font-size: 13px;
+  margin: 0 0 10px;
+  font-size: 14px;
   color: #64748b;
+  line-height: 1.5;
 }
 .parse-list {
   position: relative;
+  text-align: left;
+  margin-top: 14px;
 }
 .parse-list::before {
   content: '';
@@ -83,7 +87,7 @@ table { width: 100%; border-collapse: collapse; }
   70% { transform: scale(1.12); }
   100% { transform: scale(1); }
 }
-.parse-list { list-style: none; padding: 0; margin: 16px 0; }
+.parse-list { list-style: none; padding: 0; margin: 14px 0 16px; }
 .parse-list li { margin: 10px 0; font-size: 15px; }
 .status-icon { display: inline-block; width: 24px; text-align: center; font-weight: bold; }
 .status-icon.done { color: #16a34a; }
