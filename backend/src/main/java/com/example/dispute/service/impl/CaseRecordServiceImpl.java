@@ -8,7 +8,6 @@ import com.alibaba.dashscope.audio.asr.transcription.TranscriptionParam;
 import com.alibaba.dashscope.audio.asr.transcription.TranscriptionQueryParam;
 import com.alibaba.dashscope.audio.asr.transcription.TranscriptionResult;
 import com.alibaba.dashscope.audio.asr.transcription.TranscriptionTaskResult;
-import com.alibaba.dashscope.common.Constants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -399,8 +398,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         if (!StringUtils.hasText(soundApiKey)) {
             throw new IllegalStateException("dashscope.sound-api-key未配置，无法调用语音识别");
         }
-        Constants.baseHttpApiUrl = "https://dashscope.aliyuncs.com/api/v1";
-
         TranscriptionParam param = TranscriptionParam.builder()
                 .apiKey(soundApiKey)
                 .model("fun-asr")
