@@ -148,21 +148,14 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      * 音频案件入库。
      */
     @Override // 重写接口方法。
-    public CaseRecord ingestAudio(MultipartFile file) {
+    public String ingestAudio(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-音频入库开始: fileName={}", file.getOriginalFilename());
         // 上传音频到OSS并获取URL。
         String audioUrl = uploadAudioToOss(file);
         log.info("语音文件已上传，路径：{}", audioUrl);
 
-        String recognizedText = soundIdentify(audioUrl);
-        TextIngestRequest textIngestRequest = new TextIngestRequest();
-        textIngestRequest.setCaseText(StringUtils.hasText(recognizedText)
-                ? recognizedText
-                : "[语音识别失败] 未获取到有效转写文本，音频地址：" + audioUrl);
-        textIngestRequest.setEventSource("来电接待");
-        // 调用文本案件入库。
-        return ingestText(textIngestRequest);
+        return soundIdentify(audioUrl);
     }
 
     /**

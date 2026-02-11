@@ -124,13 +124,13 @@ public class CaseController {
      * 处理音频案件入库。
      */
     @PostMapping("/ingest/audio") // 定义音频入库接口。
-    public ApiResponse<CaseRecord> ingestAudio(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<String> ingestAudio(@RequestParam("file") MultipartFile file) {
         // 打印请求文件日志。
         log.info("音频入库请求: fileName={}", file.getOriginalFilename());
         // 调用服务执行入库。
-        CaseRecord record = caseRecordService.ingestAudio(file);
+        String record = caseRecordService.ingestAudio(file);
         // 打印响应结果日志。
-        log.info("音频入库响应: caseNo={}", record.getCaseNo());
+        log.info("音频入库响应:{}", record);
         // 返回统一成功响应。
         return ApiResponse.success(record);
     }

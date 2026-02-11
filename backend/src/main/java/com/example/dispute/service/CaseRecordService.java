@@ -12,7 +12,7 @@ public interface CaseRecordService {
 
     CaseRecord ingestExcel(MultipartFile file);
 
-    CaseRecord ingestAudio(MultipartFile file);
+    String ingestAudio(MultipartFile file);
 
     IPage<CaseRecord> queryCases(CaseQueryRequest request);
 
