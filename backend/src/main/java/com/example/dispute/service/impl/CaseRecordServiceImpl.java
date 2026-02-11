@@ -113,13 +113,56 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String parsedCounterpartyName = pickOutputValue(extractResult, "counterparty_name");
         // 提取纠纷概要文本。
         String parsedSummary = pickOutputValue(extractResult, "dispute_summary");
+        // 提取当事人身份证号。
+        String parsedPartyId = firstNonEmpty(
+                pickOutputValue(extractResult, "party_id"),
+                pickOutputValue(extractResult, "party_identity"),
+                pickOutputValue(extractResult, "当事人身份证号")
+        );
+        // 提取当事人联系方式。
+        String parsedPartyPhone = firstNonEmpty(
+                pickOutputValue(extractResult, "party_phone"),
+                pickOutputValue(extractResult, "party_mobile"),
+                pickOutputValue(extractResult, "当事人电话")
+        );
+        // 提取当事人地址。
+        String parsedPartyAddress = firstNonEmpty(
+                pickOutputValue(extractResult, "party_address"),
+                pickOutputValue(extractResult, "当事人地址")
+        );
+        // 提取对方身份证号。
+        String parsedCounterpartyId = firstNonEmpty(
+                pickOutputValue(extractResult, "counterparty_id"),
+                pickOutputValue(extractResult, "counterparty_identity"),
+                pickOutputValue(extractResult, "对方当事人身份证号")
+        );
+        // 提取对方联系方式。
+        String parsedCounterpartyPhone = firstNonEmpty(
+                pickOutputValue(extractResult, "counterparty_phone"),
+                pickOutputValue(extractResult, "counterparty_mobile"),
+                pickOutputValue(extractResult, "对方当事人电话")
+        );
+        // 提取对方地址。
+        String parsedCounterpartyAddress = firstNonEmpty(
+                pickOutputValue(extractResult, "counterparty_address"),
+                pickOutputValue(extractResult, "对方当事人地址")
+        );
+        // 提取纠纷发生地。
+        String parsedDisputeLocation = firstNonEmpty(
+                pickOutputValue(extractResult, "dispute_location"),
+                pickOutputValue(extractResult, "发生地"),
+                pickOutputValue(extractResult, "纠纷发生地")
+        );
 
         // 保存案件数据。
         CaseRecord record = saveCase(defaultVal(request.getEventSource(), "其他线下接待"),
                 defaultVal(parsedSummary, request.getCaseText()), null, null,
                 defaultVal(parsedPartyName, request.getPartyName()),
                 defaultVal(parsedCounterpartyName, request.getCounterpartyName()),
-                request.getDisputeType(), null, request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver());
+                request.getDisputeType(), null, request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver(),
+                parsedPartyId, parsedPartyPhone, parsedPartyAddress,
+                parsedCounterpartyId, parsedCounterpartyPhone, parsedCounterpartyAddress,
+                parsedDisputeLocation);
         // 打印服务日志。
         log.info("服务层-文本入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -137,7 +180,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String parsedText = parseExcelToText(file);
         // 保存案件数据。
         CaseRecord record = saveCase("EXCEL", parsedText, file.getOriginalFilename(), null,
-                null, null, "未分类", null, "中", "已受理", "系统导入");
+                null, null, "未分类", null, "中", "已受理", "系统导入",
+                null, null, null, null, null, null, null);
         // 打印服务日志。
         log.info("服务层-Excel入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -345,7 +389,10 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      */
     private CaseRecord saveCase(String eventSource, String parsedText, String fileName, Integer audioDurationSec,
                                 String partyName, String counterpartyName, String disputeType, String disputeSubType,
-                                String riskLevel, String handlingProgress, String receiver) {
+                                String riskLevel, String handlingProgress, String receiver,
+                                String partyId, String partyPhone, String partyAddress,
+                                String counterpartyId, String counterpartyPhone, String counterpartyAddress,
+                                String disputeLocation) {
         // 获取当前时间。
         LocalDateTime now = LocalDateTime.now();
         // 创建实体对象。
@@ -356,6 +403,20 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         record.setPartyName(defaultVal(partyName, "未知当事人"));
         // 设置对方当事人。
         record.setCounterpartyName(defaultVal(counterpartyName, "未知对方当事人"));
+        // 设置当事人身份证号。
+        record.setPartyId(defaultVal(partyId, null));
+        // 设置当事人电话。
+        record.setPartyPhone(defaultVal(partyPhone, null));
+        // 设置当事人地址。
+        record.setPartyAddress(defaultVal(partyAddress, null));
+        // 设置对方身份证号。
+        record.setCounterpartyId(defaultVal(counterpartyId, null));
+        // 设置对方电话。
+        record.setCounterpartyPhone(defaultVal(counterpartyPhone, null));
+        // 设置对方地址。
+        record.setCounterpartyAddress(defaultVal(counterpartyAddress, null));
+        // 设置纠纷发生地。
+        record.setDisputeLocation(defaultVal(disputeLocation, null));
         // 设置纠纷类型。
         record.setDisputeType(defaultVal(disputeType, ""));
         // 设置纠纷子类型（可为空）。
