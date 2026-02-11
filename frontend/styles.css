@@ -106,7 +106,7 @@ table { width: 100%; border-collapse: collapse; }
 .rf-node-card {
   background: #ffffff;
   border-radius: 12px;
-  border: 1px solid #94a3b8;
+  border: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   padding: 8px 12px;
   min-width: 108px;
@@ -117,17 +117,14 @@ table { width: 100%; border-collapse: collapse; }
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 .rf-node-card.is-selected {
-  border-color: #16a34a;
   box-shadow: 0 0 0 2px #dcfce7;
 }
 .rf-node-card.is-history {
   background: #ecfdf3;
-  border-color: #15803d;
   box-shadow: 0 0 0 2px #bbf7d0;
 }
 .rf-node-card.is-active {
   background: #eff6ff;
-  border-color: #3b82f6;
   box-shadow: 0 0 0 2px #bfdbfe;
 }
 .rf-node-title {
@@ -141,7 +138,7 @@ table { width: 100%; border-collapse: collapse; }
   margin-top: 4px;
 }
 .assistant-top-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.assistant-info-row { border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; padding: 10px 12px; }
+.assistant-info-row { border: none; border-radius: 10px; background: #ffffff; padding: 10px 12px; }
 .assistant-info-title { display: flex; align-items: center; justify-content: space-between; font-size: 15px; }
 .assistant-info-meta { display: grid; grid-template-columns: 1.2fr 1fr 2fr; gap: 10px; font-size: 13px; }
 .assistant-info-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -159,6 +156,7 @@ table { width: 100%; border-collapse: collapse; }
   border-radius: 10px;
   background: #ffffff;
   padding: 0;
+  box-shadow: none;
 }
 .workflow-canvas {
   width: 100%;
@@ -166,6 +164,7 @@ table { width: 100%; border-collapse: collapse; }
   border: none;
   border-radius: 10px;
   background: #ffffff;
+  box-shadow: none;
 }
 .workflow-canvas .react-flow__pane { cursor: grab; }
 .workflow-canvas .react-flow__attribution { display: none; }
@@ -187,11 +186,11 @@ table { width: 100%; border-collapse: collapse; }
 }
 .bookmark-tab.active { background: #265dff; color: #fff; }
 
-.guide-panel, .timeline-panel {
+.guide-panel,.timeline-panel {
   border: none;
   border-top: none;
   border-radius: 8px;
-  padding: 6px;
+  padding: 3px;
   background: #fff;
   flex: 1;
   min-height: 0;
@@ -207,7 +206,7 @@ table { width: 100%; border-collapse: collapse; }
   overflow-y: auto;
   border: none;
   border-radius: 6px;
-  padding: 4px;
+  padding: 3px;
   background: #ffffff;
 }
 .timeline-item { border-bottom: 1px solid #e2e8f0; padding: 8px 4px; font-size: 13px; }
@@ -246,14 +245,14 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 .guide-row-select select {
-  border: 1px solid #cbd5e1;
+  border: none;
   border-radius: 6px;
   padding: 5px 6px;
   font-size: 12px;
   background: #fff;
 }
 .guide-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 6px; }
-.guide-input-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
+.guide-input-row input { border: none; border-radius: 8px; padding: 8px 10px; }
 
 .timeline-vertical { position: relative; padding-left: 18px; flex: 1; min-height: 220px; overflow-y: auto; }
 .timeline-vertical::before {
@@ -272,7 +271,7 @@ table { width: 100%; border-collapse: collapse; }
   gap: 8px;
   margin: 0 0 12px 10px;
   padding: 6px 8px;
-  border: 1px solid #e2e8f0;
+  border: none;
   border-radius: 8px;
   background: #ffffff;
   font-size: 12px;
@@ -429,7 +428,7 @@ table { width: 100%; border-collapse: collapse; }
   border: none;
   border-radius: 8px;
   background: #ffffff;
-  padding: 6px;
+  padding: 3px;
 }
 .guide-advice-title {
   font-size: 13px;
