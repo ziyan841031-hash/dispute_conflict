@@ -28,18 +28,12 @@ table { width: 100%; border-collapse: collapse; }
   border: 1px solid #dbeafe;
   animation: parse-modal-pop .25s ease-out;
   text-align: center;
-}
-.parse-modal-content h3 { margin: 8px 0 8px; }
-.parse-modal-subtitle {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: #64748b;
-  line-height: 1.5;
+  padding: 18px 20px;
 }
 .parse-list {
   position: relative;
   text-align: left;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .parse-list::before {
   content: '';
@@ -158,8 +152,9 @@ table { width: 100%; border-collapse: collapse; }
 .risk-level.risk-r4 { color: #dc2626; font-weight: 600; }
 .assistant-main-grid { display: grid; grid-template-columns: 7fr 3fr; gap: 12px; align-items: stretch; }
 
-.flow-card { height: 560px; min-height: 560px; }
+.flow-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; }
 .flow-container {
+  flex: 1;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: linear-gradient(180deg, #f8fbff 0%, #f1f5ff 100%);
@@ -167,7 +162,7 @@ table { width: 100%; border-collapse: collapse; }
 }
 .workflow-canvas {
   width: 100%;
-  height: 540px;
+  height: 100%;
   border: 1px solid #dbe4ff;
   border-radius: 12px;
   background: #f8fbff;
@@ -177,6 +172,7 @@ table { width: 100%; border-collapse: collapse; }
 .workflow-canvas .react-flow__background path { stroke: #e5e7eb; }
 .workflow-canvas .react-flow__edge-path { transition: stroke .2s ease, stroke-width .2s ease; }
 
+.flow-card h3 { margin: 0 0 8px; }
 .rf-node-label { line-height: 1.15; }
 
 .side-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }

@@ -49,6 +49,15 @@ async function submitText() {
   await classifyRes.json();
   // 标记智能分类完成。
   markDone('classify');
+  finishParseAndGoCases();
+}
+
+
+
+function finishParseAndGoCases() {
+  setTimeout(() => {
+    window.location.href = 'cases.html';
+  }, 600);
 }
 
 // 提交Excel案件。
@@ -101,6 +110,7 @@ async function submitAudio() {
   });
   await classifyRes.json();
   markDone('classify');
+  finishParseAndGoCases();
 }
 
 // 打开解析弹窗。
