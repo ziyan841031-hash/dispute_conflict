@@ -3,6 +3,12 @@ package com.example.dispute.service.impl;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.ObjectMetadata;
+import com.alibaba.dashscope.audio.asr.transcription.Transcription;
+import com.alibaba.dashscope.audio.asr.transcription.TranscriptionParam;
+import com.alibaba.dashscope.audio.asr.transcription.TranscriptionQueryParam;
+import com.alibaba.dashscope.audio.asr.transcription.TranscriptionResult;
+import com.alibaba.dashscope.audio.asr.transcription.TranscriptionTaskResult;
+import com.alibaba.dashscope.common.Constants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +21,7 @@ import com.example.dispute.mapper.CaseClassifyRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -29,8 +36,14 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.UUID;
@@ -55,6 +68,9 @@ public class CaseRecordServiceImpl implements CaseRecordService {
 
     @Value("${oss.url-prefix:}")
     private String ossUrlPrefix;
+
+    @Value("${dashscope.sound-api-key:}")
+    private String soundApiKey;
 
     // 定义日志对象。
     private static final Logger log = LoggerFactory.getLogger(CaseRecordServiceImpl.class);
@@ -136,15 +152,16 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         log.info("服务层-音频入库开始: fileName={}", file.getOriginalFilename());
         // 上传音频到OSS并获取URL。
         String audioUrl = uploadAudioToOss(file);
-        // 构建占位转写文本。
-        String parsedText = "[音频转写占位] 文件已上传至OSS：" + audioUrl + "，待接入ASR模型后自动转写";
-        // 保存案件数据（source_file_name 记录OSS地址）。
-        CaseRecord record = saveCase("AUDIO", parsedText, audioUrl, 0,
-                null, null, "未分类", null, "中", "已受理", "系统导入");
-        // 打印服务日志。
-        log.info("服务层-音频入库完成: caseNo={}, audioUrl={}", record.getCaseNo(), audioUrl);
-        // 返回结果对象。
-        return record;
+        log.info("语音文件已上传，路径：{}", audioUrl);
+
+        String recognizedText = soundIdentify(audioUrl);
+        TextIngestRequest textIngestRequest = new TextIngestRequest();
+        textIngestRequest.setCaseText(StringUtils.hasText(recognizedText)
+                ? recognizedText
+                : "[语音识别失败] 未获取到有效转写文本，音频地址：" + audioUrl);
+        textIngestRequest.setEventSource("来电接待");
+        // 调用文本案件入库。
+        return ingestText(textIngestRequest);
     }
 
     /**
@@ -373,6 +390,103 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         caseRecordMapper.insert(record);
         // 返回实体对象。
         return record;
+    }
+
+    /**
+     * 调用千问录音文件识别并返回识别文本。
+     */
+    public String soundIdentify(String audioUrl) {
+        if (!StringUtils.hasText(soundApiKey)) {
+            throw new IllegalStateException("dashscope.sound-api-key未配置，无法调用语音识别");
+        }
+        Constants.baseHttpApiUrl = "https://dashscope.aliyuncs.com/api/v1";
+
+        TranscriptionParam param = TranscriptionParam.builder()
+                .apiKey(soundApiKey)
+                .model("fun-asr")
+                .parameter("language_hints", new String[]{"zh", "en"})
+                .fileUrls(Arrays.asList(audioUrl))
+                .build();
+        try {
+            Transcription transcription = new Transcription();
+            TranscriptionResult result = transcription.asyncCall(param);
+            result = transcription.wait(TranscriptionQueryParam.FromTranscriptionParam(param, result.getTaskId()));
+
+            List<TranscriptionTaskResult> taskResultList = result.getResults();
+            if (taskResultList == null || taskResultList.isEmpty()) {
+                return "";
+            }
+            StringJoiner joiner = new StringJoiner("\n");
+            for (TranscriptionTaskResult taskResult : taskResultList) {
+                String transcriptionUrl = taskResult.getTranscriptionUrl();
+                if (!StringUtils.hasText(transcriptionUrl)) {
+                    continue;
+                }
+                String text = fetchTranscriptionText(transcriptionUrl);
+                if (StringUtils.hasText(text)) {
+                    joiner.add(text);
+                }
+            }
+            return joiner.toString();
+        } catch (Exception ex) {
+            log.warn("语音识别失败: {}", ex.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 下载并解析转写结果文本。
+     */
+    private String fetchTranscriptionText(String transcriptionUrl) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(transcriptionUrl).openConnection();
+            connection.setRequestMethod("GET");
+            connection.connect();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                JsonNode root = objectMapper.readTree(reader);
+                StringJoiner joiner = new StringJoiner("\n");
+                collectTranscriptionText(root, joiner);
+                return joiner.toString();
+            }
+        } catch (Exception ex) {
+            log.warn("解析语音识别报文失败: {}", ex.getMessage());
+            return "";
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    /**
+     * 递归提取转写文本字段。
+     */
+    private void collectTranscriptionText(JsonNode node, StringJoiner joiner) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isObject()) {
+            if (node.has("text") && node.get("text").isTextual()) {
+                String text = node.get("text").asText("").trim();
+                if (StringUtils.hasText(text)) {
+                    joiner.add(text);
+                }
+            }
+            if (node.has("sentence") && node.get("sentence").isTextual()) {
+                String sentence = node.get("sentence").asText("").trim();
+                if (StringUtils.hasText(sentence)) {
+                    joiner.add(sentence);
+                }
+            }
+            node.fields().forEachRemaining(entry -> collectTranscriptionText(entry.getValue(), joiner));
+            return;
+        }
+        if (node.isArray()) {
+            for (JsonNode item : node) {
+                collectTranscriptionText(item, joiner);
+            }
+        }
     }
 
     /**

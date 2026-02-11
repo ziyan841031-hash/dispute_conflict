@@ -35,3 +35,6 @@ oss:
   access-key-id: replace-with-access-key-id
   access-key-secret: replace-with-access-key-secret
   url-prefix: https://replace-with-bucket.oss-cn-hangzhou.aliyuncs.com
+
+dashscope:
+  sound-api-key: replace-with-sound-api-key
