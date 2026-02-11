@@ -180,7 +180,7 @@ table { width: 100%; border-collapse: collapse; }
   font-size: 13px;
   background: #fff;
 }
-.guide-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
+.guide-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 6px; }
 .guide-input-row input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
 
 .timeline-vertical { position: relative; padding-left: 18px; flex: 1; min-height: 220px; overflow-y: auto; }
@@ -253,30 +253,30 @@ table { width: 100%; border-collapse: collapse; }
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 12px;
+  padding: 10px;
   white-space: pre-wrap;
   line-height: 1.6;
   overflow-y: auto;
-  min-height: 200px;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .case-detail-section {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 6px 8px;
   background: #ffffff;
 }
 .case-detail-section h4 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   color: #334155;
   font-size: 14px;
 }
 .case-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
+  gap: 6px 8px;
 }
 .case-detail-item {
   font-size: 13px;
@@ -284,12 +284,12 @@ table { width: 100%; border-collapse: collapse; }
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: #f8fafc;
-  padding: 8px 10px;
-  min-height: 38px;
+  padding: 6px 8px;
+  min-height: 0;
 }
 .case-detail-label { color: #64748b; }
 .case-detail-value { color: #0f172a; word-break: break-word; }
-.case-detail-text { font-size: 13px; color: #0f172a; line-height: 1.7; white-space: pre-wrap; word-break: break-word; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: #ffffff; margin-top: 10px; }
+.case-detail-text { font-size: 13px; color: #0f172a; line-height: 1.7; white-space: pre-wrap; word-break: break-word; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: #ffffff; margin-top: 6px; }
 .case-detail-empty { color: #94a3b8; font-size: 13px; }
 
 
@@ -326,7 +326,7 @@ table { width: 100%; border-collapse: collapse; }
 
 
 .guide-advice-block {
-  margin-top: 10px;
+  margin-top: 6px;
   border: 1px solid #dbeafe;
   border-radius: 10px;
   background: #f8fbff;
