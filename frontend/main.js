@@ -508,8 +508,7 @@ function renderAssistantTop(data) {
   const btn = document.getElementById('caseDetailBtn');
   if (btn) {
     btn.addEventListener('click', () => {
-      const rawMaterial = data.caseText || data.materialText || data.rawMaterial || '暂无原始材料';
-      showCaseMaterial(rawMaterial);
+      showCaseMaterial(data);
     });
   }
   if (window.updateWorkflowAcceptTime) {
@@ -517,8 +516,8 @@ function renderAssistantTop(data) {
   }
 }
 
-// 展示案件原始材料。
-function showCaseMaterial(text) {
+// 展示案件详情。
+function showCaseMaterial(data) {
   const modal = document.getElementById('caseMaterialModal');
   const contentBox = document.getElementById('caseMaterialContent');
   const closeBtn = document.getElementById('closeCaseMaterialBtn');
@@ -526,8 +525,45 @@ function showCaseMaterial(text) {
     return;
   }
 
-  const content = (text || '暂无原始材料').toString();
-  contentBox.textContent = content;
+  const safeData = data || {};
+  const rawMaterial = safeData.caseText || safeData.materialText || safeData.rawMaterial || '暂无原始材料';
+
+  const partyItems = [
+    {label: '姓名', value: safeData.partyName},
+    {label: '身份证号', value: safeData.partyId},
+    {label: '联系电话', value: safeData.partyPhone},
+    {label: '联系地址', value: safeData.partyAddress}
+  ].filter(item => item.value);
+
+  const counterpartyItems = [
+    {label: '姓名', value: safeData.counterpartyName},
+    {label: '身份证号', value: safeData.counterpartyId},
+    {label: '联系电话', value: safeData.counterpartyPhone},
+    {label: '联系地址', value: safeData.counterpartyAddress}
+  ].filter(item => item.value);
+
+  const partyHtml = partyItems.length
+    ? `<div class="case-detail-grid">${partyItems.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${item.value}</span></div>`).join('')}</div>`
+    : '<div class="case-detail-empty">暂无当事人信息</div>';
+
+  const counterpartyHtml = counterpartyItems.length
+    ? `<div class="case-detail-grid">${counterpartyItems.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${item.value}</span></div>`).join('')}</div>`
+    : '<div class="case-detail-empty">暂无对方当事人信息</div>';
+
+  contentBox.innerHTML = `
+    <section class="case-detail-section">
+      <h4>当事人信息</h4>
+      ${partyHtml}
+    </section>
+    <section class="case-detail-section">
+      <h4>对方当事人信息</h4>
+      ${counterpartyHtml}
+    </section>
+    <section class="case-detail-section">
+      <h4>案件详情</h4>
+      <div class="case-detail-text">${rawMaterial}</div>
+    </section>
+  `;
   modal.classList.remove('hidden');
 
   if (closeBtn) {

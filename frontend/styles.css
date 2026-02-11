@@ -225,6 +225,7 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 @media (max-width: 900px) {
+  .case-detail-grid { grid-template-columns: 1fr; }
   .assistant-main-grid { grid-template-columns: 1fr; }
   .side-card { min-height: 420px; }
   .workflow-canvas { height: 380px; }
@@ -257,7 +258,34 @@ table { width: 100%; border-collapse: collapse; }
   line-height: 1.6;
   overflow-y: auto;
   min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
+.case-detail-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+.case-detail-section h4 {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 14px;
+}
+.case-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.case-detail-item {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.case-detail-label { color: #64748b; }
+.case-detail-value { color: #0f172a; word-break: break-word; }
+.case-detail-text { font-size: 13px; color: #0f172a; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.case-detail-empty { color: #94a3b8; font-size: 13px; }
 
 
 .workflow-waiting-content {
