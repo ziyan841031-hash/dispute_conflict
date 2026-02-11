@@ -476,21 +476,29 @@ function syncWorkflowSelectionFromAdvice(record) {
 
 // 风险等级说明映射。
 const RISK_LEVEL_DESC = {
-  R0: '仅咨询/信息不足/冲突极轻微，无升级迹象',
-  R1: '轻度纠纷，可调解，情绪可控，无威胁无暴力',
-  R2: '矛盾较尖锐或反复发生；涉及重要权益或金额较大；辱骂指责明显但无明确暴力威胁',
-  R3: '存在升级风险：明确威胁、跟踪骚扰、聚众冲突苗头；或涉未成年人/老人等脆弱群体且对抗尖锐；或疑似违法犯罪线索',
-  R4: '紧急高危：正在/近期暴力伤害、持械、明确人身伤害/自杀他杀威胁、严重家暴、重大公共安全风险'
+  低: '仅咨询 / 信息不足 / 冲突极轻微，无升级迹象',
+  中: '矛盾较明显，存在纠纷或情绪激动，有一定对抗但无明确人身安全威胁',
+  高: '存在明显升级或现实危险，涉及威胁、骚扰、暴力苗头、脆弱群体权益、疑似违法或紧急安全风险'
 };
 
 // 归一化风险等级。
 function normalizeRiskLevel(level) {
-  const raw = (level || '').toString().trim().toUpperCase();
+  const raw = (level || '').toString().trim();
   if (RISK_LEVEL_DESC[raw]) {
     return raw;
   }
-  const map = { '低': 'R1', '中': 'R2', '高': 'R3' };
-  return map[level] || '';
+  const normalized = raw.toUpperCase();
+  const map = {
+    R0: '低',
+    R1: '低',
+    R2: '中',
+    R3: '高',
+    R4: '高',
+    LOW: '低',
+    MEDIUM: '中',
+    HIGH: '高'
+  };
+  return map[normalized] || '';
 }
 
 // 渲染顶部案件信息。
@@ -500,9 +508,10 @@ function renderAssistantTop(data) {
   const counterparty = data.counterpartyName || '-';
   const summary = data.judgementBasisText || data.factsSummary || data.caseText || '-';
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
-  const riskCode = normalizeRiskLevel(data.riskLevel);
-  const riskDesc = riskCode ? `${riskCode}(${RISK_LEVEL_DESC[riskCode]})` : (data.riskLevel || '-');
-  const riskClass = riskCode ? `risk-${riskCode.toLowerCase()}` : '';
+  const riskLevel = normalizeRiskLevel(data.riskLevel);
+  const riskDesc = riskLevel ? `${riskLevel}(${RISK_LEVEL_DESC[riskLevel]})` : (data.riskLevel || '-');
+  const riskClassMap = { 低: 'risk-low', 中: 'risk-medium', 高: 'risk-high' };
+  const riskClass = riskLevel ? (riskClassMap[riskLevel] || '') : '';
   const emotionTextRaw = data.emotionAssessmentText || '-';
   const emotionText = emotionTextRaw.includes('：')
     ? `${emotionTextRaw.split('：')[0]}(${emotionTextRaw.split('：').slice(1).join('：')})`

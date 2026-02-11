@@ -144,9 +144,9 @@ table { width: 100%; border-collapse: collapse; }
 .assistant-info-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .assistant-summary-text { flex: 1; line-height: 1.5; }
 
-.risk-level.risk-r0, .risk-level.risk-r1 { color: #16a34a; font-weight: 600; }
-.risk-level.risk-r2, .risk-level.risk-r3 { color: #ea580c; font-weight: 600; }
-.risk-level.risk-r4 { color: #dc2626; font-weight: 600; }
+.risk-level.risk-low { color: #16a34a; font-weight: 600; }
+.risk-level.risk-medium { color: #ea580c; font-weight: 600; }
+.risk-level.risk-high { color: #dc2626; font-weight: 600; }
 .assistant-main-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; align-items: stretch; }
 
 .flow-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; padding: 5px; }
