@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 智能助手</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="vendor/reactflow.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">控台首页</a>
+    <a href="cases.html">案件管理</a>
+    <a class="active" href="assistant.html">智能助手</a>
+  </aside>
+  <main class="content">
+    <section class="card assistant-header-card">
+      <h2>智能助手</h2>
+      <div id="assistantTopInfo" class="assistant-top-grid"></div>
+    </section>
+
+    <section class="assistant-main-grid">
+      <div class="card flow-card">
+        <h3>智能工作流</h3>
+        <div class="flow-container">
+          <div id="reactWorkflowRoot" class="workflow-canvas"></div>
+        </div>
+      </div>
+
+      <div class="card side-card">
+        <div class="bookmark-tabs">
+          <button class="bookmark-tab active" data-tab="guide" onclick="switchAssistantTab('guide')">智能指引</button>
+          <button class="bookmark-tab" data-tab="timeline" onclick="switchAssistantTab('timeline')">办理时间轴</button>
+        </div>
+
+        <div class="guide-panel" data-panel="guide">
+          <div id="guideList" class="scroll-box"></div>
+        </div>
+
+        <div class="timeline-panel hidden" data-panel="timeline">
+          <h3>办理时间轴</h3>
+          <div id="timelineList" class="timeline-vertical"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="caseMaterialModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="caseMaterialTitle">
+  <div class="modal-content case-material-modal-content">
+    <div class="case-material-header">
+      <h3 id="caseMaterialTitle">案件详情</h3>
+      <button id="closeCaseMaterialBtn" type="button">关闭</button>
+    </div>
+    <div id="caseMaterialContent" class="case-material-content"></div>
+  </div>
+</div>
+
+
+<div id="workflowWaitingModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflowWaitingTitle">
+  <div class="modal-content workflow-waiting-content">
+    <div class="workflow-waiting-spinner" aria-hidden="true"></div>
+    <h3 id="workflowWaitingTitle">智能体推荐中</h3>
+    <p>正在结合案件特征匹配推荐部门，请稍候...</p>
+  </div>
+</div>
+
+<script src="main.js"></script>
+<script>
+  loadAssistantPage();
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.body.appendChild(script);
+    });
+  }
+
+  async function loadWorkflowLibraries() {
+    if (window.React && window.ReactDOM && window.ReactFlow) {
+      return;
+    }
+    await loadScript('https://unpkg.com/react@18/umd/react.production.min.js');
+    await loadScript('https://unpkg.com/react-dom@18/umd/react-dom.production.min.js');
+    await loadScript('https://unpkg.com/reactflow/dist/umd/index.js');
+  }
+
+  function initWorkflow() {
+    if (!window.React || !window.ReactDOM || !window.ReactFlow) {
+      return;
+    }
+
+    const h = window.React.createElement;
+    const useMemo = window.React.useMemo;
+    const useState = window.React.useState;
+
+    const RF = window.ReactFlow;
+    const ReactFlowComp = RF.ReactFlow;
+    const Background = RF.Background;
+    const Handle = RF.Handle;
+    const Position = RF.Position;
+
+    function WorkflowNode(props) {
+      const data = props.data || {};
+      const selected = props.selected;
+      return h('div', {
+          className: `rf-node-card ${selected ? 'is-selected' : ''}`
+        },
+        h(Handle, { type: 'target', position: Position.Left, style: { opacity: 0, width: 8, height: 8 } }),
+        h('div', {className: 'rf-node-title'}, data.title || '-'),
+        h('div', {className: 'rf-node-subtitle'}, data.subtitle || ''),
+        h(Handle, { type: 'source', position: Position.Right, style: { opacity: 0, width: 8, height: 8 } })
+      );
+    }
+
+    const nodeTypes = {workflow: WorkflowNode};
+
+    const baseNodes = [
+      { id: 'accept', position: { x: 20, y: 240 }, data: { title: '已受理', subtitle: '--' }, type: 'workflow' },
+
+      { id: 'mediation', position: { x: 240, y: 70 }, data: { title: '调解', subtitle: '' }, type: 'workflow' },
+      { id: 'huajie', position: { x: 240, y: 190 }, data: { title: '化解', subtitle: '' }, type: 'workflow' },
+      { id: 'huanjie', position: { x: 240, y: 310 }, data: { title: '缓解', subtitle: '' }, type: 'workflow' },
+      { id: 'shujie', position: { x: 240, y: 430 }, data: { title: '疏解', subtitle: '' }, type: 'workflow' },
+
+      { id: 'people', position: { x: 500, y: 140 }, data: { title: '人民调解', subtitle: '' }, type: 'workflow' },
+      { id: 'admin', position: { x: 500, y: 260 }, data: { title: '行政调解', subtitle: '' }, type: 'workflow' },
+      { id: 'professional', position: { x: 500, y: 380 }, data: { title: '专业调解', subtitle: '' }, type: 'workflow' },
+
+      { id: 'status', position: { x: 760, y: 260 }, data: { title: '调解状态', subtitle: '' }, type: 'workflow' },
+      { id: 'success', position: { x: 980, y: 180 }, data: { title: '调解成功', subtitle: '' }, type: 'workflow' },
+      { id: 'failed', position: { x: 980, y: 340 }, data: { title: '调解失败', subtitle: '' }, type: 'workflow' },
+      { id: 'archive', position: { x: 1180, y: 260 }, data: { title: '案件归档', subtitle: '' }, type: 'workflow' }
+    ];
+
+    const baseEdges = [
+      { id: 'e-accept-mediation', source: 'accept', target: 'mediation' },
+      { id: 'e-accept-huajie', source: 'accept', target: 'huajie' },
+      { id: 'e-accept-huanjie', source: 'accept', target: 'huanjie' },
+      { id: 'e-accept-shujie', source: 'accept', target: 'shujie' },
+
+      { id: 'e-mediation-people', source: 'mediation', target: 'people' },
+      { id: 'e-mediation-admin', source: 'mediation', target: 'admin' },
+      { id: 'e-mediation-professional', source: 'mediation', target: 'professional' },
+
+      { id: 'e-people-status', source: 'people', target: 'status' },
+      { id: 'e-admin-status', source: 'admin', target: 'status' },
+      { id: 'e-professional-status', source: 'professional', target: 'status' },
+
+      { id: 'e-status-success', source: 'status', target: 'success' },
+      { id: 'e-status-failed', source: 'status', target: 'failed' },
+      { id: 'e-success-archive', source: 'success', target: 'archive' },
+      { id: 'e-failed-archive', source: 'failed', target: 'archive' }
+    ];
+
+    function getParentEdge(targetId, parentMap, preferMap) {
+      const incoming = parentMap[targetId] || [];
+      if (!incoming.length) {
+        return null;
+      }
+      const preferredSource = preferMap[targetId];
+      if (preferredSource) {
+        const matched = incoming.find((edge) => edge.source === preferredSource);
+        if (matched) {
+          return matched;
+        }
+      }
+      return incoming[0];
+    }
+
+    function walkUpstream(targetId, parentMap, preferMap, edgeSet, nodeSet) {
+      nodeSet.add(targetId);
+      if (targetId === 'accept') {
+        return;
+      }
+      const parentEdge = getParentEdge(targetId, parentMap, preferMap);
+      if (!parentEdge) {
+        return;
+      }
+      edgeSet.add(parentEdge.id);
+      walkUpstream(parentEdge.source, parentMap, preferMap, edgeSet, nodeSet);
+    }
+
+    function WorkflowApp() {
+      const [activeNodeId, setActiveNodeId] = useState(window.initialWorkflowNodeId || 'accept');
+      const [acceptTime, setAcceptTime] = useState('--');
+      const [mediationStatusText, setMediationStatusText] = useState('');
+      const [preferredParents, setPreferredParents] = useState({
+        status: window.initialWorkflowPreferredStatusParent || 'people',
+        archive: 'success'
+      });
+
+      window.updateWorkflowAcceptTime = function (timeText) {
+        setAcceptTime(timeText || '--');
+      };
+
+      window.updateWorkflowMediationStatus = function (statusText) {
+        setMediationStatusText(statusText || '');
+      };
+
+      window.setWorkflowPreferredStatusParent = function (nodeId) {
+        const target = nodeId || '';
+        if (!target) {
+          return;
+        }
+        setPreferredParents((prev) => ({ ...prev, status: target }));
+      };
+
+      window.setWorkflowActiveNode = function (nodeId) {
+        const nextId = nodeId || 'accept';
+        setActiveNodeId(nextId);
+        if (nextId === 'people' || nextId === 'admin' || nextId === 'professional') {
+          setPreferredParents((prev) => ({ ...prev, status: nextId }));
+        }
+
+      };
+
+      const parentMap = useMemo(() => {
+        const m = {};
+        baseEdges.forEach((edge) => {
+          if (!m[edge.target]) {
+            m[edge.target] = [];
+          }
+          m[edge.target].push(edge);
+        });
+        return m;
+      }, []);
+
+      const pathState = useMemo(() => {
+        const edgeSet = new Set();
+        const nodeSet = new Set();
+        walkUpstream(activeNodeId, parentMap, preferredParents, edgeSet, nodeSet);
+        return { edgeSet, nodeSet };
+      }, [activeNodeId, parentMap, preferredParents]);
+
+      const nodes = useMemo(() => {
+        return baseNodes.map((node) => {
+          const isAccept = node.id === 'accept';
+          const isStatus = node.id === 'status';
+          const isInPath = pathState.nodeSet.has(node.id);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              subtitle: isAccept ? acceptTime : (isStatus ? mediationStatusText : node.data.subtitle)
+            },
+            selected: isInPath
+          };
+        });
+      }, [acceptTime, mediationStatusText, pathState.nodeSet]);
+
+      const edges = useMemo(() => {
+        return baseEdges.map((edge) => {
+          const active = pathState.edgeSet.has(edge.id);
+          return {
+            ...edge,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
+            type: 'smoothstep',
+            pathOptions: { borderRadius: 16 },
+            animated: false,
+            style: {
+              stroke: active ? '#22c55e' : '#d4d4d8',
+              strokeWidth: active ? 3 : 2
+            },
+            labelBgStyle: { fill: '#ffffff', color: '#52525b', fillOpacity: 1 },
+            labelBgPadding: [8, 3],
+            labelBgBorderRadius: 999,
+            labelStyle: { fontSize: 10, fontWeight: 500, fill: '#71717a' }
+          };
+        });
+      }, [pathState.edgeSet]);
+
+      return h(ReactFlowComp, {
+        nodes,
+        edges,
+        nodeTypes,
+        fitView: true,
+        fitViewOptions: { padding: 0.16 },
+        nodesDraggable: false,
+        nodesConnectable: false,
+        elementsSelectable: true,
+        zoomOnScroll: true,
+        zoomOnPinch: true,
+        panOnDrag: true,
+        minZoom: 0.45,
+        maxZoom: 1.8,
+        onNodeClick: (_, node) => {
+          const nextId = node.id;
+          if (window.canWorkflowNodeClick && !window.canWorkflowNodeClick(nextId)) {
+            return;
+          }
+
+          const lockMeta = window.workflowLockMeta || {};
+          const isThirdNode = nextId === 'people' || nextId === 'admin' || nextId === 'professional';
+          const keepStatusActive = Boolean(lockMeta.locked) && isThirdNode;
+
+          if (keepStatusActive) {
+            setPreferredParents((prev) => ({ ...prev, status: nextId }));
+            setActiveNodeId('status');
+          } else {
+            setActiveNodeId(nextId);
+            if (isThirdNode) {
+              setPreferredParents((prev) => ({ ...prev, status: nextId }));
+            }
+            if (nextId === 'success' || nextId === 'failed') {
+              setPreferredParents((prev) => ({ ...prev, archive: nextId }));
+            }
+          }
+
+          if (window.onWorkflowNodeChange) {
+            window.onWorkflowNodeChange(nextId);
+          }
+        }
+      },
+      h(Background, { gap: 18, size: 1, color: '#e5e7eb' }));
+    }
+
+    const root = window.ReactDOM.createRoot(document.getElementById('reactWorkflowRoot'));
+    root.render(h(WorkflowApp));
+    requestAnimationFrame(() => {
+      if (window.onAssistantCanvasReady) {
+        window.onAssistantCanvasReady();
+      }
+    });
+    if (window.onWorkflowNodeChange) {
+      window.onWorkflowNodeChange(window.initialWorkflowNodeId || 'accept');
+    }
+  }
+
+  setTimeout(() => {
+    loadWorkflowLibraries().then(initWorkflow).catch(() => {});
+  }, 0);
+</script>
+</body>
+</html>
