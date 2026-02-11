@@ -198,9 +198,16 @@ public class CaseController {
         result.put("caseId", record.getId());
         result.put("caseNo", record.getCaseNo());
         result.put("partyName", record.getPartyName());
+        result.put("partyId", record.getPartyId());
+        result.put("partyPhone", record.getPartyPhone());
+        result.put("partyAddress", record.getPartyAddress());
         result.put("counterpartyName", record.getCounterpartyName());
+        result.put("counterpartyId", record.getCounterpartyId());
+        result.put("counterpartyPhone", record.getCounterpartyPhone());
+        result.put("counterpartyAddress", record.getCounterpartyAddress());
         result.put("disputeType", record.getDisputeType());
         result.put("disputeSubType", record.getDisputeSubType());
+        result.put("disputeLocation", record.getDisputeLocation());
         result.put("handlingProgress", record.getHandlingProgress());
         result.put("riskLevel", record.getRiskLevel());
         result.put("caseText", record.getCaseText());
