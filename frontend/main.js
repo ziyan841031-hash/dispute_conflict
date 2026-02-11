@@ -580,7 +580,7 @@ function showCaseMaterial(data) {
 
   contentBox.innerHTML = `
     <section class="case-detail-section case-detail-raw">
-      <h4>案件原文与头部信息</h4>
+      <h4>案件原文</h4>
       <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
       ${renderGrid(caseTopItems)}
     </section>
