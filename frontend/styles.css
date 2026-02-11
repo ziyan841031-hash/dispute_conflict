@@ -149,7 +149,7 @@ table { width: 100%; border-collapse: collapse; }
 .risk-level.risk-r4 { color: #dc2626; font-weight: 600; }
 .assistant-main-grid { display: grid; grid-template-columns: 8fr 2fr; gap: 10px; align-items: stretch; }
 
-.flow-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; }
+.flow-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; padding: 5px; }
 .flow-container {
   flex: 1;
   border: none;
@@ -171,7 +171,7 @@ table { width: 100%; border-collapse: collapse; }
 .workflow-canvas .react-flow__background path { stroke: #e5e7eb; }
 .workflow-canvas .react-flow__edge-path { transition: stroke .2s ease, stroke-width .2s ease; }
 
-.flow-card h3 { margin: 0 0 8px; }
+.flow-card h3 { margin: 0 0 5px; }
 .rf-node-label { line-height: 1.15; }
 
 .side-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
