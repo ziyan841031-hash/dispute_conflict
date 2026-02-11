@@ -1,6 +1,6 @@
 body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fa; }
 .layout { display: flex; min-height: 100vh; overflow-x: hidden; }
-.sidebar { width: 240px; background: #1f2a44; color: #fff; padding: 20px; flex-shrink: 0; }
+.sidebar { width: 216px; background: #1f2a44; color: #fff; padding: 20px; flex-shrink: 0; }
 .sidebar h1 { font-size: 18px; margin-bottom: 20px; }
 .sidebar a { display: block; color: #cfd8ea; padding: 10px; text-decoration: none; border-radius: 6px; }
 .sidebar a.active, .sidebar a:hover { background: #31466f; color: #fff; }
