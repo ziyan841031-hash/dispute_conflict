@@ -412,7 +412,20 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             result = transcription.wait(TranscriptionQueryParam.FromTranscriptionParam(param, result.getTaskId()));
 
             List<TranscriptionTaskResult> taskResultList = result.getResults();
-            return taskResultList.toString();
+            if (taskResultList == null || taskResultList.isEmpty()) {
+                return "";
+            }
+            for (TranscriptionTaskResult taskResult : taskResultList) {
+                String transcriptionUrl = taskResult.getTranscriptionUrl();
+                if (!StringUtils.hasText(transcriptionUrl)) {
+                    continue;
+                }
+                String text = fetchTranscriptionText(transcriptionUrl);
+                if (StringUtils.hasText(text)) {
+                    return text;
+                }
+            }
+            return "";
         } catch (Exception ex) {
             log.warn("语音识别失败: {}", ex.getMessage());
             return "";
@@ -420,7 +433,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     }
 
     /**
-     * 下载并解析转写结果文本。
+     * 下载并解析转写结果文本（返回transcripts[0].text）。
      */
     private String fetchTranscriptionText(String transcriptionUrl) {
         HttpURLConnection connection = null;
@@ -430,9 +443,16 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             connection.connect();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                 JsonNode root = objectMapper.readTree(reader);
-                StringJoiner joiner = new StringJoiner("\n");
-                collectTranscriptionText(root, joiner);
-                return joiner.toString();
+                JsonNode transcripts = root.path("transcripts");
+                if (transcripts.isArray()) {
+                    for (JsonNode transcript : transcripts) {
+                        String text = transcript.path("text").asText("").trim();
+                        if (StringUtils.hasText(text)) {
+                            return text;
+                        }
+                    }
+                }
+                return "";
             }
         } catch (Exception ex) {
             log.warn("解析语音识别报文失败: {}", ex.getMessage());
@@ -440,36 +460,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         } finally {
             if (connection != null) {
                 connection.disconnect();
-            }
-        }
-    }
-
-    /**
-     * 递归提取转写文本字段。
-     */
-    private void collectTranscriptionText(JsonNode node, StringJoiner joiner) {
-        if (node == null || node.isNull()) {
-            return;
-        }
-        if (node.isObject()) {
-            if (node.has("text") && node.get("text").isTextual()) {
-                String text = node.get("text").asText("").trim();
-                if (StringUtils.hasText(text)) {
-                    joiner.add(text);
-                }
-            }
-            if (node.has("sentence") && node.get("sentence").isTextual()) {
-                String sentence = node.get("sentence").asText("").trim();
-                if (StringUtils.hasText(sentence)) {
-                    joiner.add(sentence);
-                }
-            }
-            node.fields().forEachRemaining(entry -> collectTranscriptionText(entry.getValue(), joiner));
-            return;
-        }
-        if (node.isArray()) {
-            for (JsonNode item : node) {
-                collectTranscriptionText(item, joiner);
             }
         }
     }
