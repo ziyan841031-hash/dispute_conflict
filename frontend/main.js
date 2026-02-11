@@ -3,6 +3,7 @@ const API_BASE = 'http://localhost:8080/api';
 
 // 定义文字案件解析状态。
 const parseStatus = {
+  audio: false,
   text: false,
   classify: false
 };
@@ -10,7 +11,7 @@ const parseStatus = {
 // 提交文字案件。
 async function submitText() {
   // 打开解析弹窗。
-  openParseModal();
+  openParseModal('text');
   // 设置要素提取处理中。
   setLoading('text');
 
@@ -62,16 +63,55 @@ async function submitExcel() {
 // 提交音频案件。
 async function submitAudio() {
   const file = document.getElementById('audioFile').files[0];
+  if (!file) {
+    alert('请先选择音频文件');
+    return;
+  }
+
+  openParseModal('audio');
+  setLoading('audio');
+
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
-  await res.json();
+  const audioRes = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
+  const audioJson = await audioRes.json();
+  const recognizedText = audioJson && audioJson.data ? audioJson.data : '';
+  markDone('audio');
+
+  setLoading('text');
+  const textPayload = {
+    caseText: recognizedText,
+    eventSource: '来电求助'
+  };
+  const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(textPayload)
+  });
+  const textJson = await textRes.json();
+  markDone('text');
+
+  const caseId = textJson && textJson.data ? textJson.data.id : null;
+
+  setLoading('classify');
+  const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({caseId, caseText: textPayload.caseText})
+  });
+  await classifyRes.json();
+  markDone('classify');
 }
 
 // 打开解析弹窗。
-function openParseModal() {
+function openParseModal(mode) {
+  parseStatus.audio = false;
   parseStatus.text = false;
   parseStatus.classify = false;
+  const audioStep = document.getElementById('step-audio');
+  if (audioStep) {
+    audioStep.classList.toggle('hidden', mode !== 'audio');
+  }
   refreshAllIcons();
   document.getElementById('parseModal').classList.remove('hidden');
 }
@@ -100,6 +140,7 @@ function markDone(type) {
 
 // 刷新全部图标。
 function refreshAllIcons() {
+  refreshOneIcon('audio');
   refreshOneIcon('text');
   refreshOneIcon('classify');
 }

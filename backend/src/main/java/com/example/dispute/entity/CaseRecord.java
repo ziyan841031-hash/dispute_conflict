@@ -27,6 +27,27 @@ public class CaseRecord {
     @TableField("dispute_type")
     private String disputeType;
 
+    @TableField("party_id")
+    private String partyId;
+
+    @TableField("party_phone")
+    private String partyPhone;
+
+    @TableField("party_address")
+    private String partyAddress;
+
+    @TableField("counterparty_id")
+    private String counterpartyId;
+
+    @TableField("counterparty_phone")
+    private String counterpartyPhone;
+
+    @TableField("counterparty_address")
+    private String counterpartyAddress;
+
+    @TableField("dispute_location")
+    private String disputeLocation;
+
     @TableField("dispute_sub_type")
     private String disputeSubType;
 

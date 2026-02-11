@@ -2,8 +2,15 @@ CREATE TABLE IF NOT EXISTS case_record (
     id BIGSERIAL PRIMARY KEY,
     case_no VARCHAR(64) NOT NULL UNIQUE,
     party_name VARCHAR(100) NOT NULL,
+    party_id VARCHAR(32),
+    party_phone VARCHAR(32),
+    party_address VARCHAR(255),
     counterparty_name VARCHAR(100) NOT NULL,
+    counterparty_id VARCHAR(32),
+    counterparty_phone VARCHAR(32),
+    counterparty_address VARCHAR(255),
     dispute_type VARCHAR(50) NOT NULL,
+    dispute_location VARCHAR(255),
     dispute_sub_type VARCHAR(50),
     event_source VARCHAR(20) NOT NULL,
     risk_level VARCHAR(20) NOT NULL,
@@ -21,8 +28,15 @@ COMMENT ON TABLE case_record IS '案件主表';
 COMMENT ON COLUMN case_record.id IS '主键ID';
 COMMENT ON COLUMN case_record.case_no IS '案件编号';
 COMMENT ON COLUMN case_record.party_name IS '当事人';
+COMMENT ON COLUMN case_record.party_id IS '当事人身份证号';
+COMMENT ON COLUMN case_record.party_phone IS '当事人电话';
+COMMENT ON COLUMN case_record.party_address IS '当事人地址';
 COMMENT ON COLUMN case_record.counterparty_name IS '对方当事人';
+COMMENT ON COLUMN case_record.counterparty_id IS '对方当事人身份证号';
+COMMENT ON COLUMN case_record.counterparty_phone IS '对方当事人电话';
+COMMENT ON COLUMN case_record.counterparty_address IS '对方当事人地址';
 COMMENT ON COLUMN case_record.dispute_type IS '纠纷类型';
+COMMENT ON COLUMN case_record.dispute_location IS '纠纷发生地';
 COMMENT ON COLUMN case_record.dispute_sub_type IS '纠纷子类型';
 COMMENT ON COLUMN case_record.event_source IS '事件来源';
 COMMENT ON COLUMN case_record.risk_level IS '风险等级';
@@ -39,6 +53,16 @@ CREATE INDEX IF NOT EXISTS idx_case_record_dispute_type ON case_record(dispute_t
 CREATE INDEX IF NOT EXISTS idx_case_record_dispute_sub_type ON case_record(dispute_sub_type);
 CREATE INDEX IF NOT EXISTS idx_case_record_event_source ON case_record(event_source);
 CREATE INDEX IF NOT EXISTS idx_case_record_register_time ON case_record(register_time DESC);
+
+
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS party_id VARCHAR(32);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS party_phone VARCHAR(32);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS party_address VARCHAR(255);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_id VARCHAR(32);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_phone VARCHAR(32);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_address VARCHAR(255);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS dispute_location VARCHAR(255);
+
 
 
 CREATE TABLE IF NOT EXISTS case_classify_record (
