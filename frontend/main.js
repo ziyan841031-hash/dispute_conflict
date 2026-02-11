@@ -563,19 +563,24 @@ function showCaseMaterial(data) {
   const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
 
   contentBox.innerHTML = `
-    <section class="case-detail-section">
-      <h4>当事人信息</h4>
-      ${renderGrid(partyItems)}
-    </section>
-    <section class="case-detail-section">
-      <h4>对方当事人信息</h4>
-      ${renderGrid(counterpartyItems)}
-    </section>
-    <section class="case-detail-section">
+    <section class="case-detail-section case-detail-main">
       <h4>案件详情</h4>
+      <div class="case-detail-desc">
+        <div class="case-detail-desc-title">案件描述</div>
+        <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
+      </div>
       ${renderGrid(caseItems)}
-      <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
     </section>
+    <div class="case-detail-bottom-grid">
+      <section class="case-detail-section">
+        <h4>当事人信息</h4>
+        ${renderGrid(partyItems)}
+      </section>
+      <section class="case-detail-section">
+        <h4>对方当事人信息</h4>
+        ${renderGrid(counterpartyItems)}
+      </section>
+    </div>
   `;
   modal.classList.remove('hidden');
 

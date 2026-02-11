@@ -108,8 +108,9 @@
     function WorkflowNode(props) {
       const data = props.data || {};
       const selected = props.selected;
+      const stateClass = data.pathRole ? `is-${data.pathRole}` : '';
       return h('div', {
-          className: `rf-node-card ${selected ? 'is-selected' : ''}`
+          className: `rf-node-card ${selected ? 'is-selected' : ''} ${stateClass}`.trim()
         },
         h(Handle, { type: 'target', position: Position.Left, style: { opacity: 0, width: 8, height: 8 } }),
         h('div', {className: 'rf-node-title'}, data.title || '-'),
@@ -243,16 +244,18 @@
           const isAccept = node.id === 'accept';
           const isStatus = node.id === 'status';
           const isInPath = pathState.nodeSet.has(node.id);
+          const isActive = node.id === activeNodeId;
           return {
             ...node,
             data: {
               ...node.data,
-              subtitle: isAccept ? acceptTime : (isStatus ? mediationStatusText : node.data.subtitle)
+              subtitle: isAccept ? acceptTime : (isStatus ? mediationStatusText : node.data.subtitle),
+              pathRole: isInPath ? (isActive ? 'active' : 'history') : ''
             },
             selected: isInPath
           };
         });
-      }, [acceptTime, mediationStatusText, pathState.nodeSet]);
+      }, [acceptTime, mediationStatusText, pathState.nodeSet, activeNodeId]);
 
       const edges = useMemo(() => {
         return baseEdges.map((edge) => {
