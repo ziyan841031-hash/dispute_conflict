@@ -306,10 +306,12 @@ async function loadAssistantPage() {
   }
 
   const prefill = sessionStorage.getItem('assistantPrefill');
+  let prefillDataForCase = null;
   if (prefill) {
     try {
       const prefillData = JSON.parse(prefill);
       if (String(prefillData.id || '') === String(caseId)) {
+        prefillDataForCase = prefillData;
         renderAssistantTop(prefillData);
       }
     } catch (e) {}
@@ -334,7 +336,13 @@ async function loadAssistantPage() {
     orgData = [];
   }
 
-  assistantDataCache = detailData || {};
+  assistantDataCache = {
+    ...(prefillDataForCase || {}),
+    ...(detailData || {})
+  };
+  if (!assistantDataCache.eventSource && prefillDataForCase && prefillDataForCase.eventSource) {
+    assistantDataCache.eventSource = prefillDataForCase.eventSource;
+  }
   disposalOrgOptions = orgData || [];
 
   workflowAdviceLoading = true;
