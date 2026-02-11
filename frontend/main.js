@@ -551,25 +551,34 @@ function showCaseMaterial(data) {
     {label: '联系地址', value: safeData.counterpartyAddress}
   ];
 
-  const caseItems = [
+  const caseTopItems = [
     {label: '案件编号', value: safeData.caseNo},
+    {label: '登记时间', value: safeData.registerTime},
+    {label: '事件来源', value: safeData.eventSource},
+    {label: '办理进度', value: safeData.handlingProgress}
+  ];
+
+  const caseBasicItems = [
     {label: '纠纷类型', value: safeData.disputeType},
     {label: '纠纷子类型', value: safeData.disputeSubType},
     {label: '纠纷发生地', value: safeData.disputeLocation},
     {label: '风险等级', value: safeData.riskLevel},
-    {label: '登记时间', value: safeData.registerTime}
+    {label: '接待人', value: safeData.receiver}
   ];
 
-  const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
+  const smartSummary = safeData.judgementBasisText || safeData.factsSummary || safeData.summaryText || '-';
+
+  const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
 
   contentBox.innerHTML = `
-    <section class="case-detail-section case-detail-main">
-      <h4>案件详情</h4>
-      <div class="case-detail-desc">
-        <div class="case-detail-desc-title">案件描述</div>
-        <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
-      </div>
-      ${renderGrid(caseItems)}
+    <section class="case-detail-section case-detail-raw">
+      <h4>案件原文与头部信息</h4>
+      <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
+      ${renderGrid(caseTopItems)}
+    </section>
+    <section class="case-detail-section">
+      <h4>案件基本信息</h4>
+      ${renderGrid(caseBasicItems)}
     </section>
     <div class="case-detail-bottom-grid">
       <section class="case-detail-section">
@@ -581,6 +590,10 @@ function showCaseMaterial(data) {
         ${renderGrid(counterpartyItems)}
       </section>
     </div>
+    <section class="case-detail-section case-detail-summary">
+      <h4>案件智能摘要</h4>
+      <div class="case-detail-text">${formatDetailValue(smartSummary)}</div>
+    </section>
   `;
   modal.classList.remove('hidden');
 

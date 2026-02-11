@@ -47,7 +47,7 @@ table { width: 100%; border-collapse: collapse; }
 .rf-node-card {
   background: #ffffff;
   border-radius: 12px;
-  border: 1px solid #d4d4d8;
+  border: 1px solid #94a3b8;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   padding: 8px 12px;
   min-width: 108px;
@@ -58,18 +58,18 @@ table { width: 100%; border-collapse: collapse; }
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 .rf-node-card.is-selected {
-  border-color: #22c55e;
+  border-color: #16a34a;
   box-shadow: 0 0 0 2px #dcfce7;
 }
 .rf-node-card.is-history {
   background: #ecfdf3;
-  border-color: #22c55e;
-  box-shadow: 0 0 0 2px #d1fae5;
+  border-color: #15803d;
+  box-shadow: 0 0 0 2px #bbf7d0;
 }
 .rf-node-card.is-active {
   background: #eff6ff;
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 2px #dbeafe;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px #bfdbfe;
 }
 .rf-node-title {
   font-size: 14px;
@@ -234,20 +234,12 @@ table { width: 100%; border-collapse: collapse; }
   .assistant-info-summary { flex-direction: column; align-items: flex-start; }
 }
 
-@media (max-width: 900px) {
-  .case-detail-grid { grid-template-columns: 1fr; }
-  .case-detail-bottom-grid { grid-template-columns: 1fr; }
-  .assistant-main-grid { grid-template-columns: 1fr; }
-  .side-card { min-height: 420px; }
-  .workflow-canvas { height: 380px; }
-}
-
-
 .case-material-modal-content {
   width: min(980px, 92vw);
-  max-height: 84vh;
+  max-height: 86vh;
   display: flex;
   flex-direction: column;
+  border-radius: 20px;
 }
 .case-material-header {
   display: flex;
@@ -261,68 +253,81 @@ table { width: 100%; border-collapse: collapse; }
   color: #0f172a;
 }
 .case-material-content {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  background: #f3f6fb;
   padding: 12px;
-  white-space: pre-wrap;
   line-height: 1.6;
   overflow-y: auto;
-  min-height: 220px;
+  min-height: 260px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .case-detail-section {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 6px 8px;
-  background: #ffffff;
-}
-.case-detail-main {
+  border: 1px solid #d7deea;
+  border-radius: 14px;
   padding: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.case-detail-raw {
+  background: #f8fbff;
+  border-color: #cfe0ff;
+}
+.case-detail-summary {
+  background: #f7faff;
 }
 .case-detail-bottom-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-.case-detail-desc {
-  border: 1px solid #dbeafe;
-  border-radius: 8px;
-  background: #f8fbff;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-.case-detail-desc-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e40af;
-  margin-bottom: 6px;
-}
 .case-detail-section h4 {
-  margin: 0 0 4px;
-  color: #334155;
+  margin: 0 0 8px;
+  color: #1e293b;
   font-size: 14px;
+  font-weight: 700;
 }
 .case-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 8px;
+  gap: 8px;
 }
 .case-detail-item {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #f8fafc;
-  padding: 6px 8px;
-  min-height: 0;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-.case-detail-label { color: #64748b; }
-.case-detail-value { color: #0f172a; word-break: break-word; }
-.case-detail-text { font-size: 13px; color: #0f172a; line-height: 1.7; white-space: pre-wrap; word-break: break-word; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: #ffffff; margin-top: 6px; }
+.case-detail-label { color: #64748b; font-size: 11px; }
+.case-detail-value { color: #0f172a; word-break: break-word; font-weight: 600; }
+.case-detail-text {
+  font-size: 13px;
+  color: #0f172a;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid #d6dfef;
+  border-radius: 12px;
+  padding: 10px;
+  background: #ffffff;
+  margin-bottom: 8px;
+}
 .case-detail-empty { color: #94a3b8; font-size: 13px; }
+
+@media (max-width: 900px) {
+  .case-detail-grid { grid-template-columns: 1fr; }
+  .case-detail-bottom-grid { grid-template-columns: 1fr; }
+  .assistant-main-grid { grid-template-columns: 1fr; }
+  .side-card { min-height: 420px; }
+  .workflow-canvas { height: 380px; }
+}
 
 
 .workflow-waiting-content {
