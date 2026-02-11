@@ -43,12 +43,13 @@
 </div>
 
 <div id="parseModal" class="modal hidden">
-  <div class="modal-content">
+  <div class="modal-content parse-modal-content">
     <h3>案件解析中...</h3>
+    <div class="parse-modal-subtitle">流程进行中，请稍候</div>
     <ul class="parse-list">
-      <li id="step-audio"><span id="icon-audio" class="status-icon">○</span> 语音识别中</li>
-      <li><span id="icon-text" class="status-icon">○</span> 智能体要素提取中</li>
-      <li><span id="icon-classify" class="status-icon">○</span> 智能分类中</li>
+      <li id="step-audio" class="parse-step"><span id="icon-audio" class="status-icon">○</span><span class="parse-step-text">语音识别中</span></li>
+      <li class="parse-step"><span id="icon-text" class="status-icon">○</span><span class="parse-step-text">智能体要素提取中</span></li>
+      <li class="parse-step"><span id="icon-classify" class="status-icon">○</span><span class="parse-step-text">智能分类中</span></li>
     </ul>
     <button onclick="closeParseModal()">关闭</button>
   </div>
