@@ -150,14 +150,14 @@ table { width: 100%; border-collapse: collapse; }
 .risk-level.risk-r0, .risk-level.risk-r1 { color: #16a34a; font-weight: 600; }
 .risk-level.risk-r2, .risk-level.risk-r3 { color: #ea580c; font-weight: 600; }
 .risk-level.risk-r4 { color: #dc2626; font-weight: 600; }
-.assistant-main-grid { display: grid; grid-template-columns: 7fr 3fr; gap: 12px; align-items: stretch; }
+.assistant-main-grid { display: grid; grid-template-columns: 8fr 2fr; gap: 12px; align-items: stretch; }
 
 .flow-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; }
 .flow-container {
   flex: 1;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  background: linear-gradient(180deg, #f8fbff 0%, #f1f5ff 100%);
+  background: #ffffff;
   padding: 10px;
 }
 .workflow-canvas {
@@ -165,7 +165,7 @@ table { width: 100%; border-collapse: collapse; }
   height: 100%;
   border: 1px solid #dbe4ff;
   border-radius: 12px;
-  background: #f8fbff;
+  background: #ffffff;
 }
 .workflow-canvas .react-flow__pane { cursor: grab; }
 .workflow-canvas .react-flow__attribution { display: none; }
@@ -208,7 +208,7 @@ table { width: 100%; border-collapse: collapse; }
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 8px;
-  background: #f8fafc;
+  background: #ffffff;
 }
 .timeline-item { border-bottom: 1px solid #e2e8f0; padding: 8px 4px; font-size: 13px; }
 
@@ -274,7 +274,7 @@ table { width: 100%; border-collapse: collapse; }
   padding: 6px 8px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  background: #f8fafc;
+  background: #ffffff;
   font-size: 12px;
 }
 .timeline-row::before {
@@ -428,7 +428,7 @@ table { width: 100%; border-collapse: collapse; }
   margin-top: 6px;
   border: 1px solid #dbeafe;
   border-radius: 10px;
-  background: #f8fbff;
+  background: #ffffff;
   padding: 10px;
 }
 .guide-advice-title {
