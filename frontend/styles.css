@@ -281,10 +281,15 @@ table { width: 100%; border-collapse: collapse; }
 .case-detail-item {
   font-size: 13px;
   line-height: 1.5;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 8px 10px;
+  min-height: 38px;
 }
 .case-detail-label { color: #64748b; }
 .case-detail-value { color: #0f172a; word-break: break-word; }
-.case-detail-text { font-size: 13px; color: #0f172a; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.case-detail-text { font-size: 13px; color: #0f172a; line-height: 1.7; white-space: pre-wrap; word-break: break-word; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: #ffffff; margin-top: 10px; }
 .case-detail-empty { color: #94a3b8; font-size: 13px; }
 
 

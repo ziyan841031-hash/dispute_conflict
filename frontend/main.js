@@ -516,6 +516,15 @@ function renderAssistantTop(data) {
   }
 }
 
+// 格式化案件详情字段展示值。
+function formatDetailValue(value) {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+  const text = String(value).trim();
+  return text ? text : '-';
+}
+
 // 展示案件详情。
 function showCaseMaterial(data) {
   const modal = document.getElementById('caseMaterialModal');
@@ -526,42 +535,46 @@ function showCaseMaterial(data) {
   }
 
   const safeData = data || {};
-  const rawMaterial = safeData.caseText || safeData.materialText || safeData.rawMaterial || '暂无原始材料';
+  const rawMaterial = safeData.caseText || safeData.materialText || safeData.rawMaterial;
 
   const partyItems = [
     {label: '姓名', value: safeData.partyName},
     {label: '身份证号', value: safeData.partyId},
     {label: '联系电话', value: safeData.partyPhone},
     {label: '联系地址', value: safeData.partyAddress}
-  ].filter(item => item.value);
+  ];
 
   const counterpartyItems = [
     {label: '姓名', value: safeData.counterpartyName},
     {label: '身份证号', value: safeData.counterpartyId},
     {label: '联系电话', value: safeData.counterpartyPhone},
     {label: '联系地址', value: safeData.counterpartyAddress}
-  ].filter(item => item.value);
+  ];
 
-  const partyHtml = partyItems.length
-    ? `<div class="case-detail-grid">${partyItems.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${item.value}</span></div>`).join('')}</div>`
-    : '<div class="case-detail-empty">暂无当事人信息</div>';
+  const caseItems = [
+    {label: '案件编号', value: safeData.caseNo},
+    {label: '纠纷类型', value: safeData.disputeType},
+    {label: '纠纷子类型', value: safeData.disputeSubType},
+    {label: '纠纷发生地', value: safeData.disputeLocation},
+    {label: '风险等级', value: safeData.riskLevel},
+    {label: '登记时间', value: safeData.registerTime}
+  ];
 
-  const counterpartyHtml = counterpartyItems.length
-    ? `<div class="case-detail-grid">${counterpartyItems.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${item.value}</span></div>`).join('')}</div>`
-    : '<div class="case-detail-empty">暂无对方当事人信息</div>';
+  const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
 
   contentBox.innerHTML = `
     <section class="case-detail-section">
       <h4>当事人信息</h4>
-      ${partyHtml}
+      ${renderGrid(partyItems)}
     </section>
     <section class="case-detail-section">
       <h4>对方当事人信息</h4>
-      ${counterpartyHtml}
+      ${renderGrid(counterpartyItems)}
     </section>
     <section class="case-detail-section">
       <h4>案件详情</h4>
-      <div class="case-detail-text">${rawMaterial}</div>
+      ${renderGrid(caseItems)}
+      <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
     </section>
   `;
   modal.classList.remove('hidden');
