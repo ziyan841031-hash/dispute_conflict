@@ -2,7 +2,9 @@ package com.example.dispute.service.impl;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.ObjectMetadata;
+import com.aliyun.oss.model.PutObjectRequest;
 import com.alibaba.dashscope.audio.asr.transcription.Transcription;
 import com.alibaba.dashscope.audio.asr.transcription.TranscriptionParam;
 import com.alibaba.dashscope.audio.asr.transcription.TranscriptionQueryParam;
@@ -410,21 +412,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             result = transcription.wait(TranscriptionQueryParam.FromTranscriptionParam(param, result.getTaskId()));
 
             List<TranscriptionTaskResult> taskResultList = result.getResults();
-            if (taskResultList == null || taskResultList.isEmpty()) {
-                return "";
-            }
-            StringJoiner joiner = new StringJoiner("\n");
-            for (TranscriptionTaskResult taskResult : taskResultList) {
-                String transcriptionUrl = taskResult.getTranscriptionUrl();
-                if (!StringUtils.hasText(transcriptionUrl)) {
-                    continue;
-                }
-                String text = fetchTranscriptionText(transcriptionUrl);
-                if (StringUtils.hasText(text)) {
-                    joiner.add(text);
-                }
-            }
-            return joiner.toString();
+            return taskResultList.toString();
         } catch (Exception ex) {
             log.warn("语音识别失败: {}", ex.getMessage());
             return "";
@@ -494,16 +482,22 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 || !StringUtils.hasText(ossAccessKeyId) || !StringUtils.hasText(ossAccessKeySecret)) {
             throw new IllegalStateException("OSS配置不完整，无法上传音频文件");
         }
+
         String originalName = defaultVal(file.getOriginalFilename(), "audio.dat");
-        String objectKey = "audio/" + UUID.randomUUID().toString().replace("-", "") + "-" + originalName;
+        String objectKey = "Fun/" + UUID.randomUUID().toString().replace("-", "") + "-" + originalName;
 
         OSS ossClient = null;
         try (InputStream inputStream = file.getInputStream()) {
             ossClient = new OSSClientBuilder().build(ossEndpoint, ossAccessKeyId, ossAccessKeySecret);
+
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.getSize());
             metadata.setContentType(defaultVal(file.getContentType(), "application/octet-stream"));
-            ossClient.putObject(ossBucketName, objectKey, inputStream, metadata);
+            // 重要：设置文件为公共可读
+            metadata.setObjectAcl(CannedAccessControlList.PublicRead);
+
+            PutObjectRequest putObjectRequest = new PutObjectRequest(ossBucketName, objectKey, inputStream, metadata);
+            ossClient.putObject(putObjectRequest);
 
             if (StringUtils.hasText(ossUrlPrefix)) {
                 return ossUrlPrefix.replaceAll("/$", "") + "/" + objectKey;
