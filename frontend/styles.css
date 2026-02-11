@@ -1,6 +1,6 @@
 body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fa; }
 .layout { display: flex; min-height: 100vh; overflow-x: hidden; }
-.sidebar { width: 216px; background: #1f2a44; color: #fff; padding: 20px; flex-shrink: 0; }
+.sidebar { width: 184px; background: #1f2a44; color: #fff; padding: 20px; flex-shrink: 0; }
 .sidebar h1 { font-size: 18px; margin-bottom: 20px; }
 .sidebar a { display: block; color: #cfd8ea; padding: 10px; text-decoration: none; border-radius: 6px; }
 .sidebar a.active, .sidebar a:hover { background: #31466f; color: #fff; }
@@ -147,7 +147,7 @@ table { width: 100%; border-collapse: collapse; }
 .risk-level.risk-r0, .risk-level.risk-r1 { color: #16a34a; font-weight: 600; }
 .risk-level.risk-r2, .risk-level.risk-r3 { color: #ea580c; font-weight: 600; }
 .risk-level.risk-r4 { color: #dc2626; font-weight: 600; }
-.assistant-main-grid { display: grid; grid-template-columns: 8fr 2fr; gap: 10px; align-items: stretch; }
+.assistant-main-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; align-items: stretch; }
 
 .flow-card { height: 560px; min-height: 560px; display: flex; flex-direction: column; padding: 5px; }
 .flow-container {
