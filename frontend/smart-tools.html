@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 智能工具</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">控台首页</a>
+    <a href="cases.html">案件管理</a>
+    <a href="stats.html">案件统计</a>
+    <a class="active" href="smart-tools.html">智能工具</a>
+    <a href="assistant.html">智能助手</a>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h2>智能工具</h2>
+      <div class="tools-grid">
+        <button type="button" class="tool-app-card" onclick="openRealtimeTranscription()">
+          <span class="tool-app-icon">🎙️</span>
+          <span class="tool-app-name">语音实时转录</span>
+        </button>
+        <button type="button" class="tool-app-card" onclick="openLawServiceDialog()">
+          <span class="tool-app-icon">⚖️</span>
+          <span class="tool-app-name">法律服务对话智能体</span>
+        </button>
+        <button type="button" class="tool-app-card tool-app-add" onclick="openAddToolTip()">
+          <span class="tool-app-icon">＋</span>
+          <span class="tool-app-name">添加</span>
+        </button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="lawAgentModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lawAgentTitle">
+  <div class="modal-content law-agent-modal-content">
+    <div class="case-material-header">
+      <h3 id="lawAgentTitle">法律服务对话智能体</h3>
+      <button type="button" onclick="closeLawServiceDialog()">关闭</button>
+    </div>
+    <div id="lawAgentChatList" class="law-agent-chat-list"></div>
+    <div class="law-agent-input-row">
+      <input id="lawAgentInput" type="text" placeholder="请输入您的法律问题..." onkeydown="onLawAgentInputKeydown(event)">
+      <button type="button" onclick="sendLawAgentMessage()">发送</button>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
