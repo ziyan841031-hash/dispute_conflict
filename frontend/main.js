@@ -1071,7 +1071,7 @@ function renderTimeline(data) {
   const diversionDone = formatTimelineTime(diversionCompletedAt);
   const statusEnter = formatTimelineTime(diversionCompletedAt);
   const mediationDone = formatTimelineTime(mediationCompletedAt);
-  const showDynamic = !mediationCompletedAt && mediationStatus === '调解中' && !!diversionCompletedAt;
+  const showCurrentProcessingTime = mediationStatus === '调解中';
 
   const actionButtons = mediationStatus === '调解中'
     ? `
@@ -1086,7 +1086,9 @@ function renderTimeline(data) {
     {
       name: '调解状态',
       enter: statusEnter,
-      done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone,
+      done: showCurrentProcessingTime
+        ? '<span id="timelineCurrentProcessingTime" class="timeline-dynamic-time">-</span>'
+        : mediationDone,
       enterLabel: '进入时间',
       doneLabel: '处理完成时间',
       extra: actionButtons
@@ -1143,13 +1145,13 @@ function renderTimeline(data) {
     ${timelineHtml}
   `;
 
-  if (showDynamic) {
-    const target = document.getElementById('timelineDynamicTime');
+  if (showCurrentProcessingTime) {
+    const target = document.getElementById('timelineCurrentProcessingTime');
     const refresh = () => {
       if (!target) {
         return;
       }
-      target.textContent = formatElapsedFrom(diversionCompletedAt);
+      target.textContent = formatTimelineTime(new Date());
     };
     refresh();
     timelineTickTimer = setInterval(refresh, 1000);
@@ -1173,23 +1175,6 @@ function formatTimelineTime(value) {
     return String(value);
   }
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-}
-
-function formatElapsedFrom(startValue) {
-  const start = new Date(startValue);
-  if (Number.isNaN(start.getTime())) {
-    return '-';
-  }
-  let diff = Date.now() - start.getTime();
-  if (diff < 0) {
-    diff = 0;
-  }
-  const totalSeconds = Math.floor(diff / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${days}天${hours}时${minutes}分${seconds}秒`;
 }
 
 function onTimelineUrge() {
