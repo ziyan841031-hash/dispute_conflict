@@ -376,6 +376,7 @@ public class CaseStatsController {
     private void buildPpt(String pptPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
                           String typeChartPath, String districtChartPath) throws Exception {
         XMLSlideShow ppt = new XMLSlideShow();
+        ppt.setPageSize(new java.awt.Dimension(PPT_WIDTH, PPT_HEIGHT));
         addPptSlide(ppt, summary.get("month_title"), summary.get("month_summary"), timeChartPath);
         addPptSlide(ppt, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
         addPptSlide(ppt, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
@@ -387,60 +388,110 @@ public class CaseStatsController {
     }
 
     /**
-     * 单页排版：标题+摘要（按“；”拆分）+图表。
+     * 单页排版：标题+摘要（按“；”拆分并自动换行）+自适应图表。
      */
     private void addPptSlide(XMLSlideShow ppt, String title, String summary, String chartPath) throws Exception {
         XSLFSlide slide = ppt.createSlide();
 
+        // 标题区。
+        int titleHeight = 58;
         XSLFTextBox titleBox = slide.createTextBox();
-        titleBox.setAnchor(new java.awt.Rectangle(40, 20, 1160, 60));
+        titleBox.setAnchor(new java.awt.Rectangle(MARGIN, 16, PPT_WIDTH - MARGIN * 2, titleHeight));
         XSLFTextParagraph titleP = titleBox.addNewTextParagraph();
         XSLFTextRun titleR = titleP.addNewTextRun();
-        titleR.setText(title == null ? "" : title);
+        titleR.setText(title == null ? "" : title.trim());
         titleR.setFontFamily("Microsoft YaHei");
         titleR.setBold(true);
-        titleR.setFontSize(28.0);
+        titleR.setFontSize(30.0);
 
+        // 摘要区（最大高度受控，超出时自动截断并追加省略标记）。
+        int summaryTop = 86;
+        int summaryHeight = 180;
+        int summaryWidth = PPT_WIDTH - MARGIN * 2;
         XSLFTextBox summaryBox = slide.createTextBox();
-        summaryBox.setAnchor(new java.awt.Rectangle(40, 90, 1160, 170));
+        summaryBox.setAnchor(new java.awt.Rectangle(MARGIN, summaryTop, summaryWidth, summaryHeight));
+
+        java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.PLAIN, 20);
+        int maxLineWidthPx = summaryWidth - 20;
+        int maxLines = 7;
+        int usedLines = 0;
         String[] paragraphs = (summary == null ? "" : summary).split("；");
-        for (String p : paragraphs) {
-            String text = p == null ? "" : p.trim();
+        for (int i = 0; i < paragraphs.length; i++) {
+            String text = paragraphs[i] == null ? "" : paragraphs[i].trim();
             if (text.isEmpty()) {
                 continue;
             }
-            List<String> lines = wrapText(text, 70);
+            List<String> lines = wrapTextByPixel(text, summaryFont, maxLineWidthPx);
             for (String line : lines) {
+                if (usedLines >= maxLines) {
+                    break;
+                }
                 XSLFTextParagraph para = summaryBox.addNewTextParagraph();
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
                 run.setFontFamily("Microsoft YaHei");
-                run.setFontSize(16.0);
+                run.setFontSize(18.0);
+                usedLines++;
+            }
+            if (usedLines >= maxLines) {
+                break;
             }
         }
+        if (usedLines >= maxLines) {
+            XSLFTextParagraph para = summaryBox.addNewTextParagraph();
+            XSLFTextRun run = para.addNewTextRun();
+            run.setText("……");
+            run.setFontFamily("Microsoft YaHei");
+            run.setFontSize(18.0);
+        }
+
+        // 图表区：按比例缩放并居中，保证不超出幻灯片。
+        BufferedImage chart = ImageIO.read(new File(chartPath));
+        int imageTop = summaryTop + summaryHeight + 16;
+        int imageMaxW = PPT_WIDTH - MARGIN * 2;
+        int imageMaxH = PPT_HEIGHT - imageTop - 20;
+        double scale = Math.min(imageMaxW * 1.0 / chart.getWidth(), imageMaxH * 1.0 / chart.getHeight());
+        scale = Math.min(scale, 1.0);
+        int imageW = Math.max(1, (int) Math.round(chart.getWidth() * scale));
+        int imageH = Math.max(1, (int) Math.round(chart.getHeight() * scale));
+        int imageX = (PPT_WIDTH - imageW) / 2;
 
         byte[] bytes = Files.readAllBytes(Paths.get(chartPath));
         XSLFPictureData pd = ppt.addPicture(bytes, PictureData.PictureType.PNG);
         XSLFPictureShape pic = slide.createPicture(pd);
-        pic.setAnchor(new java.awt.Rectangle(40, 280, 1160, 380));
+        pic.setAnchor(new java.awt.Rectangle(imageX, imageTop, imageW, imageH));
     }
 
     /**
-     * 按固定字符宽度做简单换行。
+     * 根据像素宽度对文本换行，避免中文段落超出文本框。
      */
-    private List<String> wrapText(String text, int maxChars) {
+    private List<String> wrapTextByPixel(String text, java.awt.Font font, int maxWidthPx) {
         List<String> lines = new ArrayList<>();
-        if (text == null) {
+        if (text == null || text.trim().isEmpty()) {
             return lines;
         }
-        String content = text.trim();
-        while (content.length() > maxChars) {
-            lines.add(content.substring(0, maxChars));
-            content = content.substring(maxChars);
+        BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setFont(font);
+        java.awt.FontMetrics metrics = g.getFontMetrics();
+
+        StringBuilder current = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            current.append(ch);
+            if (metrics.stringWidth(current.toString()) > maxWidthPx) {
+                current.deleteCharAt(current.length() - 1);
+                if (current.length() > 0) {
+                    lines.add(current.toString());
+                    current.setLength(0);
+                }
+                current.append(ch);
+            }
         }
-        if (!content.isEmpty()) {
-            lines.add(content);
+        if (current.length() > 0) {
+            lines.add(current.toString());
         }
+        g.dispose();
         return lines;
     }
 
