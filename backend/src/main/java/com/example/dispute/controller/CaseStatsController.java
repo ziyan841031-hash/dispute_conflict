@@ -460,8 +460,8 @@ public class CaseStatsController {
         textBg.setFillColor(new Color(248, 250, 252));
         textBg.setLineColor(new Color(203, 213, 225));
 
-        // 右侧内容按条目切分，每条独立背景卡片。
-        java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.PLAIN, 16);
+        // 右侧内容按条目切分，每条使用淡黄色矩形背景。
+        java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18);
         int cardPadding = 12;
         int cardGap = 10;
         int cardWidth = textAreaWidth - 20;
@@ -484,10 +484,10 @@ public class CaseStatsController {
             }
 
             XSLFAutoShape card = slide.createAutoShape();
-            card.setShapeType(ShapeType.ROUND_RECT);
+            card.setShapeType(ShapeType.RECT);
             card.setAnchor(new java.awt.Rectangle(textLeft + 10, currentY, cardWidth, cardHeight));
-            card.setFillColor(new Color(239, 246, 255));
-            card.setLineColor(new Color(147, 197, 253));
+            card.setFillColor(new Color(255, 251, 214));
+            card.setLineColor(new Color(250, 204, 21));
 
             XSLFTextBox cardText = slide.createTextBox();
             cardText.setAnchor(new java.awt.Rectangle(textLeft + 10 + cardPadding, currentY + cardPadding,
@@ -497,7 +497,8 @@ public class CaseStatsController {
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
                 run.setFontFamily("Microsoft YaHei");
-                run.setFontSize(15.0);
+                run.setBold(true);
+                run.setFontSize(18.0);
                 run.setFontColor(new Color(30, 41, 59));
             }
             currentY += cardHeight + cardGap;
@@ -786,7 +787,7 @@ public class CaseStatsController {
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, img.getWidth(), img.getHeight());
         g.setColor(Color.BLACK);
-        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 30));
+        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 36));
         g.drawString(title, 30, 50);
         g.dispose();
         return img;
@@ -797,7 +798,7 @@ public class CaseStatsController {
      */
     private void setupGraphics(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 18));
     }
 
     /**
