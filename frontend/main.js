@@ -1063,14 +1063,19 @@ function renderTimeline(data) {
     timelineTickTimer = null;
   }
 
+  const diversionCompletedAt = data.diversionCompletedAt;
+  const mediationCompletedAt = data.mediationCompletedAt;
+  const mediationStatus = String(data.mediationStatus || '').trim();
+
   const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
-  const diversionDone = formatTimelineTime(data.diversionCompletedAt);
-  const statusEnter = formatTimelineTime(data.diversionCompletedAt);
-  const mediationDone = formatTimelineTime(data.mediationCompletedAt);
+  const diversionDone = formatTimelineTime(diversionCompletedAt);
+  const statusEnter = formatTimelineTime(diversionCompletedAt);
+  const mediationDone = formatTimelineTime(mediationCompletedAt);
+  const showDynamic = !mediationCompletedAt && mediationStatus === '调解中' && !!diversionCompletedAt;
 
   const timeline = [
     {name: '调解分流', enter: diversionEnter, done: diversionDone},
-    {name: '调解状态', enter: statusEnter, done: mediationDone || '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>'}
+    {name: '调解状态', enter: statusEnter, done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone}
   ];
 
   box.innerHTML = timeline.map(item => `
@@ -1080,13 +1085,13 @@ function renderTimeline(data) {
     </div>
   `).join('');
 
-  if (!mediationDone && data.diversionCompletedAt) {
+  if (showDynamic) {
     const target = document.getElementById('timelineDynamicTime');
     const refresh = () => {
       if (!target) {
         return;
       }
-      target.textContent = formatElapsedFrom(data.diversionCompletedAt);
+      target.textContent = formatElapsedFrom(diversionCompletedAt);
     };
     refresh();
     timelineTickTimer = setInterval(refresh, 1000);
