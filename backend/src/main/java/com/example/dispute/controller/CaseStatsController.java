@@ -308,7 +308,10 @@ public class CaseStatsController {
         Map<String, Map<String, Long>> districtStatus = new LinkedHashMap<>();
         for (CaseStatsDetail d : details) {
             String district = safe(d.getDistrict());
-            String status = safe(d.getCurrentStatus());
+            String status = normalizeDistrictStatus(d.getCurrentStatus());
+            if (status == null) {
+                continue;
+            }
             if (!districtStatus.containsKey(district)) {
                 districtStatus.put(district, new LinkedHashMap<String, Long>());
             }
@@ -495,10 +498,10 @@ public class CaseStatsController {
         XSLFAutoShape textBg = slide.createAutoShape();
         textBg.setShapeType(ShapeType.ROUND_RECT);
         textBg.setAnchor(new java.awt.Rectangle(textLeft, bodyTop, textAreaWidth, bodyHeight));
-        textBg.setFillColor(new Color(248, 250, 252));
-        textBg.setLineColor(new Color(203, 213, 225));
+        textBg.setFillColor(new Color(235, 245, 255));
+        textBg.setLineColor(new Color(147, 197, 253));
 
-        // 右侧内容按条目切分，每条卡片文本居中，整体在右栏垂直居中展示。
+        // 右侧内容按条目切分，每条卡片文本右对齐，整体在右栏垂直居中展示。
         java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18);
         int cardPadding = 16;
         int cardGap = 12;
@@ -548,7 +551,7 @@ public class CaseStatsController {
                     cardWidth - cardPadding * 2, cardHeight - cardPadding * 2));
             for (String line : lines) {
                 XSLFTextParagraph para = cardText.addNewTextParagraph();
-                para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
+                para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.RIGHT);
                 para.setLineSpacing(110.0);
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
@@ -707,7 +710,7 @@ public class CaseStatsController {
         drawAxis(g, left, top, right, bottom);
         long max = Math.max(1L, data.values().stream().mapToLong(Long::longValue).max().orElse(1L));
         drawYGridAndTicks(g, left, right, top, bottom, max, 5);
-        drawAxisLabels(g, left, right, top, bottom, "类别", "数量（件）");
+        drawAxisLabels(g, left, right, top, bottom, "街镇（柱内纵向）", "数量（件）");
         List<Map.Entry<String, Long>> entries = new ArrayList<>(data.entrySet());
         int n = Math.max(1, entries.size());
         int barW = Math.max(20, (right - left) / (n * 2));
@@ -717,12 +720,39 @@ public class CaseStatsController {
             int h = (int) ((bottom - top) * (entry.getValue() * 1.0 / max));
             g.setColor(new Color(37, 99, 235));
             g.fillRect(x, bottom - h, barW, h);
-            g.setColor(Color.DARK_GRAY);
-            g.drawString(entry.getKey(), x - 8, bottom + 20);
+            int barTop = bottom - h;
+            g.setColor(new Color(15, 23, 42));
+            g.drawString(String.valueOf(entry.getValue()), x + 2, Math.max(top + 14, barTop - 6));
+            drawVerticalTextInBar(g, entry.getKey(), x, barTop, barW, h);
             x += barW + gap;
         }
         ImageIO.write(img, "png", new File(output));
         g.dispose();
+    }
+
+    /**
+     * 将街镇名称按纵向方式绘制在柱形内部。
+     */
+    private void drawVerticalTextInBar(Graphics2D g, String text, int barX, int barTop, int barW, int barH) {
+        if (text == null || text.trim().isEmpty() || barH <= 18) {
+            return;
+        }
+        String value = text.trim();
+        java.awt.Font original = g.getFont();
+        g.setFont(new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 13));
+        int charHeight = g.getFontMetrics().getHeight();
+        int totalHeight = value.length() * charHeight;
+        int startY = barTop + Math.max(charHeight, (barH - totalHeight) / 2 + charHeight - 4);
+        g.setColor(Color.WHITE);
+        int centerX = barX + barW / 2 - 6;
+        for (int i = 0; i < value.length(); i++) {
+            int y = startY + i * charHeight;
+            if (y > barTop + barH - 4) {
+                break;
+            }
+            g.drawString(String.valueOf(value.charAt(i)), centerX, y);
+        }
+        g.setFont(original);
     }
 
     /**
@@ -763,11 +793,7 @@ public class CaseStatsController {
         setupGraphics(g);
         int left = 100, right = 1120, top = 100, bottom = 620;
         drawAxis(g, left, top, right, bottom);
-        Set<String> statusSet = new LinkedHashSet<String>();
-        for (Map<String, Long> m : data.values()) {
-            statusSet.addAll(m.keySet());
-        }
-        List<String> statuses = new ArrayList<String>(statusSet);
+        List<String> statuses = Arrays.asList("已办结", "办理中");
         List<String> districts = new ArrayList<String>(data.keySet());
         long max = 1L;
         for (String d : districts) {
@@ -995,5 +1021,22 @@ public class CaseStatsController {
      */
     private String safe(String value) {
         return value == null || value.trim().isEmpty() ? "未知" : value.trim();
+    }
+
+    /**
+     * 统一办理状态，仅保留“已办结”“办理中”两类，其余状态不计入区办理状态图。
+     */
+    private String normalizeDistrictStatus(String status) {
+        String value = safe(status);
+        if ("未知".equals(value)) {
+            return null;
+        }
+        if (value.contains("办结") || value.contains("已完成") || value.contains("完成")) {
+            return "已办结";
+        }
+        if (value.contains("办理中") || value.contains("处理中") || value.contains("在办")) {
+            return "办理中";
+        }
+        return null;
     }
 }
