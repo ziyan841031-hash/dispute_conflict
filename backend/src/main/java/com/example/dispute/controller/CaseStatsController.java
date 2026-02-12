@@ -610,8 +610,39 @@ public class CaseStatsController {
         if (current.length() > 0) {
             lines.add(current.toString());
         }
+        smoothSingleCharMiddleLine(lines, metrics, maxWidthPx);
         g.dispose();
         return lines;
+    }
+
+    /**
+     * 在保留自然换行的前提下，轻量优化“中间行仅1个字”的孤字行问题。
+     */
+    private void smoothSingleCharMiddleLine(List<String> lines, java.awt.FontMetrics metrics, int maxWidthPx) {
+        if (lines == null || lines.size() < 3) {
+            return;
+        }
+        for (int i = 1; i < lines.size() - 1; i++) {
+            String current = lines.get(i);
+            String previous = lines.get(i - 1);
+            if (current == null || previous == null) {
+                continue;
+            }
+            current = current.trim();
+            if (current.length() > 1 || previous.length() <= 2) {
+                continue;
+            }
+
+            String moved = previous.substring(previous.length() - 1);
+            String prevCandidate = previous.substring(0, previous.length() - 1);
+            String currCandidate = moved + current;
+            if (!prevCandidate.isEmpty()
+                    && metrics.stringWidth(prevCandidate) <= maxWidthPx
+                    && metrics.stringWidth(currCandidate) <= maxWidthPx) {
+                lines.set(i - 1, prevCandidate);
+                lines.set(i, currCandidate);
+            }
+        }
     }
 
 
