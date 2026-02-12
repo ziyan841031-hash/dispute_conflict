@@ -10,6 +10,7 @@ import com.example.dispute.mapper.CaseStatsDetailMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.sl.usermodel.PictureData;
 import org.apache.poi.sl.usermodel.ShapeType;
+import org.apache.poi.sl.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
@@ -494,23 +495,19 @@ public class CaseStatsController {
         imageBg.setFillColor(new Color(248, 250, 252));
         imageBg.setLineColor(new Color(203, 213, 225));
 
-        // 右侧文本区背景框。
+        // 右侧文本区背景框（橙色：着色6，浅色60%）。
         XSLFAutoShape textBg = slide.createAutoShape();
         textBg.setShapeType(ShapeType.ROUND_RECT);
         textBg.setAnchor(new java.awt.Rectangle(textLeft, bodyTop, textAreaWidth, bodyHeight));
-        textBg.setFillColor(new Color(224, 242, 254));
-        textBg.setLineColor(new Color(125, 211, 252));
+        textBg.setFillColor(new Color(252, 228, 214));
+        textBg.setLineColor(new Color(230, 145, 56));
 
-        // 右侧内容按条目切分，每条卡片文本左对齐，按自然换行展示。
-        java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18);
         int cardPadding = 16;
         int cardGap = 12;
         int cardWidth = textAreaWidth - 20;
         int maxBottom = bodyTop + bodyHeight - 10;
 
-        List<List<String>> wrappedItems = new ArrayList<>();
-        List<Integer> cardHeights = new ArrayList<>();
-        int totalHeight = 0;
+        List<String> items = new ArrayList<>();
 
         String[] paragraphs = (summary == null ? "" : summary).split("；");
         int index = 1;
@@ -520,46 +517,41 @@ public class CaseStatsController {
                 continue;
             }
             String itemText = text.matches("^\\d+[）.)].*") ? text : (index + "）" + text);
-            List<String> lines = wrapTextByPixel(itemText, summaryFont, cardWidth - cardPadding * 2);
-            int lineHeight = 30;
-            int cardHeight = lines.size() * lineHeight + cardPadding * 2 + 6;
-            if (totalHeight + cardHeight + (wrappedItems.isEmpty() ? 0 : cardGap) > bodyHeight - 20) {
-                break;
-            }
-            wrappedItems.add(lines);
-            cardHeights.add(cardHeight);
-            totalHeight += cardHeight + (wrappedItems.size() == 1 ? 0 : cardGap);
+            items.add(itemText);
             index++;
         }
 
+        int lineHeight = 30;
+        int cardHeight = lineHeight * 3 + cardPadding * 2;
+        int totalHeight = items.size() * cardHeight + Math.max(0, items.size() - 1) * cardGap;
         int currentY = bodyTop + Math.max(10, (bodyHeight - totalHeight) / 2);
-        for (int i = 0; i < wrappedItems.size(); i++) {
-            List<String> lines = wrappedItems.get(i);
-            int cardHeight = cardHeights.get(i);
+
+        for (String itemText : items) {
             if (currentY + cardHeight > maxBottom) {
                 break;
             }
 
             XSLFAutoShape card = slide.createAutoShape();
-            card.setShapeType(ShapeType.RECT);
+            card.setShapeType(ShapeType.ROUND_RECT);
             card.setAnchor(new java.awt.Rectangle(textLeft + 10, currentY, cardWidth, cardHeight));
-            card.setFillColor(new Color(241, 245, 249));
-            card.setLineColor(new Color(191, 219, 254));
+            card.setFillColor(new Color(255, 247, 237));
+            card.setLineColor(new Color(253, 186, 116));
 
             XSLFTextBox cardText = slide.createTextBox();
-            cardText.setAnchor(new java.awt.Rectangle(textLeft + 10 + cardPadding, currentY + cardPadding,
-                    cardWidth - cardPadding * 2, cardHeight - cardPadding * 2));
-            for (String line : lines) {
-                XSLFTextParagraph para = cardText.addNewTextParagraph();
-                para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.LEFT);
-                para.setLineSpacing(110.0);
-                XSLFTextRun run = para.addNewTextRun();
-                run.setText(line);
-                run.setFontFamily("Microsoft YaHei");
-                run.setBold(true);
-                run.setFontSize(18.0);
-                run.setFontColor(new Color(30, 41, 59));
-            }
+            cardText.setAnchor(new java.awt.Rectangle(textLeft + 10 + cardPadding, currentY + 6,
+                    cardWidth - cardPadding * 2, cardHeight - 12));
+            cardText.setWordWrap(true);
+            cardText.setVerticalAlignment(VerticalAlignment.MIDDLE);
+
+            XSLFTextParagraph para = cardText.addNewTextParagraph();
+            para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.LEFT);
+            para.setLineSpacing(110.0);
+            XSLFTextRun run = para.addNewTextRun();
+            run.setText(itemText);
+            run.setFontFamily("Microsoft YaHei");
+            run.setBold(true);
+            run.setFontSize(18.0);
+            run.setFontColor(new Color(30, 41, 59));
             currentY += cardHeight + cardGap;
         }
 
@@ -582,71 +574,6 @@ public class CaseStatsController {
     }
 
     /**
-     * 根据像素宽度对文本换行，避免中文段落超出文本框。
-     */
-    private List<String> wrapTextByPixel(String text, java.awt.Font font, int maxWidthPx) {
-        List<String> lines = new ArrayList<>();
-        if (text == null || text.trim().isEmpty()) {
-            return lines;
-        }
-        BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        g.setFont(font);
-        java.awt.FontMetrics metrics = g.getFontMetrics();
-
-        StringBuilder current = new StringBuilder();
-        for (int i = 0; i < text.length(); i++) {
-            char ch = text.charAt(i);
-            current.append(ch);
-            if (metrics.stringWidth(current.toString()) > maxWidthPx) {
-                current.deleteCharAt(current.length() - 1);
-                if (current.length() > 0) {
-                    lines.add(current.toString());
-                    current.setLength(0);
-                }
-                current.append(ch);
-            }
-        }
-        if (current.length() > 0) {
-            lines.add(current.toString());
-        }
-        smoothSingleCharMiddleLine(lines, metrics, maxWidthPx);
-        g.dispose();
-        return lines;
-    }
-
-    /**
-     * 在保留自然换行的前提下，轻量优化“中间行仅1个字”的孤字行问题。
-     */
-    private void smoothSingleCharMiddleLine(List<String> lines, java.awt.FontMetrics metrics, int maxWidthPx) {
-        if (lines == null || lines.size() < 3) {
-            return;
-        }
-        for (int i = 1; i < lines.size() - 1; i++) {
-            String current = lines.get(i);
-            String previous = lines.get(i - 1);
-            if (current == null || previous == null) {
-                continue;
-            }
-            current = current.trim();
-            if (current.length() > 1 || previous.length() <= 2) {
-                continue;
-            }
-
-            String moved = previous.substring(previous.length() - 1);
-            String prevCandidate = previous.substring(0, previous.length() - 1);
-            String currCandidate = moved + current;
-            if (!prevCandidate.isEmpty()
-                    && metrics.stringWidth(prevCandidate) <= maxWidthPx
-                    && metrics.stringWidth(currCandidate) <= maxWidthPx) {
-                lines.set(i - 1, prevCandidate);
-                lines.set(i, currCandidate);
-            }
-        }
-    }
-
-
-    /**
      * 绘制折线图（近6个月趋势）。
      */
     private void drawLineChart(String title, Map<String, Long> data, Map<String, Map<String, Long>> top3Series, String output) throws Exception {
@@ -655,6 +582,7 @@ public class CaseStatsController {
         setupGraphics(g);
         int left = 100, right = 1080, top = 100, bottom = 620;
         drawAxis(g, left, top, right, bottom);
+        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 24));
         long max = Math.max(1L, data.values().stream().mapToLong(Long::longValue).max().orElse(1L));
         if (top3Series != null) {
             for (Map<String, Long> m : top3Series.values()) {
@@ -676,7 +604,7 @@ public class CaseStatsController {
             allX.add(x);
             allY.add(y);
             g.setColor(Color.DARK_GRAY);
-            g.drawString(labels.get(i), x - 20, bottom + 24);
+            g.drawString(labels.get(i), x - 28, bottom + 30);
         }
         drawSmoothLine(g, allX, allY, lineColors[0]);
 
@@ -697,8 +625,10 @@ public class CaseStatsController {
                 colorIndex++;
             }
         }
-
-        drawLineLegend(g, left, top - 40, lineColors, top3Series);
+        int legendItems = 1 + (top3Series == null ? 0 : top3Series.size());
+        int legendWidth = legendItems * 160;
+        int legendStartX = left + Math.max(0, (right - left - legendWidth) / 2);
+        drawLineLegend(g, legendStartX, top - 44, lineColors, top3Series);
         ImageIO.write(img, "png", new File(output));
         g.dispose();
     }
@@ -776,11 +706,12 @@ public class CaseStatsController {
         int barH = Math.max(18, (bottom - top) / (n * 2));
         int gap = barH;
         int y = top + 20;
+        long maxValue = entries.stream().mapToLong(Map.Entry::getValue).max().orElse(0L);
         for (Map.Entry<String, Long> entry : entries) {
             int w = (int) ((right - left) * (entry.getValue() * 1.0 / max));
-            g.setColor(new Color(6, 182, 212));
+            g.setColor(entry.getValue() == maxValue ? new Color(239, 68, 68) : new Color(250, 204, 21));
             g.fillRect(left, y, w, barH);
-            g.setColor(Color.DARK_GRAY);
+            g.setColor(new Color(51, 65, 85));
             g.drawString(entry.getKey(), 80, y + barH - 2);
             y += barH + gap;
         }
@@ -903,10 +834,10 @@ public class CaseStatsController {
         int x = startX;
         for (int i = 0; i < names.size() && i < colors.length; i++) {
             g.setColor(colors[i]);
-            g.fillRect(x, startY, 18, 8);
+            g.fillRect(x, startY, 24, 12);
             g.setColor(new Color(30, 41, 59));
-            g.drawString(names.get(i), x + 24, startY + 8);
-            x += 120;
+            g.drawString(names.get(i), x + 32, startY + 12);
+            x += 160;
         }
     }
 
