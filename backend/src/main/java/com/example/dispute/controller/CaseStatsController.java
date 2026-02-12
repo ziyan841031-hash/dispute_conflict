@@ -9,6 +9,7 @@ import com.example.dispute.mapper.CaseStatsBatchMapper;
 import com.example.dispute.mapper.CaseStatsDetailMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.sl.usermodel.PictureData;
+import org.apache.poi.sl.usermodel.ShapeType;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
@@ -21,6 +22,7 @@ import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.poi.xslf.usermodel.XSLFAutoShape;
 import org.apache.poi.xslf.usermodel.XSLFTextBox;
 import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
 import org.apache.poi.xslf.usermodel.XSLFTextRun;
@@ -420,12 +422,12 @@ public class CaseStatsController {
     }
 
     /**
-     * 单页排版：标题+摘要（按“；”拆分并自动换行）+自适应图表。
+     * 单页排版：标题在上，左图右文，文本按条目分隔并配背景框。
      */
     private void addPptSlide(XMLSlideShow ppt, String title, String summary, String chartPath) throws Exception {
         XSLFSlide slide = ppt.createSlide();
 
-        // 标题区。
+        // 标题区（顶部横排）。
         int titleHeight = 58;
         XSLFTextBox titleBox = slide.createTextBox();
         titleBox.setAnchor(new java.awt.Rectangle(MARGIN, 16, PPT_WIDTH - MARGIN * 2, titleHeight));
@@ -436,62 +438,88 @@ public class CaseStatsController {
         titleR.setBold(true);
         titleR.setFontSize(30.0);
 
-        // 摘要区（最大高度受控，超出时自动截断并追加省略标记）。
-        int summaryTop = 86;
-        int summaryHeight = 180;
-        int summaryWidth = PPT_WIDTH - MARGIN * 2;
-        XSLFTextBox summaryBox = slide.createTextBox();
-        summaryBox.setAnchor(new java.awt.Rectangle(MARGIN, summaryTop, summaryWidth, summaryHeight));
+        // 内容区采用左右布局：左侧图片、右侧要点卡片。
+        int bodyTop = 90;
+        int bodyHeight = PPT_HEIGHT - bodyTop - 20;
+        int imageAreaWidth = (int) ((PPT_WIDTH - MARGIN * 3) * 0.58);
+        int textAreaWidth = PPT_WIDTH - MARGIN * 3 - imageAreaWidth;
+        int imageLeft = MARGIN;
+        int textLeft = imageLeft + imageAreaWidth + MARGIN;
 
-        java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.PLAIN, 20);
-        int maxLineWidthPx = summaryWidth - 20;
-        int maxLines = 7;
-        int usedLines = 0;
+        // 左侧图片区背景框。
+        XSLFAutoShape imageBg = slide.createAutoShape();
+        imageBg.setShapeType(ShapeType.ROUND_RECT);
+        imageBg.setAnchor(new java.awt.Rectangle(imageLeft, bodyTop, imageAreaWidth, bodyHeight));
+        imageBg.setFillColor(new Color(248, 250, 252));
+        imageBg.setLineColor(new Color(203, 213, 225));
+
+        // 右侧文本区背景框。
+        XSLFAutoShape textBg = slide.createAutoShape();
+        textBg.setShapeType(ShapeType.ROUND_RECT);
+        textBg.setAnchor(new java.awt.Rectangle(textLeft, bodyTop, textAreaWidth, bodyHeight));
+        textBg.setFillColor(new Color(248, 250, 252));
+        textBg.setLineColor(new Color(203, 213, 225));
+
+        // 右侧内容按条目切分，每条独立背景卡片。
+        java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.PLAIN, 16);
+        int cardPadding = 12;
+        int cardGap = 10;
+        int cardWidth = textAreaWidth - 20;
+        int currentY = bodyTop + 10;
+        int maxBottom = bodyTop + bodyHeight - 10;
+
         String[] paragraphs = (summary == null ? "" : summary).split("；");
-        for (int i = 0; i < paragraphs.length; i++) {
-            String text = paragraphs[i] == null ? "" : paragraphs[i].trim();
+        int index = 1;
+        for (String paragraph : paragraphs) {
+            String text = paragraph == null ? "" : paragraph.trim();
             if (text.isEmpty()) {
                 continue;
             }
-            List<String> lines = wrapTextByPixel(text, summaryFont, maxLineWidthPx);
+            String itemText = text.matches("^\\d+[）.)].*") ? text : (index + "）" + text);
+            List<String> lines = wrapTextByPixel(itemText, summaryFont, cardWidth - cardPadding * 2);
+            int lineHeight = 24;
+            int cardHeight = lines.size() * lineHeight + cardPadding * 2;
+            if (currentY + cardHeight > maxBottom) {
+                break;
+            }
+
+            XSLFAutoShape card = slide.createAutoShape();
+            card.setShapeType(ShapeType.ROUND_RECT);
+            card.setAnchor(new java.awt.Rectangle(textLeft + 10, currentY, cardWidth, cardHeight));
+            card.setFillColor(new Color(239, 246, 255));
+            card.setLineColor(new Color(147, 197, 253));
+
+            XSLFTextBox cardText = slide.createTextBox();
+            cardText.setAnchor(new java.awt.Rectangle(textLeft + 10 + cardPadding, currentY + cardPadding,
+                    cardWidth - cardPadding * 2, cardHeight - cardPadding * 2));
             for (String line : lines) {
-                if (usedLines >= maxLines) {
-                    break;
-                }
-                XSLFTextParagraph para = summaryBox.addNewTextParagraph();
+                XSLFTextParagraph para = cardText.addNewTextParagraph();
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
                 run.setFontFamily("Microsoft YaHei");
-                run.setFontSize(18.0);
-                usedLines++;
+                run.setFontSize(15.0);
+                run.setFontColor(new Color(30, 41, 59));
             }
-            if (usedLines >= maxLines) {
-                break;
-            }
-        }
-        if (usedLines >= maxLines) {
-            XSLFTextParagraph para = summaryBox.addNewTextParagraph();
-            XSLFTextRun run = para.addNewTextRun();
-            run.setText("……");
-            run.setFontFamily("Microsoft YaHei");
-            run.setFontSize(18.0);
+            currentY += cardHeight + cardGap;
+            index++;
         }
 
-        // 图表区：按比例缩放并居中，保证不超出幻灯片。
+        // 左侧图表按比例缩放并居中，确保不超出图片区。
         BufferedImage chart = ImageIO.read(new File(chartPath));
-        int imageTop = summaryTop + summaryHeight + 16;
-        int imageMaxW = PPT_WIDTH - MARGIN * 2;
-        int imageMaxH = PPT_HEIGHT - imageTop - 20;
+        int imageTop = bodyTop + 14;
+        int imageMaxW = imageAreaWidth - 28;
+        int imageMaxH = bodyHeight - 28;
         double scale = Math.min(imageMaxW * 1.0 / chart.getWidth(), imageMaxH * 1.0 / chart.getHeight());
         scale = Math.min(scale, 1.0);
         int imageW = Math.max(1, (int) Math.round(chart.getWidth() * scale));
         int imageH = Math.max(1, (int) Math.round(chart.getHeight() * scale));
-        int imageX = (PPT_WIDTH - imageW) / 2;
+        int imageX = imageLeft + (imageAreaWidth - imageW) / 2;
+        int imageY = bodyTop + (bodyHeight - imageH) / 2;
 
         byte[] bytes = Files.readAllBytes(Paths.get(chartPath));
         XSLFPictureData pd = ppt.addPicture(bytes, PictureData.PictureType.PNG);
         XSLFPictureShape pic = slide.createPicture(pd);
-        pic.setAnchor(new java.awt.Rectangle(imageX, imageTop, imageW, imageH));
+        pic.setAnchor(new java.awt.Rectangle(imageX, imageY, imageW, imageH));
     }
 
     /**
