@@ -30,6 +30,34 @@ public class CaseStatsBatch {
     @TableField("report_file_url")
     private String reportFileUrl;
 
+
+    @TableField("time_trend_json")
+    private String timeTrendJson;
+
+    @TableField("street_top10_json")
+    private String streetTop10Json;
+
+    @TableField("type_top10_json")
+    private String typeTop10Json;
+
+    @TableField("district_status_json")
+    private String districtStatusJson;
+
+    @TableField("time_chart_path")
+    private String timeChartPath;
+
+    @TableField("street_chart_path")
+    private String streetChartPath;
+
+    @TableField("type_chart_path")
+    private String typeChartPath;
+
+    @TableField("district_chart_path")
+    private String districtChartPath;
+
+    @TableField("report_file_path")
+    private String reportFilePath;
+
     @TableField("created_at")
     private LocalDateTime createdAt;
 }

@@ -251,3 +251,12 @@ COMMENT ON COLUMN case_stats_detail.register_time IS '登记时间';
 COMMENT ON COLUMN case_stats_detail.current_status IS '当前办理状态';
 
 CREATE INDEX IF NOT EXISTS idx_case_stats_detail_batch_id ON case_stats_detail(batch_id);
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS time_trend_json TEXT;
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS street_top10_json TEXT;
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS type_top10_json TEXT;
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS district_status_json TEXT;
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS time_chart_path VARCHAR(512);
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS street_chart_path VARCHAR(512);
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS type_chart_path VARCHAR(512);
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS district_chart_path VARCHAR(512);
+ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS report_file_path VARCHAR(512);
