@@ -219,16 +219,31 @@ async function loadStatsBatches() {
 
 
 
-function downloadStatsReport(reportUrl) {
+async function downloadStatsReport(reportUrl) {
   if (!reportUrl) {
     return;
   }
-  const anchor = document.createElement('a');
-  anchor.href = reportUrl;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
+  const url = reportUrl.startsWith('http') ? reportUrl : `${API_BASE}${reportUrl}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`下载失败: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const pathParts = reportUrl.split('/');
+    const fileName = pathParts[pathParts.length - 1] || 'case-stats-report.pptx';
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    alert('报告下载失败，请稍后重试');
+  }
 }
 
 // 导入案件统计Excel。
