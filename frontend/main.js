@@ -190,6 +190,91 @@ async function loadCases() {
   });
 }
 
+
+
+// 加载案件统计批次列表。
+async function loadStatsBatches() {
+  const tbody = document.getElementById('statsBatchBody');
+  if (!tbody) {
+    return;
+  }
+  const res = await fetch(`${API_BASE}/case-stats/batches`);
+  const json = await res.json();
+  const rows = (json && json.data) ? json.data : [];
+  tbody.innerHTML = '';
+  rows.forEach(item => {
+    const tr = document.createElement('tr');
+    const reportCell = item.reportFileUrl ? `<a href="${item.reportFileUrl}" target="_blank">下载</a>` : '-';
+    tr.innerHTML = `
+      <td>${item.batchNo || '-'}</td>
+      <td>${item.recordCount || 0}</td>
+      <td>${item.importedAt || '-'}</td>
+      <td>${item.reportGeneratedAt || '-'}</td>
+      <td>${reportCell}</td>
+      <td><button onclick="openStatsDetail(${item.id})">查看明细</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 导入案件统计Excel。
+async function importStatsExcel() {
+  const fileInput = document.getElementById('statsExcelFile');
+  const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+  if (!file) {
+    alert('请先选择Excel文件');
+    return;
+  }
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
+  const json = await res.json();
+  if (json && json.code === 0) {
+    alert('导入成功');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    await loadStatsBatches();
+    return;
+  }
+  alert((json && json.message) || '导入失败');
+}
+
+// 打开统计明细弹窗。
+async function openStatsDetail(batchId) {
+  const modal = document.getElementById('statsDetailModal');
+  const tbody = document.getElementById('statsDetailBody');
+  if (!modal || !tbody) {
+    return;
+  }
+  const res = await fetch(`${API_BASE}/case-stats/batches/${batchId}/details`);
+  const json = await res.json();
+  const rows = (json && json.data) ? json.data : [];
+  tbody.innerHTML = '';
+  rows.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.serialNo || '-'}</td>
+      <td>${item.eventTime || '-'}</td>
+      <td>${item.district || '-'}</td>
+      <td>${item.streetTown || '-'}</td>
+      <td>${item.registerSource || '-'}</td>
+      <td>${item.caseType || '-'}</td>
+      <td>${item.registerTime || '-'}</td>
+      <td>${item.currentStatus || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  modal.classList.remove('hidden');
+}
+
+function closeStatsDetailModal() {
+  const modal = document.getElementById('statsDetailModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
 // 打开智能助手页面。
 function openAssistant(caseId) {
   const rowData = caseListCache[caseId];

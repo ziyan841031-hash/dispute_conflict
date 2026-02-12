@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 案件统计</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">控台首页</a>
+    <a href="cases.html">案件管理</a>
+    <a class="active" href="stats.html">案件统计</a>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h2>案件统计</h2>
+      <div class="upload stats-import-row">
+        <label>Excel导入：</label>
+        <input type="file" id="statsExcelFile" accept=".xlsx,.xls">
+        <button onclick="importStatsExcel()">导入明细记录</button>
+      </div>
+      <div class="table-wrap">
+        <table class="cases-table stats-table">
+          <thead>
+          <tr>
+            <th>批次号</th><th>批次记录数</th><th>批次导入时间</th><th>报告生成时间</th><th>报告下载</th><th>记录明细</th>
+          </tr>
+          </thead>
+          <tbody id="statsBatchBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="statsDetailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="statsDetailTitle">
+  <div class="modal-content stats-detail-modal-content">
+    <div class="case-material-header">
+      <h3 id="statsDetailTitle">批次明细</h3>
+      <button type="button" onclick="closeStatsDetailModal()">关闭</button>
+    </div>
+    <div class="table-wrap">
+      <table class="cases-table stats-detail-table">
+        <thead>
+        <tr>
+          <th>序号</th><th>时间</th><th>区</th><th>街镇</th><th>登记来源</th><th>类型</th><th>登记时间</th><th>当前办理状态</th>
+        </tr>
+        </thead>
+        <tbody id="statsDetailBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+<script>loadStatsBatches();</script>
+</body>
+</html>

@@ -470,3 +470,21 @@ table { width: 100%; border-collapse: collapse; }
   overflow: visible;
   padding-right: 0;
 }
+
+.stats-table { min-width: 980px; }
+.stats-detail-table { min-width: 1080px; }
+.stats-detail-modal-content {
+  width: min(1100px, 94vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+}
+.stats-detail-modal-content .table-wrap {
+  max-height: 70vh;
+}
+.stats-import-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}

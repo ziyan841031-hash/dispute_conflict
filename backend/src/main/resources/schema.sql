@@ -207,3 +207,47 @@ CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_created_at ON case_
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_status VARCHAR(50);
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_advice TEXT;
+
+CREATE TABLE IF NOT EXISTS case_stats_batch (
+    id BIGSERIAL PRIMARY KEY,
+    batch_no VARCHAR(64) NOT NULL UNIQUE,
+    record_count INTEGER NOT NULL,
+    imported_at TIMESTAMP NOT NULL,
+    report_generated_at TIMESTAMP,
+    report_file_url VARCHAR(512),
+    created_at TIMESTAMP NOT NULL
+);
+
+COMMENT ON TABLE case_stats_batch IS '案件统计导入批次表';
+COMMENT ON COLUMN case_stats_batch.batch_no IS '批次号';
+COMMENT ON COLUMN case_stats_batch.record_count IS '批次记录数';
+COMMENT ON COLUMN case_stats_batch.imported_at IS '批次导入时间';
+COMMENT ON COLUMN case_stats_batch.report_generated_at IS '报告生成时间';
+COMMENT ON COLUMN case_stats_batch.report_file_url IS '报告下载地址';
+
+CREATE TABLE IF NOT EXISTS case_stats_detail (
+    id BIGSERIAL PRIMARY KEY,
+    batch_id BIGINT NOT NULL,
+    serial_no VARCHAR(64),
+    event_time VARCHAR(64),
+    district VARCHAR(64),
+    street_town VARCHAR(128),
+    register_source VARCHAR(128),
+    case_type VARCHAR(128),
+    register_time VARCHAR(64),
+    current_status VARCHAR(128),
+    created_at TIMESTAMP NOT NULL
+);
+
+COMMENT ON TABLE case_stats_detail IS '案件统计导入明细表';
+COMMENT ON COLUMN case_stats_detail.batch_id IS '所属批次ID';
+COMMENT ON COLUMN case_stats_detail.serial_no IS '序号';
+COMMENT ON COLUMN case_stats_detail.event_time IS '时间';
+COMMENT ON COLUMN case_stats_detail.district IS '区';
+COMMENT ON COLUMN case_stats_detail.street_town IS '街镇';
+COMMENT ON COLUMN case_stats_detail.register_source IS '登记来源';
+COMMENT ON COLUMN case_stats_detail.case_type IS '类型';
+COMMENT ON COLUMN case_stats_detail.register_time IS '登记时间';
+COMMENT ON COLUMN case_stats_detail.current_status IS '当前办理状态';
+
+CREATE INDEX IF NOT EXISTS idx_case_stats_detail_batch_id ON case_stats_detail(batch_id);
