@@ -240,8 +240,25 @@ async function downloadStatsReport(reportUrl) {
     const blob = await res.blob();
     const objectUrl = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-    const pathParts = reportUrl.split('/');
-    const fileName = pathParts[pathParts.length - 1] || 'case-stats-report.pptx';
+    // 优先使用后端响应头中的附件文件名，避免URL末段无后缀导致文件无法打开。
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let fileName = 'case-stats-report.pptx';
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+    if (utf8Match && utf8Match[1]) {
+      fileName = decodeURIComponent(utf8Match[1]);
+    } else if (plainMatch && plainMatch[1]) {
+      fileName = plainMatch[1];
+    } else {
+      const pathParts = reportUrl.split('/');
+      const urlName = pathParts[pathParts.length - 1] || '';
+      if (urlName && urlName.includes('.')) {
+        fileName = urlName;
+      }
+    }
+    if (!fileName.toLowerCase().endsWith('.pptx')) {
+      fileName = `${fileName}.pptx`;
+    }
     anchor.href = objectUrl;
     anchor.download = fileName;
     anchor.style.display = 'none';

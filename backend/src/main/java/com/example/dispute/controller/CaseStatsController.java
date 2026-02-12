@@ -27,6 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;
@@ -38,6 +39,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -223,8 +225,10 @@ public class CaseStatsController {
             return ResponseEntity.notFound().build();
         }
         Resource resource = new FileSystemResource(file);
+        String encodedName = UriUtils.encode(file.getName(), StandardCharsets.UTF_8);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.getName())
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + file.getName() + "\"; filename*=UTF-8''" + encodedName)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }
