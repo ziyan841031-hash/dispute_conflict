@@ -242,7 +242,7 @@ async function downloadStatsReport(reportUrl) {
     const anchor = document.createElement('a');
     // 优先使用后端响应头中的附件文件名，避免URL末段无后缀导致文件无法打开。
     const disposition = res.headers.get('Content-Disposition') || '';
-    let fileName = 'case-stats-report.pdf';
+    let fileName = 'case-stats-report.pptx';
     const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
     const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
     if (utf8Match && utf8Match[1]) {
@@ -259,9 +259,9 @@ async function downloadStatsReport(reportUrl) {
     // 若响应头未给出扩展名，则按内容类型补全后缀。
     if (!/\.[A-Za-z0-9]+$/.test(fileName)) {
       const contentType = (res.headers.get('Content-Type') || '').toLowerCase();
-      if (contentType.includes('pdf')) {
-        fileName = `${fileName}.pdf`;
-      } else if (contentType.includes('presentation') || contentType.includes('powerpoint')) {
+      if (contentType.includes('presentation') || contentType.includes('powerpoint')) {
+        fileName = `${fileName}.pptx`;
+      } else {
         fileName = `${fileName}.pptx`;
       }
     }

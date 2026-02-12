@@ -21,11 +21,9 @@ import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.poi.xslf.usermodel.XSLFTextBox;
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
+import org.apache.poi.xslf.usermodel.XSLFTextRun;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -42,7 +40,6 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -64,7 +61,7 @@ import java.util.stream.Collectors;
 
 /**
  * 案件统计控制器。
- * 提供Excel导入、批次查询、明细查询、统计分析与报告(PDF/PPT)下载能力。
+ * 提供Excel导入、批次查询、明细查询、统计分析与PPT报告下载能力。
  */
 @RestController
 @RequestMapping("/api/case-stats")
@@ -225,7 +222,7 @@ public class CaseStatsController {
     }
 
     /**
-     * 下载指定批次生成的PPT报告文件。
+     * 下载指定批次生成的报告文件。
      */
     @GetMapping("/batches/{batchId}/report-download")
     public ResponseEntity<Resource> downloadReport(@PathVariable("batchId") Long batchId) {
@@ -242,7 +239,7 @@ public class CaseStatsController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + file.getName() + "\"; filename*=UTF-8''" + encodedName)
-                .contentType(file.getName().toLowerCase().endsWith(".pdf") ? MediaType.APPLICATION_PDF : MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.presentationml.presentation"))
                 .body(resource);
     }
 
@@ -290,7 +287,7 @@ public class CaseStatsController {
     }
 
     /**
-     * 将统计结果渲染为统一尺寸图片，并调用Dify生成文字摘要后输出PDF/备份PPT。
+     * 将统计结果渲染为统一尺寸图片，并调用Dify生成文字摘要后输出PPT。
      */
     private Map<String, String> generateChartsAndPpt(CaseStatsBatch batch, Map<String, Object> analysis) {
         try {
@@ -302,7 +299,6 @@ public class CaseStatsController {
             String typeChartPath = dir.resolve("type-top10.png").toString();
             String districtChartPath = dir.resolve("district-status.png").toString();
             String pptPath = dir.resolve("case-stats-report.pptx").toString();
-            String pdfPath = dir.resolve("case-stats-report.pdf").toString();
 
             drawLineChart("近6个月趋势", ((Map<String, Long>) analysis.get("timeTrend")), timeChartPath);
             drawVerticalBarChart("街镇高发Top10", ((Map<String, Long>) analysis.get("streetTop10")), streetChartPath);
@@ -310,18 +306,14 @@ public class CaseStatsController {
             drawGroupedBarChart("区办理状态", ((Map<String, Map<String, Long>>) analysis.get("districtStatus")), districtChartPath);
 
             Map<String, String> aiSummary = callDifyForCaseStatsSummary(analysis);
-            buildPdf(pdfPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath);
-            // 保留PPT作为备份输出。
-            buildPpt(pptPath, timeChartPath, streetChartPath, typeChartPath, districtChartPath);
+            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath);
 
             Map<String, String> files = new HashMap<>();
             files.put("timeChartPath", timeChartPath);
             files.put("streetChartPath", streetChartPath);
             files.put("typeChartPath", typeChartPath);
             files.put("districtChartPath", districtChartPath);
-            files.put("pptPath", pdfPath);
-            files.put("pdfPath", pdfPath);
-            files.put("backupPptPath", pptPath);
+            files.put("pptPath", pptPath);
             return files;
         } catch (Exception ex) {
             throw new RuntimeException("报告生成失败: " + ex.getMessage(), ex);
@@ -379,67 +371,58 @@ public class CaseStatsController {
     }
 
     /**
-     * 生成四页PDF报告：每页标题+分段摘要+图表。
+     * 将标题、分段摘要和图表排版到PPT（四页）。
      */
-    private void buildPdf(String pdfPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
+    private void buildPpt(String pptPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
                           String typeChartPath, String districtChartPath) throws Exception {
-        try (PDDocument doc = new PDDocument()) {
-            addPdfPage(doc, summary.get("month_title"), summary.get("month_summary"), timeChartPath);
-            addPdfPage(doc, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
-            addPdfPage(doc, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
-            addPdfPage(doc, summary.get("district_title"), summary.get("district_summary"), districtChartPath);
-            doc.save(pdfPath);
+        XMLSlideShow ppt = new XMLSlideShow();
+        addPptSlide(ppt, summary.get("month_title"), summary.get("month_summary"), timeChartPath);
+        addPptSlide(ppt, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
+        addPptSlide(ppt, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
+        addPptSlide(ppt, summary.get("district_title"), summary.get("district_summary"), districtChartPath);
+        try (FileOutputStream out = new FileOutputStream(pptPath)) {
+            ppt.write(out);
         }
+        ppt.close();
     }
 
     /**
-     * 单页排版：摘要按“；”切分段落后与图表合成页面。
+     * 单页排版：标题+摘要（按“；”拆分）+图表。
      */
-    private void addPdfPage(PDDocument doc, String title, String summary, String chartPath) throws Exception {
-        BufferedImage canvas = new BufferedImage(1240, 1754, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = canvas.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        g.setColor(new Color(15, 23, 42));
-        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 40));
-        g.drawString(title == null ? "" : title, 70, 90);
+    private void addPptSlide(XMLSlideShow ppt, String title, String summary, String chartPath) throws Exception {
+        XSLFSlide slide = ppt.createSlide();
 
-        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 24));
-        g.setColor(new Color(51, 65, 85));
-        int currentY = 150;
+        XSLFTextBox titleBox = slide.createTextBox();
+        titleBox.setAnchor(new java.awt.Rectangle(40, 20, 1160, 60));
+        XSLFTextParagraph titleP = titleBox.addNewTextParagraph();
+        XSLFTextRun titleR = titleP.addNewTextRun();
+        titleR.setText(title == null ? "" : title);
+        titleR.setFontFamily("Microsoft YaHei");
+        titleR.setBold(true);
+        titleR.setFontSize(28.0);
+
+        XSLFTextBox summaryBox = slide.createTextBox();
+        summaryBox.setAnchor(new java.awt.Rectangle(40, 90, 1160, 170));
         String[] paragraphs = (summary == null ? "" : summary).split("；");
         for (String p : paragraphs) {
             String text = p == null ? "" : p.trim();
             if (text.isEmpty()) {
                 continue;
             }
-            List<String> lines = wrapText(text, 52);
+            List<String> lines = wrapText(text, 70);
             for (String line : lines) {
-                g.drawString(line, 70, currentY);
-                currentY += 36;
+                XSLFTextParagraph para = summaryBox.addNewTextParagraph();
+                XSLFTextRun run = para.addNewTextRun();
+                run.setText(line);
+                run.setFontFamily("Microsoft YaHei");
+                run.setFontSize(16.0);
             }
-            currentY += 12;
         }
 
-        BufferedImage chart = ImageIO.read(new File(chartPath));
-        int chartTop = Math.max(currentY + 20, 520);
-        int maxW = 1100;
-        int maxH = 1100;
-        double scale = Math.min(maxW * 1.0 / chart.getWidth(), maxH * 1.0 / chart.getHeight());
-        int drawW = (int) (chart.getWidth() * scale);
-        int drawH = (int) (chart.getHeight() * scale);
-        int drawX = (canvas.getWidth() - drawW) / 2;
-        g.drawImage(chart, drawX, chartTop, drawW, drawH, null);
-        g.dispose();
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ImageIO.write(canvas, "png", out);
-        PDPage page = new PDPage(PDRectangle.A4);
-        doc.addPage(page);
-        PDImageXObject image = PDImageXObject.createFromByteArray(doc, out.toByteArray(), "page");
-        try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
-            cs.drawImage(image, 0, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight());
-        }
+        byte[] bytes = Files.readAllBytes(Paths.get(chartPath));
+        XSLFPictureData pd = ppt.addPicture(bytes, PictureData.PictureType.PNG);
+        XSLFPictureShape pic = slide.createPicture(pd);
+        pic.setAnchor(new java.awt.Rectangle(40, 280, 1160, 380));
     }
 
     /**
@@ -459,24 +442,6 @@ public class CaseStatsController {
             lines.add(content);
         }
         return lines;
-    }
-
-    /**
-     * 将多张图表写入PPT（每页一张）。
-     */
-    private void buildPpt(String pptPath, String... images) throws Exception {
-        XMLSlideShow ppt = new XMLSlideShow();
-        for (String image : images) {
-            XSLFSlide slide = ppt.createSlide();
-            byte[] bytes = Files.readAllBytes(Paths.get(image));
-            XSLFPictureData pd = ppt.addPicture(bytes, PictureData.PictureType.PNG);
-            XSLFPictureShape pic = slide.createPicture(pd);
-            pic.setAnchor(new java.awt.Rectangle(40, 40, 880, 500));
-        }
-        try (FileOutputStream out = new FileOutputStream(pptPath)) {
-            ppt.write(out);
-        }
-        ppt.close();
     }
 
     /**
