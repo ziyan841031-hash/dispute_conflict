@@ -1,6 +1,7 @@
 package com.example.dispute.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.entity.CaseStatsBatch;
 import com.example.dispute.entity.CaseStatsDetail;
@@ -20,6 +21,12 @@ import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFPictureData;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -35,6 +42,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -56,7 +64,7 @@ import java.util.stream.Collectors;
 
 /**
  * 案件统计控制器。
- * 提供Excel导入、批次查询、明细查询、统计分析与报告下载能力。
+ * 提供Excel导入、批次查询、明细查询、统计分析与报告(PDF/PPT)下载能力。
  */
 @RestController
 @RequestMapping("/api/case-stats")
@@ -68,10 +76,15 @@ public class CaseStatsController {
 
     private final CaseStatsBatchMapper batchMapper;
     private final CaseStatsDetailMapper detailMapper;
+    private final DifyClient difyClient;
 
-    public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper) {
+    @Value("${dify.api-key:replace-with-real-key}")
+    private String difyApiKey;
+
+    public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient) {
         this.batchMapper = batchMapper;
         this.detailMapper = detailMapper;
+        this.difyClient = difyClient;
     }
 
     /**
@@ -229,7 +242,7 @@ public class CaseStatsController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + file.getName() + "\"; filename*=UTF-8''" + encodedName)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(file.getName().toLowerCase().endsWith(".pdf") ? MediaType.APPLICATION_PDF : MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }
 
@@ -277,7 +290,7 @@ public class CaseStatsController {
     }
 
     /**
-     * 将统计结果渲染为统一尺寸图片并生成PPT文件。
+     * 将统计结果渲染为统一尺寸图片，并调用Dify生成文字摘要后输出PDF/备份PPT。
      */
     private Map<String, String> generateChartsAndPpt(CaseStatsBatch batch, Map<String, Object> analysis) {
         try {
@@ -289,11 +302,16 @@ public class CaseStatsController {
             String typeChartPath = dir.resolve("type-top10.png").toString();
             String districtChartPath = dir.resolve("district-status.png").toString();
             String pptPath = dir.resolve("case-stats-report.pptx").toString();
+            String pdfPath = dir.resolve("case-stats-report.pdf").toString();
 
             drawLineChart("近6个月趋势", ((Map<String, Long>) analysis.get("timeTrend")), timeChartPath);
             drawVerticalBarChart("街镇高发Top10", ((Map<String, Long>) analysis.get("streetTop10")), streetChartPath);
             drawHorizontalBarChart("类型高发Top10", ((Map<String, Long>) analysis.get("typeTop10")), typeChartPath);
             drawGroupedBarChart("区办理状态", ((Map<String, Map<String, Long>>) analysis.get("districtStatus")), districtChartPath);
+
+            Map<String, String> aiSummary = callDifyForCaseStatsSummary(analysis);
+            buildPdf(pdfPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath);
+            // 保留PPT作为备份输出。
             buildPpt(pptPath, timeChartPath, streetChartPath, typeChartPath, districtChartPath);
 
             Map<String, String> files = new HashMap<>();
@@ -301,11 +319,146 @@ public class CaseStatsController {
             files.put("streetChartPath", streetChartPath);
             files.put("typeChartPath", typeChartPath);
             files.put("districtChartPath", districtChartPath);
-            files.put("pptPath", pptPath);
+            files.put("pptPath", pdfPath);
+            files.put("pdfPath", pdfPath);
+            files.put("backupPptPath", pptPath);
             return files;
         } catch (Exception ex) {
             throw new RuntimeException("报告生成失败: " + ex.getMessage(), ex);
         }
+    }
+
+    /**
+     * 调用Dify工作流生成四个维度的标题与摘要。
+     */
+    private Map<String, String> callDifyForCaseStatsSummary(Map<String, Object> analysis) {
+        Map<String, String> result = new HashMap<>();
+        result.put("month_title", "近6个月纠纷量趋势分析");
+        result.put("month_summary", "1）近6个月纠纷量变化见图；2）建议结合环比变化持续跟踪重点月份。");
+        result.put("street_title", "街镇高发案分布分析");
+        result.put("street_summary", "1）街镇高发Top10见图；2）建议对高发街镇开展专项治理。");
+        result.put("type_title", "纠纷类型分布分析");
+        result.put("type_summary", "1）类型高发Top10见图；2）建议聚焦头部类型强化源头治理。");
+        result.put("district_title", "各区办理状态分布分析");
+        result.put("district_summary", "1）各区办理状态分布见图；2）建议跟踪办理中事项提升闭环效率。");
+        try {
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("monthly_trend_json", toJson(analysis.get("timeTrend")));
+            inputs.put("street_top10_json", toJson(analysis.get("streetTop10")));
+            inputs.put("type_top10_json", toJson(analysis.get("typeTop10")));
+            inputs.put("district_status_json", toJson(analysis.get("districtStatus")));
+            Object response = difyClient.runWorkflowWithInputs(inputs, difyApiKey, "案件统计摘要");
+            if (response instanceof Map) {
+                Object outputs = ((Map<?, ?>) response).get("outputs");
+                if (outputs instanceof Map) {
+                    Map<?, ?> map = (Map<?, ?>) outputs;
+                    mergeSummaryField(result, map, "month_title");
+                    mergeSummaryField(result, map, "month_summary");
+                    mergeSummaryField(result, map, "street_title");
+                    mergeSummaryField(result, map, "street_summary");
+                    mergeSummaryField(result, map, "type_title");
+                    mergeSummaryField(result, map, "type_summary");
+                    mergeSummaryField(result, map, "district_title");
+                    mergeSummaryField(result, map, "district_summary");
+                }
+            }
+        } catch (Exception ex) {
+            // Dify异常时使用默认文案兜底，不影响报告生成。
+        }
+        return result;
+    }
+
+    /**
+     * 从Dify输出中合并指定字段。
+     */
+    private void mergeSummaryField(Map<String, String> target, Map<?, ?> source, String key) {
+        Object value = source.get(key);
+        if (value != null && !value.toString().trim().isEmpty()) {
+            target.put(key, value.toString().trim());
+        }
+    }
+
+    /**
+     * 生成四页PDF报告：每页标题+分段摘要+图表。
+     */
+    private void buildPdf(String pdfPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
+                          String typeChartPath, String districtChartPath) throws Exception {
+        try (PDDocument doc = new PDDocument()) {
+            addPdfPage(doc, summary.get("month_title"), summary.get("month_summary"), timeChartPath);
+            addPdfPage(doc, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
+            addPdfPage(doc, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
+            addPdfPage(doc, summary.get("district_title"), summary.get("district_summary"), districtChartPath);
+            doc.save(pdfPath);
+        }
+    }
+
+    /**
+     * 单页排版：摘要按“；”切分段落后与图表合成页面。
+     */
+    private void addPdfPage(PDDocument doc, String title, String summary, String chartPath) throws Exception {
+        BufferedImage canvas = new BufferedImage(1240, 1754, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = canvas.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        g.setColor(new Color(15, 23, 42));
+        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 40));
+        g.drawString(title == null ? "" : title, 70, 90);
+
+        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 24));
+        g.setColor(new Color(51, 65, 85));
+        int currentY = 150;
+        String[] paragraphs = (summary == null ? "" : summary).split("；");
+        for (String p : paragraphs) {
+            String text = p == null ? "" : p.trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            List<String> lines = wrapText(text, 52);
+            for (String line : lines) {
+                g.drawString(line, 70, currentY);
+                currentY += 36;
+            }
+            currentY += 12;
+        }
+
+        BufferedImage chart = ImageIO.read(new File(chartPath));
+        int chartTop = Math.max(currentY + 20, 520);
+        int maxW = 1100;
+        int maxH = 1100;
+        double scale = Math.min(maxW * 1.0 / chart.getWidth(), maxH * 1.0 / chart.getHeight());
+        int drawW = (int) (chart.getWidth() * scale);
+        int drawH = (int) (chart.getHeight() * scale);
+        int drawX = (canvas.getWidth() - drawW) / 2;
+        g.drawImage(chart, drawX, chartTop, drawW, drawH, null);
+        g.dispose();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(canvas, "png", out);
+        PDPage page = new PDPage(PDRectangle.A4);
+        doc.addPage(page);
+        PDImageXObject image = PDImageXObject.createFromByteArray(doc, out.toByteArray(), "page");
+        try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+            cs.drawImage(image, 0, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight());
+        }
+    }
+
+    /**
+     * 按固定字符宽度做简单换行。
+     */
+    private List<String> wrapText(String text, int maxChars) {
+        List<String> lines = new ArrayList<>();
+        if (text == null) {
+            return lines;
+        }
+        String content = text.trim();
+        while (content.length() > maxChars) {
+            lines.add(content.substring(0, maxChars));
+            content = content.substring(maxChars);
+        }
+        if (!content.isEmpty()) {
+            lines.add(content);
+        }
+        return lines;
     }
 
     /**
