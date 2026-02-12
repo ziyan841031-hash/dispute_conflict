@@ -1074,25 +1074,57 @@ function renderTimeline(data) {
   const showDynamic = !mediationCompletedAt && mediationStatus === '调解中' && !!diversionCompletedAt;
 
   const timeline = [
-    {name: '调解分流', enter: diversionEnter, done: diversionDone},
-    {name: '调解状态', enter: statusEnter, done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone}
+    {
+      name: '调解分流',
+      enter: diversionEnter,
+      done: diversionDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间'
+    },
+    {
+      name: '调解状态',
+      enter: statusEnter,
+      done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间'
+    }
   ];
 
   const actionButtons = mediationStatus === '调解中'
     ? `
       <div class="timeline-action-row">
-        <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">催办</button>
-        <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">督办</button>
+        <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">⚡ 催办</button>
+        <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">🛡 督办</button>
       </div>
     `
     : '';
 
-  box.innerHTML = timeline.map(item => `
-    <div class="timeline-row">
-      <div class="timeline-left"><strong>${item.name}</strong><span>进入时间：${item.enter}</span></div>
-      <div class="timeline-right"><strong>处理完成时间</strong><span>${item.done}</span></div>
+  const statusPill = mediationStatus
+    ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
+    : '<span class="timeline-status-pill">状态未知</span>';
+
+  box.innerHTML = `
+    <div class="timeline-ios-head">
+      <strong>办理状态时间轴</strong>
+      ${statusPill}
     </div>
-  `).join('') + actionButtons;
+    ${timeline.map(item => `
+      <div class="timeline-row timeline-row-ios">
+        <div class="timeline-stage-title">${item.name}</div>
+        <div class="timeline-time-grid">
+          <div class="timeline-time-card">
+            <span class="timeline-time-label">${item.enterLabel}</span>
+            <span class="timeline-time-value">${item.enter}</span>
+          </div>
+          <div class="timeline-time-card">
+            <span class="timeline-time-label">${item.doneLabel}</span>
+            <span class="timeline-time-value">${item.done}</span>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+    ${actionButtons}
+  `;
 
   if (showDynamic) {
     const target = document.getElementById('timelineDynamicTime');
