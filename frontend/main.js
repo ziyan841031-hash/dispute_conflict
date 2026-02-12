@@ -1185,6 +1185,92 @@ function onTimelineSupervise() {
   alert('已发起督办');
 }
 
+// 打开语音实时转录工具（预留）。
+function openRealtimeTranscription() {
+  alert('语音实时转录功能即将上线');
+}
+
+// 打开添加工具提示（预留）。
+function openAddToolTip() {
+  alert('更多智能工具正在接入中');
+}
+
+// 打开法律服务对话框。
+function openLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  const list = document.getElementById('lawAgentChatList');
+  if (!modal || !list) {
+    return;
+  }
+  modal.classList.remove('hidden');
+  if (!list.dataset.initialized) {
+    appendLawAgentMessage('assistant', '您好，我是法律服务对话智能体。请描述您的法律问题，我会先给您基础建议。');
+    list.dataset.initialized = '1';
+  }
+}
+
+// 关闭法律服务对话框。
+function closeLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+function onLawAgentInputKeydown(event) {
+  if (event && event.key === 'Enter') {
+    event.preventDefault();
+    sendLawAgentMessage();
+  }
+}
+
+// 发送法律服务对话消息。
+function sendLawAgentMessage() {
+  const input = document.getElementById('lawAgentInput');
+  if (!input) {
+    return;
+  }
+  const text = String(input.value || '').trim();
+  if (!text) {
+    return;
+  }
+  appendLawAgentMessage('user', text);
+  input.value = '';
+
+  window.setTimeout(() => {
+    appendLawAgentMessage('assistant', buildLawAgentReply(text));
+  }, 320);
+}
+
+function appendLawAgentMessage(role, text) {
+  const list = document.getElementById('lawAgentChatList');
+  if (!list) {
+    return;
+  }
+  const item = document.createElement('div');
+  item.className = `law-agent-msg ${role === 'user' ? 'is-user' : 'is-assistant'}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'law-agent-bubble';
+  bubble.textContent = text;
+  item.appendChild(bubble);
+  list.appendChild(item);
+  list.scrollTop = list.scrollHeight;
+}
+
+function buildLawAgentReply(question) {
+  const q = (question || '').toLowerCase();
+  if (q.includes('劳动') || q.includes('工资')) {
+    return '建议先固定证据（劳动合同、考勤、工资流水），再通过劳动仲裁途径主张权利；如涉及拖欠工资，可同步向劳动监察投诉。';
+  }
+  if (q.includes('租赁') || q.includes('房东') || q.includes('租房')) {
+    return '租赁纠纷建议先核对合同条款与付款凭证，明确违约责任；优先协商，协商不成可通过调解或诉讼处理。';
+  }
+  if (q.includes('婚姻') || q.includes('离婚')) {
+    return '婚姻家庭问题建议先梳理财产、债务与子女抚养诉求，必要时准备证据材料并咨询专业律师进行风险评估。';
+  }
+  return '已收到您的问题。建议先整理时间线和关键证据（合同、聊天记录、转账凭证等），我可以继续帮您细化处理步骤。';
+}
+
 // 绑定流程图点击交互（从主节点到当前节点高亮）。
 function bindFlowInteraction() {
   const edges = [
@@ -1246,4 +1332,83 @@ function bindFlowInteraction() {
       });
     });
   });
+}
+
+function openRealtimeTranscription() {
+  alert('语音实时转录功能建设中，敬请期待');
+}
+
+function openAddToolTip() {
+  alert('更多智能工具即将上线');
+}
+
+function openLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  const list = document.getElementById('lawAgentChatList');
+  if (!modal || !list) {
+    return;
+  }
+  modal.classList.remove('hidden');
+  if (!list.dataset.inited) {
+    appendLawAgentMessage('assistant', '您好，我是法律服务对话智能体。请描述您的问题，我将为您提供法律参考建议。');
+    list.dataset.inited = '1';
+  }
+}
+
+function closeLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+function onLawAgentInputKeydown(event) {
+  if (event && event.key === 'Enter') {
+    event.preventDefault();
+    sendLawAgentMessage();
+  }
+}
+
+async function sendLawAgentMessage() {
+  const input = document.getElementById('lawAgentInput');
+  if (!input) {
+    return;
+  }
+  const question = String(input.value || '').trim();
+  if (!question) {
+    return;
+  }
+  appendLawAgentMessage('user', question);
+  input.value = '';
+
+  let answer = '';
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: question})
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : {};
+    answer = payload.answer || payload.text || payload.output || '';
+  } catch (error) {
+    answer = '';
+  }
+
+  if (!answer) {
+    answer = '已收到您的问题。当前无法获取在线回复，请稍后重试。';
+  }
+  appendLawAgentMessage('assistant', answer);
+}
+
+function appendLawAgentMessage(role, text) {
+  const list = document.getElementById('lawAgentChatList');
+  if (!list) {
+    return;
+  }
+  const item = document.createElement('div');
+  item.className = `law-agent-msg ${role === 'user' ? 'user' : 'assistant'}`;
+  item.textContent = text || '';
+  list.appendChild(item);
+  list.scrollTop = list.scrollHeight;
 }

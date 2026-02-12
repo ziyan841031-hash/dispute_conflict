@@ -621,3 +621,215 @@ table { width: 100%; border-collapse: collapse; }
   font-size: 20px;
   color: #0f172a;
 }
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.tool-app-card {
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  padding: 14px 10px;
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  color: #1e293b;
+}
+
+.tool-app-card:hover {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.tool-app-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.tool-app-name {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tool-app-add {
+  border-style: dashed;
+  color: #475569;
+}
+
+.law-agent-modal-content {
+  width: min(860px, 94vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.law-agent-chat-list {
+  flex: 1;
+  min-height: 420px;
+  max-height: 58vh;
+  overflow-y: auto;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.law-agent-msg {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.law-agent-msg.is-user {
+  justify-content: flex-end;
+}
+
+.law-agent-msg.is-assistant {
+  justify-content: flex-start;
+}
+
+.law-agent-bubble {
+  max-width: 78%;
+  border-radius: 14px;
+  padding: 10px 12px;
+  line-height: 1.6;
+  font-size: 14px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.law-agent-msg.is-user .law-agent-bubble {
+  background: #2563eb;
+  color: #fff;
+}
+
+.law-agent-msg.is-assistant .law-agent-bubble {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #dbeafe;
+}
+
+.law-agent-input-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.law-agent-input-row input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.tool-app-card {
+  border: 1px solid #dbe3ef;
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.tool-app-card:hover {
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.tool-app-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #e0e7ff 0%, #dbeafe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.tool-app-name {
+  color: #0f172a;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.tool-app-add .tool-app-icon {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+}
+
+.law-agent-modal-content {
+  width: min(980px, 94vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.law-agent-chat-list {
+  flex: 1;
+  min-height: 420px;
+  max-height: 62vh;
+  overflow-y: auto;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.law-agent-msg {
+  max-width: 78%;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.law-agent-msg.user {
+  margin-left: auto;
+  background: #2563eb;
+  color: #fff;
+}
+
+.law-agent-msg.assistant {
+  margin-right: auto;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.law-agent-input-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.law-agent-input-row input {
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
