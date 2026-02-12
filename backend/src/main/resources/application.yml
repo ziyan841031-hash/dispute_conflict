@@ -28,6 +28,7 @@ dify:
   classify-api-key: replace-with-classify-key
   disposal-api-key: replace-with-disposal-key
   mediator-suggestion-api-key: replace-with-mediator-suggestion-key
+  case-stats-api-key: replace-with-case-stats-key
 
 oss:
   endpoint: https://oss-cn-hangzhou.aliyuncs.com

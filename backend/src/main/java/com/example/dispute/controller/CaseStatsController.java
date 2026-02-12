@@ -78,8 +78,8 @@ public class CaseStatsController {
     private final CaseStatsDetailMapper detailMapper;
     private final DifyClient difyClient;
 
-    @Value("${dify.api-key:replace-with-real-key}")
-    private String difyApiKey;
+    @Value("${dify.case-stats-api-key:replace-with-case-stats-key}")
+    private String caseStatsApiKey;
 
     public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient) {
         this.batchMapper = batchMapper;
@@ -347,7 +347,7 @@ public class CaseStatsController {
             inputs.put("street_top10_json", toJson(analysis.get("streetTop10")));
             inputs.put("type_top10_json", toJson(analysis.get("typeTop10")));
             inputs.put("district_status_json", toJson(analysis.get("districtStatus")));
-            Object response = difyClient.runWorkflowWithInputs(inputs, difyApiKey, "案件统计摘要");
+            Object response = difyClient.runWorkflowWithInputs(inputs, caseStatsApiKey, "案件统计摘要");
             if (response instanceof Map) {
                 Object outputs = ((Map<?, ?>) response).get("outputs");
                 if (outputs instanceof Map) {
