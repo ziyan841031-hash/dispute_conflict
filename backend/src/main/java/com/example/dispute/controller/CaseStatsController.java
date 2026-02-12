@@ -52,6 +52,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * 案件统计控制器。
+ * 提供Excel导入、批次查询、明细查询、统计分析与报告下载能力。
+ */
 @RestController
 @RequestMapping("/api/case-stats")
 public class CaseStatsController {
@@ -68,12 +72,16 @@ public class CaseStatsController {
         this.detailMapper = detailMapper;
     }
 
+    /**
+     * 导入案件统计Excel并完成入库、统计分析、图表渲染和PPT生成。
+     */
     @PostMapping("/import-excel")
     public ApiResponse<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return ApiResponse.fail("请上传Excel文件");
         }
 
+        // 定义解析后的明细列表。
         List<CaseStatsDetail> details = new ArrayList<>();
         try (InputStream inputStream = file.getInputStream(); Workbook workbook = WorkbookFactory.create(inputStream)) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -125,7 +133,9 @@ public class CaseStatsController {
             detailMapper.insert(detail);
         }
 
+        // 生成四维度统计数据。
         Map<String, Object> analysis = buildAnalysis(details);
+        // 渲染图表并生成PPT文件。
         Map<String, String> files = generateChartsAndPpt(batch, analysis);
 
         batch.setReportGeneratedAt(LocalDateTime.now());
@@ -156,6 +166,9 @@ public class CaseStatsController {
         return ApiResponse.success(result);
     }
 
+    /**
+     * 查询案件统计批次列表。
+     */
     @GetMapping("/batches")
     public ApiResponse<List<CaseStatsBatch>> listBatches() {
         List<CaseStatsBatch> list = batchMapper.selectList(new LambdaQueryWrapper<CaseStatsBatch>()
@@ -163,6 +176,9 @@ public class CaseStatsController {
         return ApiResponse.success(list);
     }
 
+    /**
+     * 查询指定批次的明细数据。
+     */
     @GetMapping("/batches/{batchId}/details")
     public ApiResponse<List<CaseStatsDetail>> listDetails(@PathVariable("batchId") Long batchId) {
         List<CaseStatsDetail> list = detailMapper.selectList(new LambdaQueryWrapper<CaseStatsDetail>()
@@ -171,6 +187,9 @@ public class CaseStatsController {
         return ApiResponse.success(list);
     }
 
+    /**
+     * 查询指定批次的统计分析JSON与图表路径。
+     */
     @GetMapping("/batches/{batchId}/analysis")
     public ApiResponse<Map<String, Object>> getAnalysis(@PathVariable("batchId") Long batchId) {
         CaseStatsBatch batch = batchMapper.selectById(batchId);
@@ -190,6 +209,9 @@ public class CaseStatsController {
         return ApiResponse.success(result);
     }
 
+    /**
+     * 下载指定批次生成的PPT报告文件。
+     */
     @GetMapping("/batches/{batchId}/report-download")
     public ResponseEntity<Resource> downloadReport(@PathVariable("batchId") Long batchId) {
         CaseStatsBatch batch = batchMapper.selectById(batchId);
@@ -207,6 +229,9 @@ public class CaseStatsController {
                 .body(resource);
     }
 
+    /**
+     * 基于明细列表构建四个维度统计分析数据。
+     */
     private Map<String, Object> buildAnalysis(List<CaseStatsDetail> details) {
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -247,8 +272,12 @@ public class CaseStatsController {
         return result;
     }
 
+    /**
+     * 将统计结果渲染为统一尺寸图片并生成PPT文件。
+     */
     private Map<String, String> generateChartsAndPpt(CaseStatsBatch batch, Map<String, Object> analysis) {
         try {
+            // 按批次号创建报告输出目录。
             Path dir = Paths.get("backend", "reports", batch.getBatchNo());
             Files.createDirectories(dir);
             String timeChartPath = dir.resolve("time-trend.png").toString();
@@ -275,6 +304,9 @@ public class CaseStatsController {
         }
     }
 
+    /**
+     * 将多张图表写入PPT（每页一张）。
+     */
     private void buildPpt(String pptPath, String... images) throws Exception {
         XMLSlideShow ppt = new XMLSlideShow();
         for (String image : images) {
@@ -290,6 +322,9 @@ public class CaseStatsController {
         ppt.close();
     }
 
+    /**
+     * 绘制折线图（近6个月趋势）。
+     */
     private void drawLineChart(String title, Map<String, Long> data, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
@@ -318,6 +353,9 @@ public class CaseStatsController {
         g.dispose();
     }
 
+    /**
+     * 绘制竖向柱状图（Top10）。
+     */
     private void drawVerticalBarChart(String title, Map<String, Long> data, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
@@ -342,6 +380,9 @@ public class CaseStatsController {
         g.dispose();
     }
 
+    /**
+     * 绘制横向柱状图（Top10）。
+     */
     private void drawHorizontalBarChart(String title, Map<String, Long> data, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
@@ -366,6 +407,9 @@ public class CaseStatsController {
         g.dispose();
     }
 
+    /**
+     * 绘制分组柱状图（区+办理状态）。
+     */
     private void drawGroupedBarChart(String title, Map<String, Map<String, Long>> data, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
@@ -403,6 +447,9 @@ public class CaseStatsController {
         g.dispose();
     }
 
+    /**
+     * 创建统一尺寸图表画布并绘制标题。
+     */
     private BufferedImage createCanvas(String title) {
         BufferedImage img = new BufferedImage(1200, 700, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = img.createGraphics();
@@ -415,17 +462,26 @@ public class CaseStatsController {
         return img;
     }
 
+    /**
+     * 设置图形渲染参数与默认字体。
+     */
     private void setupGraphics(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
     }
 
+    /**
+     * 绘制坐标轴。
+     */
     private void drawAxis(Graphics2D g, int left, int top, int right, int bottom) {
         g.setColor(new Color(100, 116, 139));
         g.drawLine(left, bottom, right, bottom);
         g.drawLine(left, top, left, bottom);
     }
 
+    /**
+     * 从登记时间或事件时间提取“yyyy-MM”月份键。
+     */
     private String extractMonth(String registerTime, String eventTime) {
         String source = (registerTime == null || registerTime.trim().isEmpty()) ? eventTime : registerTime;
         if (source == null) {
@@ -445,6 +501,9 @@ public class CaseStatsController {
         }
     }
 
+    /**
+     * 对统计映射按数量降序取前N条。
+     */
     private Map<String, Long> topNMap(Map<String, Long> map, int n) {
         return map.entrySet().stream()
                 .filter(e -> e.getKey() != null && !e.getKey().trim().isEmpty())
@@ -458,6 +517,9 @@ public class CaseStatsController {
                 ));
     }
 
+    /**
+     * 将对象序列化为JSON字符串。
+     */
     private String toJson(Object value) {
         try {
             return OBJECT_MAPPER.writeValueAsString(value);
@@ -466,6 +528,9 @@ public class CaseStatsController {
         }
     }
 
+    /**
+     * 校验Excel表头是否符合预期顺序与名称。
+     */
     private boolean validateHeader(Row headerRow) {
         if (headerRow == null) {
             return false;
@@ -479,6 +544,9 @@ public class CaseStatsController {
         return true;
     }
 
+    /**
+     * 读取单元格并统一转换为字符串。
+     */
     private String cellString(Row row, int index) {
         Cell cell = row.getCell(index, MissingCellPolicy.RETURN_BLANK_AS_NULL);
         if (cell == null) {
@@ -496,6 +564,9 @@ public class CaseStatsController {
         return cell.toString().trim();
     }
 
+    /**
+     * 判断当前行是否为空行。
+     */
     private boolean isEmptyRow(Row row) {
         for (int i = 0; i < REQUIRED_HEADERS.size(); i++) {
             if (!cellString(row, i).isEmpty()) {
@@ -505,6 +576,9 @@ public class CaseStatsController {
         return true;
     }
 
+    /**
+     * 统一空值处理，返回“未知”。
+     */
     private String safe(String value) {
         return value == null || value.trim().isEmpty() ? "未知" : value.trim();
     }

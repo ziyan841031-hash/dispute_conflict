@@ -63,6 +63,7 @@ function finishParseAndGoCases() {
 // 提交Excel案件。
 async function submitExcel() {
   const file = document.getElementById('excelFile').files[0];
+  // 组装文件上传表单。
   const form = new FormData();
   form.append('file', file);
   const res = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
@@ -198,6 +199,7 @@ async function loadStatsBatches() {
   if (!tbody) {
     return;
   }
+  // 请求批次列表。
   const res = await fetch(`${API_BASE}/case-stats/batches`);
   const json = await res.json();
   const rows = (json && json.data) ? json.data : [];
@@ -219,6 +221,7 @@ async function loadStatsBatches() {
 
 
 
+// 当前页触发报告下载，不跳转页面。
 async function downloadStatsReport(reportUrl) {
   if (!reportUrl) {
     return;
@@ -233,6 +236,7 @@ async function downloadStatsReport(reportUrl) {
     if (!res.ok) {
       throw new Error(`下载失败: ${res.status}`);
     }
+    // 将响应体转换为二进制文件流。
     const blob = await res.blob();
     const objectUrl = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
