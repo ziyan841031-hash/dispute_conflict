@@ -95,6 +95,8 @@ public class DifyController {
             throw new IllegalArgumentException("未找到workflow记录: " + caseId);
         }
         record.setMediationStatus("调解中");
+        record.setDiversionCompletedAt(LocalDateTime.now());
+        record.setMediationCompletedAt(null);
 
         Object mediatorAdvice = null;
         try {
@@ -203,6 +205,10 @@ public class DifyController {
             record.setFlowLevel2(toStringValue(flowMap.get("level2")));
             record.setFlowLevel3(toStringValue(flowMap.get("level3")));
             record.setMediationStatus(resolveMediationStatus(answerMap, flowMap));
+            if ("调解中".equals(record.getMediationStatus()) && record.getDiversionCompletedAt() == null) {
+                record.setDiversionCompletedAt(LocalDateTime.now());
+                record.setMediationCompletedAt(null);
+            }
             record.setRawResponse(objectMapper.writeValueAsString(responseObj));
 
             if (exists) {

@@ -285,19 +285,30 @@ async function importStatsExcel() {
     alert('请先选择Excel文件');
     return;
   }
+  const generatingModal = document.getElementById('statsGeneratingModal');
+  if (generatingModal) {
+    generatingModal.classList.remove('hidden');
+  }
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
-  const json = await res.json();
-  if (json && json.code === 0) {
-    alert('导入成功');
-    if (fileInput) {
-      fileInput.value = '';
+  try {
+    const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
+    const json = await res.json();
+    if (json && json.code === 0) {
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      await loadStatsBatches();
+      return;
     }
-    await loadStatsBatches();
-    return;
+    alert((json && json.message) || '导入失败');
+  } catch (error) {
+    alert('导入失败');
+  } finally {
+    if (generatingModal) {
+      generatingModal.classList.add('hidden');
+    }
   }
-  alert((json && json.message) || '导入失败');
 }
 
 // 打开统计明细弹窗。
@@ -361,6 +372,7 @@ let workflowAdviceRecord = null;
 let workflowAdviceLoading = false;
 let assistantInitialWorkflowDone = false;
 let assistantCanvasReady = false;
+let timelineTickTimer = null;
 const THIRD_LEVEL_NODE_MAP = {
   people: '人民调解',
   admin: '行政调解',
@@ -1043,18 +1055,134 @@ function onGuideOrgChange(orgName) {
 // 渲染案件时间线（竖状）。
 function renderTimeline(data) {
   const box = document.getElementById('timelineList');
+  if (!box) {
+    return;
+  }
+  if (timelineTickTimer) {
+    clearInterval(timelineTickTimer);
+    timelineTickTimer = null;
+  }
+
+  const diversionCompletedAt = data.diversionCompletedAt;
+  const mediationCompletedAt = data.mediationCompletedAt;
+  const mediationStatus = String(data.mediationStatus || '').trim();
+
+  const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
+  const diversionDone = formatTimelineTime(diversionCompletedAt);
+  const statusEnter = formatTimelineTime(diversionCompletedAt);
+  const mediationDone = formatTimelineTime(mediationCompletedAt);
+  const showCurrentProcessingTime = mediationStatus === '调解中';
+
+  const actionButtons = mediationStatus === '调解中'
+    ? `
+      <div class="timeline-action-row timeline-action-row-top">
+        <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">⚡ 催办</button>
+        <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">🛡 督办</button>
+      </div>
+    `
+    : '';
+
   const timeline = [
-    {name: '已受理', enter: data.registerTime || '-', done: data.classifyCreatedAt || '-'},
-    {name: '调解分流', enter: data.classifyCreatedAt || '-', done: data.updatedAt || '-'},
-    {name: '调解状态', enter: data.updatedAt || '-', done: '-'},
-    {name: '案件归档', enter: '-', done: data.handlingProgress || '待归档'}
+    {
+      name: '调解状态',
+      enter: statusEnter,
+      done: showCurrentProcessingTime
+        ? '<span id="timelineCurrentProcessingTime" class="timeline-dynamic-time">-</span>'
+        : mediationDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间',
+      extra: actionButtons
+    },
+    {
+      name: '调解分流',
+      enter: diversionEnter,
+      done: diversionDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间',
+      extra: ''
+    }
   ];
-  box.innerHTML = timeline.map(item => `
-    <div class="timeline-row">
-      <div class="timeline-left"><strong>${item.name}</strong><span>进入时间：${item.enter}</span></div>
-      <div class="timeline-right"><strong>处理完成时间</strong><span>${item.done}</span></div>
+
+  const statusPill = mediationStatus
+    ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
+    : '<span class="timeline-status-pill">已受理</span>';
+
+  const timelineHtml = timeline.map(item => {
+    const cards = [];
+    if (hasTimelineValue(item.enter)) {
+      cards.push(`
+        <div class="timeline-time-card">
+          <span class="timeline-time-label">${item.enterLabel}</span>
+          <span class="timeline-time-value">${item.enter}</span>
+        </div>
+      `);
+    }
+    if (hasTimelineValue(item.done)) {
+      cards.push(`
+        <div class="timeline-time-card">
+          <span class="timeline-time-label">${item.doneLabel}</span>
+          <span class="timeline-time-value">${item.done}</span>
+        </div>
+      `);
+    }
+    if (cards.length === 0 && !item.extra) {
+      return '';
+    }
+    return `
+      <div class="timeline-row timeline-row-ios">
+        <div class="timeline-stage-title">${item.name}</div>
+        <div class="timeline-time-grid">${cards.join('')}</div>
+        ${item.extra || ''}
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="timeline-ios-head">
+      <strong>办理状态时间轴</strong>
+      ${statusPill}
     </div>
-  `).join('');
+    ${timelineHtml}
+  `;
+
+  if (showCurrentProcessingTime) {
+    const target = document.getElementById('timelineCurrentProcessingTime');
+    const refresh = () => {
+      if (!target) {
+        return;
+      }
+      target.textContent = formatTimelineTime(new Date());
+    };
+    refresh();
+    timelineTickTimer = setInterval(refresh, 1000);
+  }
+}
+
+function hasTimelineValue(value) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  const text = String(value).trim();
+  return text !== '' && text !== '-';
+}
+
+function formatTimelineTime(value) {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+}
+
+function onTimelineUrge() {
+  alert('已发起催办');
+}
+
+function onTimelineSupervise() {
+  alert('已发起督办');
 }
 
 // 绑定流程图点击交互（从主节点到当前节点高亮）。
@@ -1118,4 +1246,83 @@ function bindFlowInteraction() {
       });
     });
   });
+}
+
+function openRealtimeTranscription() {
+  alert('语音实时转录功能建设中，敬请期待');
+}
+
+function openAddToolTip() {
+  alert('更多智能工具即将上线');
+}
+
+function openLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  const list = document.getElementById('lawAgentChatList');
+  if (!modal || !list) {
+    return;
+  }
+  modal.classList.remove('hidden');
+  if (!list.dataset.inited) {
+    appendLawAgentMessage('assistant', '您好，我是法律服务对话智能体。请描述您的问题，我将为您提供法律参考建议。');
+    list.dataset.inited = '1';
+  }
+}
+
+function closeLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+function onLawAgentInputKeydown(event) {
+  if (event && event.key === 'Enter') {
+    event.preventDefault();
+    sendLawAgentMessage();
+  }
+}
+
+async function sendLawAgentMessage() {
+  const input = document.getElementById('lawAgentInput');
+  if (!input) {
+    return;
+  }
+  const question = String(input.value || '').trim();
+  if (!question) {
+    return;
+  }
+  appendLawAgentMessage('user', question);
+  input.value = '';
+
+  let answer = '';
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: question})
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : {};
+    answer = payload.answer || payload.text || payload.output || '';
+  } catch (error) {
+    answer = '';
+  }
+
+  if (!answer) {
+    answer = '已收到您的问题。当前无法获取在线回复，请稍后重试。';
+  }
+  appendLawAgentMessage('assistant', answer);
+}
+
+function appendLawAgentMessage(role, text) {
+  const list = document.getElementById('lawAgentChatList');
+  if (!list) {
+    return;
+  }
+  const item = document.createElement('div');
+  item.className = `law-agent-msg ${role === 'user' ? 'user' : 'assistant'}`;
+  item.textContent = text || '';
+  list.appendChild(item);
+  list.scrollTop = list.scrollHeight;
 }
