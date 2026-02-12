@@ -70,6 +70,9 @@ public class CaseStatsController {
     private static final List<String> REQUIRED_HEADERS = Arrays.asList("序号", "时间", "区", "街镇", "登记来源", "类型", "登记时间", "当前办理状态");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4})[-/](\\d{1,2})");
+    private static final int PPT_WIDTH = 1366;
+    private static final int PPT_HEIGHT = 768;
+    private static final int MARGIN = 36;
 
     private final CaseStatsBatchMapper batchMapper;
     private final CaseStatsDetailMapper detailMapper;
