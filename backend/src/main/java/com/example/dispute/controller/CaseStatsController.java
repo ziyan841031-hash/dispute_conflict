@@ -607,8 +607,36 @@ public class CaseStatsController {
         if (current.length() > 0) {
             lines.add(current.toString());
         }
+        // 末行过短时进行重排，避免出现“第二行/第三行仅一两个字”的展示。
+        rebalanceShortLastLine(lines, metrics, maxWidthPx);
         g.dispose();
         return lines;
+    }
+
+    /**
+     * 对末尾短行做均衡处理，减少孤字行。
+     */
+    private void rebalanceShortLastLine(List<String> lines, java.awt.FontMetrics metrics, int maxWidthPx) {
+        if (lines == null || lines.size() < 2) {
+            return;
+        }
+        for (int i = lines.size() - 1; i > 0; i--) {
+            String curr = lines.get(i);
+            String prev = lines.get(i - 1);
+            // 当前行字数太少，且上一行有可分配空间时，从上一行尾部迁移字符。
+            while (curr.length() > 0 && curr.length() < 4 && prev.length() > 6) {
+                String candidatePrev = prev.substring(0, prev.length() - 1);
+                String candidateCurr = prev.substring(prev.length() - 1) + curr;
+                if (metrics.stringWidth(candidatePrev) <= maxWidthPx && metrics.stringWidth(candidateCurr) <= maxWidthPx) {
+                    prev = candidatePrev;
+                    curr = candidateCurr;
+                } else {
+                    break;
+                }
+            }
+            lines.set(i - 1, prev);
+            lines.set(i, curr);
+        }
     }
 
     /**
