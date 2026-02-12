@@ -1073,35 +1073,37 @@ function renderTimeline(data) {
   const mediationDone = formatTimelineTime(mediationCompletedAt);
   const showDynamic = !mediationCompletedAt && mediationStatus === '调解中' && !!diversionCompletedAt;
 
-  const timeline = [
-    {
-      name: '调解分流',
-      enter: diversionEnter,
-      done: diversionDone,
-      enterLabel: '进入时间',
-      doneLabel: '处理完成时间'
-    },
-    {
-      name: '调解状态',
-      enter: statusEnter,
-      done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone,
-      enterLabel: '进入时间',
-      doneLabel: '处理完成时间'
-    }
-  ];
-
   const actionButtons = mediationStatus === '调解中'
     ? `
-      <div class="timeline-action-row">
+      <div class="timeline-action-row timeline-action-row-top">
         <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">⚡ 催办</button>
         <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">🛡 督办</button>
       </div>
     `
     : '';
 
+  const timeline = [
+    {
+      name: '调解状态',
+      enter: statusEnter,
+      done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间',
+      extra: actionButtons
+    },
+    {
+      name: '调解分流',
+      enter: diversionEnter,
+      done: diversionDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间',
+      extra: ''
+    }
+  ];
+
   const statusPill = mediationStatus
     ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
-    : '<span class="timeline-status-pill">状态未知</span>';
+    : '<span class="timeline-status-pill">已受理</span>';
 
   box.innerHTML = `
     <div class="timeline-ios-head">
@@ -1121,9 +1123,9 @@ function renderTimeline(data) {
             <span class="timeline-time-value">${item.done}</span>
           </div>
         </div>
+        ${item.extra || ''}
       </div>
     `).join('')}
-    ${actionButtons}
   `;
 
   if (showDynamic) {

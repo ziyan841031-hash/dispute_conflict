@@ -374,6 +374,10 @@ table { width: 100%; border-collapse: collapse; }
   margin: 4px 0 4px 14px;
 }
 
+.timeline-action-row-top {
+  margin: 10px 0 2px;
+}
+
 .timeline-action-btn {
   border: 1px solid #bfdbfe;
   border-radius: 999px;
