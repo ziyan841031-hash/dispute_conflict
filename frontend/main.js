@@ -372,6 +372,7 @@ let workflowAdviceRecord = null;
 let workflowAdviceLoading = false;
 let assistantInitialWorkflowDone = false;
 let assistantCanvasReady = false;
+let timelineTickTimer = null;
 const THIRD_LEVEL_NODE_MAP = {
   people: '人民调解',
   admin: '行政调解',
@@ -1054,18 +1055,69 @@ function onGuideOrgChange(orgName) {
 // 渲染案件时间线（竖状）。
 function renderTimeline(data) {
   const box = document.getElementById('timelineList');
+  if (!box) {
+    return;
+  }
+  if (timelineTickTimer) {
+    clearInterval(timelineTickTimer);
+    timelineTickTimer = null;
+  }
+
+  const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
+  const diversionDone = formatTimelineTime(data.diversionCompletedAt);
+  const statusEnter = formatTimelineTime(data.diversionCompletedAt);
+  const mediationDone = formatTimelineTime(data.mediationCompletedAt);
+
   const timeline = [
-    {name: '已受理', enter: data.registerTime || '-', done: data.classifyCreatedAt || '-'},
-    {name: '调解分流', enter: data.classifyCreatedAt || '-', done: data.updatedAt || '-'},
-    {name: '调解状态', enter: data.updatedAt || '-', done: '-'},
-    {name: '案件归档', enter: '-', done: data.handlingProgress || '待归档'}
+    {name: '调解分流', enter: diversionEnter, done: diversionDone},
+    {name: '调解状态', enter: statusEnter, done: mediationDone || '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>'}
   ];
+
   box.innerHTML = timeline.map(item => `
     <div class="timeline-row">
       <div class="timeline-left"><strong>${item.name}</strong><span>进入时间：${item.enter}</span></div>
       <div class="timeline-right"><strong>处理完成时间</strong><span>${item.done}</span></div>
     </div>
   `).join('');
+
+  if (!mediationDone && data.diversionCompletedAt) {
+    const target = document.getElementById('timelineDynamicTime');
+    const refresh = () => {
+      if (!target) {
+        return;
+      }
+      target.textContent = formatElapsedFrom(data.diversionCompletedAt);
+    };
+    refresh();
+    timelineTickTimer = setInterval(refresh, 1000);
+  }
+}
+
+function formatTimelineTime(value) {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+}
+
+function formatElapsedFrom(startValue) {
+  const start = new Date(startValue);
+  if (Number.isNaN(start.getTime())) {
+    return '-';
+  }
+  let diff = Date.now() - start.getTime();
+  if (diff < 0) {
+    diff = 0;
+  }
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${days}天${hours}小时${minutes}分`;
 }
 
 // 绑定流程图点击交互（从主节点到当前节点高亮）。

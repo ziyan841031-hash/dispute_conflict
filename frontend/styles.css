@@ -292,6 +292,17 @@ table { width: 100%; border-collapse: collapse; }
 }
 .timeline-left strong, .timeline-right strong { display: block; color: #334155; margin-bottom: 4px; }
 
+.timeline-dynamic-time {
+  font-weight: 700;
+  color: #dc2626;
+  animation: timeline-time-glow 1.2s ease-in-out infinite;
+}
+
+@keyframes timeline-time-glow {
+  0%, 100% { opacity: .65; }
+  50% { opacity: 1; }
+}
+
 
 @media (max-width: 1200px) {
   .assistant-info-meta { grid-template-columns: 1fr; }

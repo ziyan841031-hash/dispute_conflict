@@ -219,6 +219,9 @@ public class CaseController {
             result.put("flowLevel1", workflowRecord.getFlowLevel1());
             result.put("flowLevel2", workflowRecord.getFlowLevel2());
             result.put("flowLevel3", workflowRecord.getFlowLevel3());
+            result.put("workflowCreatedAt", workflowRecord.getCreatedAt());
+            result.put("diversionCompletedAt", workflowRecord.getDiversionCompletedAt());
+            result.put("mediationCompletedAt", workflowRecord.getMediationCompletedAt());
             result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
             result.put("recommendedMediationType", workflowRecord.getRecommendedMediationType());
             result.put("mediationAdvice", workflowRecord.getMediationAdvice());
