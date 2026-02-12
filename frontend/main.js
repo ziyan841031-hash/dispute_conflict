@@ -285,19 +285,30 @@ async function importStatsExcel() {
     alert('请先选择Excel文件');
     return;
   }
+  const generatingModal = document.getElementById('statsGeneratingModal');
+  if (generatingModal) {
+    generatingModal.classList.remove('hidden');
+  }
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
-  const json = await res.json();
-  if (json && json.code === 0) {
-    alert('导入成功');
-    if (fileInput) {
-      fileInput.value = '';
+  try {
+    const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
+    const json = await res.json();
+    if (json && json.code === 0) {
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      await loadStatsBatches();
+      return;
     }
-    await loadStatsBatches();
-    return;
+    alert((json && json.message) || '导入失败');
+  } catch (error) {
+    alert('导入失败');
+  } finally {
+    if (generatingModal) {
+      generatingModal.classList.add('hidden');
+    }
   }
-  alert((json && json.message) || '导入失败');
 }
 
 // 打开统计明细弹窗。
