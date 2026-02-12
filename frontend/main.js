@@ -1105,27 +1105,42 @@ function renderTimeline(data) {
     ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
     : '<span class="timeline-status-pill">已受理</span>';
 
+  const timelineHtml = timeline.map(item => {
+    const cards = [];
+    if (hasTimelineValue(item.enter)) {
+      cards.push(`
+        <div class="timeline-time-card">
+          <span class="timeline-time-label">${item.enterLabel}</span>
+          <span class="timeline-time-value">${item.enter}</span>
+        </div>
+      `);
+    }
+    if (hasTimelineValue(item.done)) {
+      cards.push(`
+        <div class="timeline-time-card">
+          <span class="timeline-time-label">${item.doneLabel}</span>
+          <span class="timeline-time-value">${item.done}</span>
+        </div>
+      `);
+    }
+    if (cards.length === 0 && !item.extra) {
+      return '';
+    }
+    return `
+      <div class="timeline-row timeline-row-ios">
+        <div class="timeline-stage-title">${item.name}</div>
+        <div class="timeline-time-grid">${cards.join('')}</div>
+        ${item.extra || ''}
+      </div>
+    `;
+  }).join('');
+
   box.innerHTML = `
     <div class="timeline-ios-head">
       <strong>办理状态时间轴</strong>
       ${statusPill}
     </div>
-    ${timeline.map(item => `
-      <div class="timeline-row timeline-row-ios">
-        <div class="timeline-stage-title">${item.name}</div>
-        <div class="timeline-time-grid">
-          <div class="timeline-time-card">
-            <span class="timeline-time-label">${item.enterLabel}</span>
-            <span class="timeline-time-value">${item.enter}</span>
-          </div>
-          <div class="timeline-time-card">
-            <span class="timeline-time-label">${item.doneLabel}</span>
-            <span class="timeline-time-value">${item.done}</span>
-          </div>
-        </div>
-        ${item.extra || ''}
-      </div>
-    `).join('')}
+    ${timelineHtml}
   `;
 
   if (showDynamic) {
@@ -1139,6 +1154,14 @@ function renderTimeline(data) {
     refresh();
     timelineTickTimer = setInterval(refresh, 1000);
   }
+}
+
+function hasTimelineValue(value) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  const text = String(value).trim();
+  return text !== '' && text !== '-';
 }
 
 function formatTimelineTime(value) {
