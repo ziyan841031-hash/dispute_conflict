@@ -340,7 +340,7 @@ public class CaseStatsController {
             drawGroupedBarChart("区办理状态", ((Map<String, Map<String, Long>>) analysis.get("districtStatus")), districtChartPath);
 
             Map<String, String> aiSummary = callDifyForCaseStatsSummary(analysis);
-            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath);
+            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath, batch.getImportedAt());
 
             Map<String, String> files = new HashMap<>();
             files.put("timeChartPath", timeChartPath);
@@ -408,9 +408,10 @@ public class CaseStatsController {
      * 将标题、分段摘要和图表排版到PPT（四页）。
      */
     private void buildPpt(String pptPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
-                          String typeChartPath, String districtChartPath) throws Exception {
+                          String typeChartPath, String districtChartPath, LocalDateTime importedAt) throws Exception {
         XMLSlideShow ppt = new XMLSlideShow();
         ppt.setPageSize(new java.awt.Dimension(PPT_WIDTH, PPT_HEIGHT));
+        addCoverSlide(ppt, importedAt);
         addPptSlide(ppt, summary.get("month_title"), summary.get("month_summary"), timeChartPath);
         addPptSlide(ppt, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
         addPptSlide(ppt, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
@@ -419,6 +420,43 @@ public class CaseStatsController {
             ppt.write(out);
         }
         ppt.close();
+    }
+
+    /**
+     * 新增PPT首页：导入日期-数据分析洞察报告。
+     */
+    private void addCoverSlide(XMLSlideShow ppt, LocalDateTime importedAt) {
+        XSLFSlide slide = ppt.createSlide();
+        XSLFAutoShape bg = slide.createAutoShape();
+        bg.setShapeType(ShapeType.RECT);
+        bg.setAnchor(new java.awt.Rectangle(0, 0, PPT_WIDTH, PPT_HEIGHT));
+        bg.setFillColor(new Color(239, 246, 255));
+        bg.setLineColor(new Color(239, 246, 255));
+
+        String dateText = (importedAt == null ? LocalDateTime.now() : importedAt)
+                .format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+        String title = dateText + "-数据分析洞察报告";
+
+        XSLFTextBox titleBox = slide.createTextBox();
+        titleBox.setAnchor(new java.awt.Rectangle(120, 250, PPT_WIDTH - 240, 120));
+        XSLFTextParagraph titleP = titleBox.addNewTextParagraph();
+        titleP.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
+        XSLFTextRun titleR = titleP.addNewTextRun();
+        titleR.setText(title);
+        titleR.setFontFamily("Microsoft YaHei");
+        titleR.setBold(true);
+        titleR.setFontSize(44.0);
+        titleR.setFontColor(new Color(30, 64, 175));
+
+        XSLFTextBox subBox = slide.createTextBox();
+        subBox.setAnchor(new java.awt.Rectangle(120, 390, PPT_WIDTH - 240, 50));
+        XSLFTextParagraph subP = subBox.addNewTextParagraph();
+        subP.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
+        XSLFTextRun subR = subP.addNewTextRun();
+        subR.setText("矛盾纠纷案件统计专题");
+        subR.setFontFamily("Microsoft YaHei");
+        subR.setFontSize(24.0);
+        subR.setFontColor(new Color(71, 85, 105));
     }
 
     /**
@@ -460,13 +498,16 @@ public class CaseStatsController {
         textBg.setFillColor(new Color(248, 250, 252));
         textBg.setLineColor(new Color(203, 213, 225));
 
-        // 右侧内容按条目切分，每条使用淡黄色矩形背景。
+        // 右侧内容按条目切分，每条卡片文本居中，整体在右栏垂直居中展示。
         java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18);
         int cardPadding = 12;
         int cardGap = 10;
         int cardWidth = textAreaWidth - 20;
-        int currentY = bodyTop + 10;
         int maxBottom = bodyTop + bodyHeight - 10;
+
+        List<List<String>> wrappedItems = new ArrayList<>();
+        List<Integer> cardHeights = new ArrayList<>();
+        int totalHeight = 0;
 
         String[] paragraphs = (summary == null ? "" : summary).split("；");
         int index = 1;
@@ -479,6 +520,19 @@ public class CaseStatsController {
             List<String> lines = wrapTextByPixel(itemText, summaryFont, cardWidth - cardPadding * 2);
             int lineHeight = 24;
             int cardHeight = lines.size() * lineHeight + cardPadding * 2;
+            if (totalHeight + cardHeight + (wrappedItems.isEmpty() ? 0 : cardGap) > bodyHeight - 20) {
+                break;
+            }
+            wrappedItems.add(lines);
+            cardHeights.add(cardHeight);
+            totalHeight += cardHeight + (wrappedItems.size() == 1 ? 0 : cardGap);
+            index++;
+        }
+
+        int currentY = bodyTop + Math.max(10, (bodyHeight - totalHeight) / 2);
+        for (int i = 0; i < wrappedItems.size(); i++) {
+            List<String> lines = wrappedItems.get(i);
+            int cardHeight = cardHeights.get(i);
             if (currentY + cardHeight > maxBottom) {
                 break;
             }
@@ -486,14 +540,15 @@ public class CaseStatsController {
             XSLFAutoShape card = slide.createAutoShape();
             card.setShapeType(ShapeType.RECT);
             card.setAnchor(new java.awt.Rectangle(textLeft + 10, currentY, cardWidth, cardHeight));
-            card.setFillColor(new Color(255, 251, 214));
-            card.setLineColor(new Color(250, 204, 21));
+            card.setFillColor(new Color(241, 245, 249));
+            card.setLineColor(new Color(191, 219, 254));
 
             XSLFTextBox cardText = slide.createTextBox();
             cardText.setAnchor(new java.awt.Rectangle(textLeft + 10 + cardPadding, currentY + cardPadding,
                     cardWidth - cardPadding * 2, cardHeight - cardPadding * 2));
             for (String line : lines) {
                 XSLFTextParagraph para = cardText.addNewTextParagraph();
+                para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
                 run.setFontFamily("Microsoft YaHei");
@@ -502,7 +557,6 @@ public class CaseStatsController {
                 run.setFontColor(new Color(30, 41, 59));
             }
             currentY += cardHeight + cardGap;
-            index++;
         }
 
         // 左侧图表按比例缩放并居中，确保不超出图片区。
