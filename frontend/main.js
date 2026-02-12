@@ -204,7 +204,7 @@ async function loadStatsBatches() {
   tbody.innerHTML = '';
   rows.forEach(item => {
     const tr = document.createElement('tr');
-    const reportCell = item.reportFileUrl ? `<a href="${item.reportFileUrl}" target="_blank">下载</a>` : '-';
+    const reportCell = item.reportFileUrl ? `<button type="button" onclick="downloadStatsReport('${item.reportFileUrl}')">下载</button>` : '-';
     tr.innerHTML = `
       <td>${item.batchNo || '-'}</td>
       <td>${item.recordCount || 0}</td>
@@ -215,6 +215,20 @@ async function loadStatsBatches() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+
+
+function downloadStatsReport(reportUrl) {
+  if (!reportUrl) {
+    return;
+  }
+  const anchor = document.createElement('a');
+  anchor.href = reportUrl;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
 }
 
 // 导入案件统计Excel。
