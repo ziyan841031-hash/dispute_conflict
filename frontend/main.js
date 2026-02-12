@@ -223,7 +223,11 @@ async function downloadStatsReport(reportUrl) {
   if (!reportUrl) {
     return;
   }
-  const url = reportUrl.startsWith('http') ? reportUrl : `${API_BASE}${reportUrl}`;
+  let url = reportUrl;
+  if (!reportUrl.startsWith('http')) {
+    const apiRoot = API_BASE.replace(/\/api\/?$/, '');
+    url = reportUrl.startsWith('/api/') ? `${apiRoot}${reportUrl}` : `${API_BASE}${reportUrl}`;
+  }
   try {
     const res = await fetch(url);
     if (!res.ok) {
