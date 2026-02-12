@@ -498,10 +498,10 @@ public class CaseStatsController {
         XSLFAutoShape textBg = slide.createAutoShape();
         textBg.setShapeType(ShapeType.ROUND_RECT);
         textBg.setAnchor(new java.awt.Rectangle(textLeft, bodyTop, textAreaWidth, bodyHeight));
-        textBg.setFillColor(new Color(235, 245, 255));
-        textBg.setLineColor(new Color(147, 197, 253));
+        textBg.setFillColor(new Color(224, 242, 254));
+        textBg.setLineColor(new Color(125, 211, 252));
 
-        // 右侧内容按条目切分，每条卡片文本右对齐，整体在右栏垂直居中展示。
+        // 右侧内容按条目切分，每条卡片文本左对齐，按自然换行展示。
         java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18);
         int cardPadding = 16;
         int cardGap = 12;
@@ -551,7 +551,7 @@ public class CaseStatsController {
                     cardWidth - cardPadding * 2, cardHeight - cardPadding * 2));
             for (String line : lines) {
                 XSLFTextParagraph para = cardText.addNewTextParagraph();
-                para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.RIGHT);
+                para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.LEFT);
                 para.setLineSpacing(110.0);
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
@@ -610,37 +610,10 @@ public class CaseStatsController {
         if (current.length() > 0) {
             lines.add(current.toString());
         }
-        // 末行过短时进行重排，避免出现“第二行/第三行仅一两个字”的展示。
-        rebalanceShortLastLine(lines, metrics, maxWidthPx);
         g.dispose();
         return lines;
     }
 
-    /**
-     * 对末尾短行做均衡处理，减少孤字行。
-     */
-    private void rebalanceShortLastLine(List<String> lines, java.awt.FontMetrics metrics, int maxWidthPx) {
-        if (lines == null || lines.size() < 2) {
-            return;
-        }
-        for (int i = lines.size() - 1; i > 0; i--) {
-            String curr = lines.get(i);
-            String prev = lines.get(i - 1);
-            // 当前行字数太少，且上一行有可分配空间时，从上一行尾部迁移字符。
-            while (curr.length() > 0 && curr.length() < 4 && prev.length() > 6) {
-                String candidatePrev = prev.substring(0, prev.length() - 1);
-                String candidateCurr = prev.substring(prev.length() - 1) + curr;
-                if (metrics.stringWidth(candidatePrev) <= maxWidthPx && metrics.stringWidth(candidateCurr) <= maxWidthPx) {
-                    prev = candidatePrev;
-                    curr = candidateCurr;
-                } else {
-                    break;
-                }
-            }
-            lines.set(i - 1, prev);
-            lines.set(i, curr);
-        }
-    }
 
     /**
      * 绘制折线图（近6个月趋势）。
@@ -739,7 +712,7 @@ public class CaseStatsController {
         }
         String value = text.trim();
         java.awt.Font original = g.getFont();
-        g.setFont(new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 13));
+        g.setFont(new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18));
         int charHeight = g.getFontMetrics().getHeight();
         int totalHeight = value.length() * charHeight;
         int startY = barTop + Math.max(charHeight, (barH - totalHeight) / 2 + charHeight - 4);
@@ -805,7 +778,10 @@ public class CaseStatsController {
         drawAxisLabels(g, left, right, top, bottom, "区", "数量（件）");
         int groupW = Math.max(40, (right - left) / Math.max(1, districts.size()));
         int barW = Math.max(8, groupW / Math.max(1, statuses.size() + 1));
-        Color[] colors = {new Color(59, 130, 246), new Color(6, 182, 212), new Color(249, 115, 22), new Color(236, 72, 153), new Color(16, 185, 129)};
+        Color doneColor = new Color(34, 197, 94);   // 已办结：绿色
+        Color processingColor = new Color(59, 130, 246); // 办理中：蓝色
+        Color[] colors = {doneColor, processingColor};
+        drawDistrictStatusLegend(g, right - 260, top - 42, doneColor, processingColor);
         for (int i = 0; i < districts.size(); i++) {
             int gx = left + i * groupW + 8;
             String district = districts.get(i);
@@ -820,6 +796,22 @@ public class CaseStatsController {
         }
         ImageIO.write(img, "png", new File(output));
         g.dispose();
+    }
+
+    /**
+     * 绘制区办理状态图例：绿色=已办结，蓝色=办理中。
+     */
+    private void drawDistrictStatusLegend(Graphics2D g, int x, int y, Color doneColor, Color processingColor) {
+        g.setColor(doneColor);
+        g.fillRect(x, y, 24, 12);
+        g.setColor(new Color(30, 41, 59));
+        g.drawString("已办结", x + 30, y + 11);
+
+        int nextX = x + 108;
+        g.setColor(processingColor);
+        g.fillRect(nextX, y, 24, 12);
+        g.setColor(new Color(30, 41, 59));
+        g.drawString("办理中", nextX + 30, y + 11);
     }
 
     /**
