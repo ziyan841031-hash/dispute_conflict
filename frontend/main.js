@@ -1078,12 +1078,21 @@ function renderTimeline(data) {
     {name: '调解状态', enter: statusEnter, done: showDynamic ? '<span id="timelineDynamicTime" class="timeline-dynamic-time">-</span>' : mediationDone}
   ];
 
+  const actionButtons = mediationStatus === '调解中'
+    ? `
+      <div class="timeline-action-row">
+        <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">催办</button>
+        <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">督办</button>
+      </div>
+    `
+    : '';
+
   box.innerHTML = timeline.map(item => `
     <div class="timeline-row">
       <div class="timeline-left"><strong>${item.name}</strong><span>进入时间：${item.enter}</span></div>
       <div class="timeline-right"><strong>处理完成时间</strong><span>${item.done}</span></div>
     </div>
-  `).join('');
+  `).join('') + actionButtons;
 
   if (showDynamic) {
     const target = document.getElementById('timelineDynamicTime');
@@ -1122,7 +1131,16 @@ function formatElapsedFrom(startValue) {
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  return `${days}天${hours}小时${minutes}分`;
+  const seconds = totalSeconds % 60;
+  return `${days}天${hours}时${minutes}分${seconds}秒`;
+}
+
+function onTimelineUrge() {
+  alert('已发起催办');
+}
+
+function onTimelineSupervise() {
+  alert('已发起督办');
 }
 
 // 绑定流程图点击交互（从主节点到当前节点高亮）。

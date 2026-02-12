@@ -292,6 +292,34 @@ table { width: 100%; border-collapse: collapse; }
 }
 .timeline-left strong, .timeline-right strong { display: block; color: #334155; margin-bottom: 4px; }
 
+.timeline-action-row {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 0 10px;
+}
+
+.timeline-action-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.timeline-action-btn:hover {
+  background: #1d4ed8;
+}
+
+.timeline-action-btn-warning {
+  background: #f59e0b;
+}
+
+.timeline-action-btn-warning:hover {
+  background: #d97706;
+}
+
 .timeline-dynamic-time {
   font-weight: 700;
   color: #dc2626;
