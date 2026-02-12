@@ -39,6 +39,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.BasicStroke;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -269,6 +270,33 @@ public class CaseStatsController {
         }
         result.put("timeTrend", monthMap);
 
+        // 计算近6个月街镇累计Top3并构建各自月度趋势。
+        Map<String, Long> streetCount = details.stream()
+                .collect(Collectors.groupingBy(item -> safe(item.getStreetTown()), Collectors.counting()));
+        List<String> top3Streets = streetCount.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .limit(3)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        Map<String, Map<String, Long>> timeTrendTop3 = new LinkedHashMap<>();
+        for (String street : top3Streets) {
+            Map<String, Long> streetMonth = new LinkedHashMap<>();
+            for (String key : monthKeys) {
+                streetMonth.put(key, 0L);
+            }
+            for (CaseStatsDetail d : details) {
+                if (!street.equals(safe(d.getStreetTown()))) {
+                    continue;
+                }
+                String month = extractMonth(d.getRegisterTime(), d.getEventTime());
+                if (streetMonth.containsKey(month)) {
+                    streetMonth.put(month, streetMonth.get(month) + 1);
+                }
+            }
+            timeTrendTop3.put(street, streetMonth);
+        }
+        result.put("timeTrendTop3", timeTrendTop3);
+
         result.put("streetTop10", topNMap(details.stream()
                 .collect(Collectors.groupingBy(item -> safe(item.getStreetTown()), Collectors.counting())), 10));
 
@@ -303,7 +331,8 @@ public class CaseStatsController {
             String districtChartPath = dir.resolve("district-status.png").toString();
             String pptPath = dir.resolve("case-stats-report.pptx").toString();
 
-            drawLineChart("近6个月趋势", ((Map<String, Long>) analysis.get("timeTrend")), timeChartPath);
+            drawLineChart("近6个月趋势", ((Map<String, Long>) analysis.get("timeTrend")),
+                    ((Map<String, Map<String, Long>>) analysis.get("timeTrendTop3")), timeChartPath);
             drawVerticalBarChart("街镇高发Top10", ((Map<String, Long>) analysis.get("streetTop10")), streetChartPath);
             drawHorizontalBarChart("类型高发Top10", ((Map<String, Long>) analysis.get("typeTop10")), typeChartPath);
             drawGroupedBarChart("区办理状态", ((Map<String, Map<String, Long>>) analysis.get("districtStatus")), districtChartPath);
@@ -501,30 +530,56 @@ public class CaseStatsController {
     /**
      * 绘制折线图（近6个月趋势）。
      */
-    private void drawLineChart(String title, Map<String, Long> data, String output) throws Exception {
+    private void drawLineChart(String title, Map<String, Long> data, Map<String, Map<String, Long>> top3Series, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
         setupGraphics(g);
         int left = 100, right = 1080, top = 100, bottom = 620;
         drawAxis(g, left, top, right, bottom);
         long max = Math.max(1L, data.values().stream().mapToLong(Long::longValue).max().orElse(1L));
+        if (top3Series != null) {
+            for (Map<String, Long> m : top3Series.values()) {
+                max = Math.max(max, m.values().stream().mapToLong(Long::longValue).max().orElse(0L));
+            }
+        }
+        drawYGridAndTicks(g, left, right, top, bottom, max, 5);
+        drawAxisLabels(g, left, right, top, bottom, "月份", "数量（件）");
         List<String> labels = new ArrayList<>(data.keySet());
         int n = labels.size();
-        int prevX = -1, prevY = -1;
-        g.setColor(new Color(37, 99, 235));
+        Color[] lineColors = {new Color(37, 99, 235), new Color(236, 72, 153), new Color(249, 115, 22), new Color(22, 163, 74)};
+
+        // 绘制总量曲线。
+        List<Integer> allX = new ArrayList<>();
+        List<Integer> allY = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             int x = left + (right - left) * i / Math.max(1, n - 1);
             int y = bottom - (int) ((bottom - top) * (data.get(labels.get(i)) * 1.0 / max));
-            g.fillOval(x - 4, y - 4, 8, 8);
-            if (prevX >= 0) {
-                g.drawLine(prevX, prevY, x, y);
-            }
-            prevX = x;
-            prevY = y;
+            allX.add(x);
+            allY.add(y);
             g.setColor(Color.DARK_GRAY);
             g.drawString(labels.get(i), x - 20, bottom + 24);
-            g.setColor(new Color(37, 99, 235));
         }
+        drawSmoothLine(g, allX, allY, lineColors[0]);
+
+        // 绘制Top3街镇曲线。
+        int colorIndex = 1;
+        if (top3Series != null) {
+            for (Map.Entry<String, Map<String, Long>> entry : top3Series.entrySet()) {
+                List<Integer> xs = new ArrayList<>();
+                List<Integer> ys = new ArrayList<>();
+                for (int i = 0; i < n; i++) {
+                    int x = left + (right - left) * i / Math.max(1, n - 1);
+                    long v = entry.getValue().getOrDefault(labels.get(i), 0L);
+                    int y = bottom - (int) ((bottom - top) * (v * 1.0 / max));
+                    xs.add(x);
+                    ys.add(y);
+                }
+                drawSmoothLine(g, xs, ys, lineColors[colorIndex % lineColors.length]);
+                colorIndex++;
+            }
+        }
+
+        drawLineLegend(g, left, top - 40, lineColors, top3Series);
         ImageIO.write(img, "png", new File(output));
         g.dispose();
     }
@@ -539,6 +594,8 @@ public class CaseStatsController {
         int left = 120, right = 1100, top = 100, bottom = 620;
         drawAxis(g, left, top, right, bottom);
         long max = Math.max(1L, data.values().stream().mapToLong(Long::longValue).max().orElse(1L));
+        drawYGridAndTicks(g, left, right, top, bottom, max, 5);
+        drawAxisLabels(g, left, right, top, bottom, "类别", "数量（件）");
         List<Map.Entry<String, Long>> entries = new ArrayList<>(data.entrySet());
         int n = Math.max(1, entries.size());
         int barW = Math.max(20, (right - left) / (n * 2));
@@ -546,7 +603,7 @@ public class CaseStatsController {
         int x = left + 20;
         for (Map.Entry<String, Long> entry : entries) {
             int h = (int) ((bottom - top) * (entry.getValue() * 1.0 / max));
-            g.setColor(new Color(59, 130, 246));
+            g.setColor(new Color(37, 99, 235));
             g.fillRect(x, bottom - h, barW, h);
             g.setColor(Color.DARK_GRAY);
             g.drawString(entry.getKey(), x - 8, bottom + 20);
@@ -566,6 +623,8 @@ public class CaseStatsController {
         int left = 280, right = 1120, top = 100, bottom = 620;
         drawAxis(g, left, top, right, bottom);
         long max = Math.max(1L, data.values().stream().mapToLong(Long::longValue).max().orElse(1L));
+        drawYGridAndTicks(g, left, right, top, bottom, max, 5);
+        drawAxisLabels(g, left, right, top, bottom, "数量（件）", "类别");
         List<Map.Entry<String, Long>> entries = new ArrayList<>(data.entrySet());
         int n = Math.max(1, entries.size());
         int barH = Math.max(18, (bottom - top) / (n * 2));
@@ -573,7 +632,7 @@ public class CaseStatsController {
         int y = top + 20;
         for (Map.Entry<String, Long> entry : entries) {
             int w = (int) ((right - left) * (entry.getValue() * 1.0 / max));
-            g.setColor(new Color(14, 165, 233));
+            g.setColor(new Color(6, 182, 212));
             g.fillRect(left, y, w, barH);
             g.setColor(Color.DARK_GRAY);
             g.drawString(entry.getKey(), 80, y + barH - 2);
@@ -604,9 +663,11 @@ public class CaseStatsController {
                 max = Math.max(max, data.get(d).getOrDefault(s, 0L));
             }
         }
+        drawYGridAndTicks(g, left, right, top, bottom, max, 5);
+        drawAxisLabels(g, left, right, top, bottom, "区", "数量（件）");
         int groupW = Math.max(40, (right - left) / Math.max(1, districts.size()));
         int barW = Math.max(8, groupW / Math.max(1, statuses.size() + 1));
-        Color[] colors = {new Color(37, 99, 235), new Color(14, 165, 233), new Color(249, 115, 22), new Color(34, 197, 94)};
+        Color[] colors = {new Color(59, 130, 246), new Color(6, 182, 212), new Color(249, 115, 22), new Color(236, 72, 153), new Color(16, 185, 129)};
         for (int i = 0; i < districts.size(); i++) {
             int gx = left + i * groupW + 8;
             String district = districts.get(i);
@@ -621,6 +682,71 @@ public class CaseStatsController {
         }
         ImageIO.write(img, "png", new File(output));
         g.dispose();
+    }
+
+    /**
+     * 绘制Y轴辅助线与刻度。
+     */
+    private void drawYGridAndTicks(Graphics2D g, int left, int right, int top, int bottom, long max, int steps) {
+        int count = Math.max(2, steps);
+        for (int i = 0; i <= count; i++) {
+            int y = bottom - (bottom - top) * i / count;
+            long value = Math.round(max * i * 1.0 / count);
+            g.setColor(new Color(226, 232, 240));
+            g.drawLine(left, y, right, y);
+            g.setColor(new Color(100, 116, 139));
+            g.drawString(String.valueOf(value), left - 42, y + 5);
+        }
+    }
+
+    /**
+     * 绘制坐标轴标题。
+     */
+    private void drawAxisLabels(Graphics2D g, int left, int right, int top, int bottom, String xLabel, String yLabel) {
+        g.setColor(new Color(71, 85, 105));
+        g.drawString(xLabel, (left + right) / 2 - 20, bottom + 42);
+        g.drawString(yLabel, left - 72, top - 10);
+    }
+
+    /**
+     * 绘制平滑曲线及数据点。
+     */
+    private void drawSmoothLine(Graphics2D g, List<Integer> xs, List<Integer> ys, Color color) {
+        if (xs == null || ys == null || xs.size() < 2 || ys.size() < 2) {
+            return;
+        }
+        java.awt.geom.Path2D.Double path = new java.awt.geom.Path2D.Double();
+        path.moveTo(xs.get(0), ys.get(0));
+        for (int i = 1; i < xs.size(); i++) {
+            double cx = (xs.get(i - 1) + xs.get(i)) / 2.0;
+            path.curveTo(cx, ys.get(i - 1), cx, ys.get(i), xs.get(i), ys.get(i));
+        }
+        g.setColor(color);
+        g.setStroke(new BasicStroke(2.5f));
+        g.draw(path);
+        for (int i = 0; i < xs.size(); i++) {
+            g.fillOval(xs.get(i) - 4, ys.get(i) - 4, 8, 8);
+        }
+        g.setStroke(new BasicStroke(1.0f));
+    }
+
+    /**
+     * 绘制趋势图图例。
+     */
+    private void drawLineLegend(Graphics2D g, int startX, int startY, Color[] colors, Map<String, Map<String, Long>> top3Series) {
+        List<String> names = new ArrayList<>();
+        names.add("总量");
+        if (top3Series != null) {
+            names.addAll(top3Series.keySet());
+        }
+        int x = startX;
+        for (int i = 0; i < names.size() && i < colors.length; i++) {
+            g.setColor(colors[i]);
+            g.fillRect(x, startY, 18, 8);
+            g.setColor(new Color(30, 41, 59));
+            g.drawString(names.get(i), x + 24, startY + 8);
+            x += 120;
+        }
     }
 
     /**
