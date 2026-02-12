@@ -500,8 +500,8 @@ public class CaseStatsController {
 
         // 右侧内容按条目切分，每条卡片文本居中，整体在右栏垂直居中展示。
         java.awt.Font summaryFont = new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18);
-        int cardPadding = 12;
-        int cardGap = 10;
+        int cardPadding = 16;
+        int cardGap = 12;
         int cardWidth = textAreaWidth - 20;
         int maxBottom = bodyTop + bodyHeight - 10;
 
@@ -518,8 +518,8 @@ public class CaseStatsController {
             }
             String itemText = text.matches("^\\d+[）.)].*") ? text : (index + "）" + text);
             List<String> lines = wrapTextByPixel(itemText, summaryFont, cardWidth - cardPadding * 2);
-            int lineHeight = 24;
-            int cardHeight = lines.size() * lineHeight + cardPadding * 2;
+            int lineHeight = 30;
+            int cardHeight = lines.size() * lineHeight + cardPadding * 2 + 6;
             if (totalHeight + cardHeight + (wrappedItems.isEmpty() ? 0 : cardGap) > bodyHeight - 20) {
                 break;
             }
@@ -549,6 +549,7 @@ public class CaseStatsController {
             for (String line : lines) {
                 XSLFTextParagraph para = cardText.addNewTextParagraph();
                 para.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
+                para.setLineSpacing(110.0);
                 XSLFTextRun run = para.addNewTextRun();
                 run.setText(line);
                 run.setFontFamily("Microsoft YaHei");
@@ -841,7 +842,7 @@ public class CaseStatsController {
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, img.getWidth(), img.getHeight());
         g.setColor(Color.BLACK);
-        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 36));
+        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 30));
         g.drawString(title, 30, 50);
         g.dispose();
         return img;
@@ -852,7 +853,7 @@ public class CaseStatsController {
      */
     private void setupGraphics(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 18));
+        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 21));
     }
 
     /**
