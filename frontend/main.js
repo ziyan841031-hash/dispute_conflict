@@ -49,11 +49,21 @@ async function submitText() {
   await classifyRes.json();
   // 标记智能分类完成。
   markDone('classify');
+  finishParseAndGoCases();
+}
+
+
+
+function finishParseAndGoCases() {
+  setTimeout(() => {
+    window.location.href = 'cases.html';
+  }, 600);
 }
 
 // 提交Excel案件。
 async function submitExcel() {
   const file = document.getElementById('excelFile').files[0];
+  // 组装文件上传表单。
   const form = new FormData();
   form.append('file', file);
   const res = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
@@ -101,6 +111,7 @@ async function submitAudio() {
   });
   await classifyRes.json();
   markDone('classify');
+  finishParseAndGoCases();
 }
 
 // 打开解析弹窗。
@@ -178,6 +189,150 @@ async function loadCases() {
     tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
+}
+
+
+
+// 加载案件统计批次列表。
+async function loadStatsBatches() {
+  const tbody = document.getElementById('statsBatchBody');
+  if (!tbody) {
+    return;
+  }
+  // 请求批次列表。
+  const res = await fetch(`${API_BASE}/case-stats/batches`);
+  const json = await res.json();
+  const rows = (json && json.data) ? json.data : [];
+  tbody.innerHTML = '';
+  rows.forEach(item => {
+    const tr = document.createElement('tr');
+    const reportCell = item.reportFileUrl ? `<button type="button" onclick="downloadStatsReport('${item.reportFileUrl}')">下载</button>` : '-';
+    tr.innerHTML = `
+      <td>${item.batchNo || '-'}</td>
+      <td>${item.recordCount || 0}</td>
+      <td>${item.importedAt || '-'}</td>
+      <td>${item.reportGeneratedAt || '-'}</td>
+      <td>${reportCell}</td>
+      <td><button onclick="openStatsDetail(${item.id})">查看明细</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+
+
+// 当前页触发报告下载，不跳转页面。
+async function downloadStatsReport(reportUrl) {
+  if (!reportUrl) {
+    return;
+  }
+  let url = reportUrl;
+  if (!reportUrl.startsWith('http')) {
+    const apiRoot = API_BASE.replace(/\/api\/?$/, '');
+    url = reportUrl.startsWith('/api/') ? `${apiRoot}${reportUrl}` : `${API_BASE}${reportUrl}`;
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`下载失败: ${res.status}`);
+    }
+    // 将响应体转换为二进制文件流。
+    const blob = await res.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    // 优先使用后端响应头中的附件文件名，避免URL末段无后缀导致文件无法打开。
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let fileName = 'case-stats-report.pptx';
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+    if (utf8Match && utf8Match[1]) {
+      fileName = decodeURIComponent(utf8Match[1]);
+    } else if (plainMatch && plainMatch[1]) {
+      fileName = plainMatch[1];
+    } else {
+      const pathParts = reportUrl.split('/');
+      const urlName = pathParts[pathParts.length - 1] || '';
+      if (urlName && urlName.includes('.')) {
+        fileName = urlName;
+      }
+    }
+    // 若响应头未给出扩展名，则按内容类型补全后缀。
+    if (!/\.[A-Za-z0-9]+$/.test(fileName)) {
+      const contentType = (res.headers.get('Content-Type') || '').toLowerCase();
+      if (contentType.includes('presentation') || contentType.includes('powerpoint')) {
+        fileName = `${fileName}.pptx`;
+      } else {
+        fileName = `${fileName}.pptx`;
+      }
+    }
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    alert('报告下载失败，请稍后重试');
+  }
+}
+
+// 导入案件统计Excel。
+async function importStatsExcel() {
+  const fileInput = document.getElementById('statsExcelFile');
+  const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+  if (!file) {
+    alert('请先选择Excel文件');
+    return;
+  }
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
+  const json = await res.json();
+  if (json && json.code === 0) {
+    alert('导入成功');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    await loadStatsBatches();
+    return;
+  }
+  alert((json && json.message) || '导入失败');
+}
+
+// 打开统计明细弹窗。
+async function openStatsDetail(batchId) {
+  const modal = document.getElementById('statsDetailModal');
+  const tbody = document.getElementById('statsDetailBody');
+  if (!modal || !tbody) {
+    return;
+  }
+  const res = await fetch(`${API_BASE}/case-stats/batches/${batchId}/details`);
+  const json = await res.json();
+  const rows = (json && json.data) ? json.data : [];
+  tbody.innerHTML = '';
+  rows.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.serialNo || '-'}</td>
+      <td>${item.eventTime || '-'}</td>
+      <td>${item.district || '-'}</td>
+      <td>${item.streetTown || '-'}</td>
+      <td>${item.registerSource || '-'}</td>
+      <td>${item.caseType || '-'}</td>
+      <td>${item.registerTime || '-'}</td>
+      <td>${item.currentStatus || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  modal.classList.remove('hidden');
+}
+
+function closeStatsDetailModal() {
+  const modal = document.getElementById('statsDetailModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
 }
 
 // 打开智能助手页面。
@@ -306,10 +461,12 @@ async function loadAssistantPage() {
   }
 
   const prefill = sessionStorage.getItem('assistantPrefill');
+  let prefillDataForCase = null;
   if (prefill) {
     try {
       const prefillData = JSON.parse(prefill);
       if (String(prefillData.id || '') === String(caseId)) {
+        prefillDataForCase = prefillData;
         renderAssistantTop(prefillData);
       }
     } catch (e) {}
@@ -334,7 +491,13 @@ async function loadAssistantPage() {
     orgData = [];
   }
 
-  assistantDataCache = detailData || {};
+  assistantDataCache = {
+    ...(prefillDataForCase || {}),
+    ...(detailData || {})
+  };
+  if (!assistantDataCache.eventSource && prefillDataForCase && prefillDataForCase.eventSource) {
+    assistantDataCache.eventSource = prefillDataForCase.eventSource;
+  }
   disposalOrgOptions = orgData || [];
 
   workflowAdviceLoading = true;
@@ -458,21 +621,29 @@ function syncWorkflowSelectionFromAdvice(record) {
 
 // 风险等级说明映射。
 const RISK_LEVEL_DESC = {
-  R0: '仅咨询/信息不足/冲突极轻微，无升级迹象',
-  R1: '轻度纠纷，可调解，情绪可控，无威胁无暴力',
-  R2: '矛盾较尖锐或反复发生；涉及重要权益或金额较大；辱骂指责明显但无明确暴力威胁',
-  R3: '存在升级风险：明确威胁、跟踪骚扰、聚众冲突苗头；或涉未成年人/老人等脆弱群体且对抗尖锐；或疑似违法犯罪线索',
-  R4: '紧急高危：正在/近期暴力伤害、持械、明确人身伤害/自杀他杀威胁、严重家暴、重大公共安全风险'
+  低: '仅咨询 / 信息不足 / 冲突极轻微，无升级迹象',
+  中: '矛盾较明显，存在纠纷或情绪激动，有一定对抗但无明确人身安全威胁',
+  高: '存在明显升级或现实危险，涉及威胁、骚扰、暴力苗头、脆弱群体权益、疑似违法或紧急安全风险'
 };
 
 // 归一化风险等级。
 function normalizeRiskLevel(level) {
-  const raw = (level || '').toString().trim().toUpperCase();
+  const raw = (level || '').toString().trim();
   if (RISK_LEVEL_DESC[raw]) {
     return raw;
   }
-  const map = { '低': 'R1', '中': 'R2', '高': 'R3' };
-  return map[level] || '';
+  const normalized = raw.toUpperCase();
+  const map = {
+    R0: '低',
+    R1: '低',
+    R2: '中',
+    R3: '高',
+    R4: '高',
+    LOW: '低',
+    MEDIUM: '中',
+    HIGH: '高'
+  };
+  return map[normalized] || '';
 }
 
 // 渲染顶部案件信息。
@@ -482,9 +653,10 @@ function renderAssistantTop(data) {
   const counterparty = data.counterpartyName || '-';
   const summary = data.judgementBasisText || data.factsSummary || data.caseText || '-';
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
-  const riskCode = normalizeRiskLevel(data.riskLevel);
-  const riskDesc = riskCode ? `${riskCode}(${RISK_LEVEL_DESC[riskCode]})` : (data.riskLevel || '-');
-  const riskClass = riskCode ? `risk-${riskCode.toLowerCase()}` : '';
+  const riskLevel = normalizeRiskLevel(data.riskLevel);
+  const riskDesc = riskLevel ? `${riskLevel}(${RISK_LEVEL_DESC[riskLevel]})` : (data.riskLevel || '-');
+  const riskClassMap = { 低: 'risk-low', 中: 'risk-medium', 高: 'risk-high' };
+  const riskClass = riskLevel ? (riskClassMap[riskLevel] || '') : '';
   const emotionTextRaw = data.emotionAssessmentText || '-';
   const emotionText = emotionTextRaw.includes('：')
     ? `${emotionTextRaw.split('：')[0]}(${emotionTextRaw.split('：').slice(1).join('：')})`
@@ -551,30 +723,48 @@ function showCaseMaterial(data) {
     {label: '联系地址', value: safeData.counterpartyAddress}
   ];
 
-  const caseItems = [
+  const caseTopItems = [
     {label: '案件编号', value: safeData.caseNo},
+    {label: '登记时间', value: safeData.registerTime},
+    {label: '事件来源', value: safeData.eventSource},
+    {label: '办理进度', value: safeData.handlingProgress}
+  ];
+
+  const caseBasicItems = [
     {label: '纠纷类型', value: safeData.disputeType},
     {label: '纠纷子类型', value: safeData.disputeSubType},
     {label: '纠纷发生地', value: safeData.disputeLocation},
     {label: '风险等级', value: safeData.riskLevel},
-    {label: '登记时间', value: safeData.registerTime}
+    {label: '接待人', value: safeData.receiver}
   ];
 
-  const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}：</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
+  const smartSummary = safeData.judgementBasisText || safeData.factsSummary || safeData.summaryText || '-';
+
+  const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
 
   contentBox.innerHTML = `
-    <section class="case-detail-section">
-      <h4>当事人信息</h4>
-      ${renderGrid(partyItems)}
-    </section>
-    <section class="case-detail-section">
-      <h4>对方当事人信息</h4>
-      ${renderGrid(counterpartyItems)}
-    </section>
-    <section class="case-detail-section">
-      <h4>案件详情</h4>
-      ${renderGrid(caseItems)}
+    <section class="case-detail-section case-detail-raw">
+      <h4>案件原文</h4>
       <div class="case-detail-text">${formatDetailValue(rawMaterial)}</div>
+      ${renderGrid(caseTopItems)}
+    </section>
+    <section class="case-detail-section">
+      <h4>案件基本信息</h4>
+      ${renderGrid(caseBasicItems)}
+    </section>
+    <div class="case-detail-bottom-grid">
+      <section class="case-detail-section">
+        <h4>当事人信息</h4>
+        ${renderGrid(partyItems)}
+      </section>
+      <section class="case-detail-section">
+        <h4>对方当事人信息</h4>
+        ${renderGrid(counterpartyItems)}
+      </section>
+    </div>
+    <section class="case-detail-section case-detail-summary">
+      <h4>案件智能摘要</h4>
+      <div class="case-detail-text">${formatDetailValue(smartSummary)}</div>
     </section>
   `;
   modal.classList.remove('hidden');
@@ -599,8 +789,16 @@ function closeCaseMaterial() {
 
 
 // 展示工作流推荐等待弹框。
-function showWorkflowWaitingModal() {
+function showWorkflowWaitingModal(titleText = '智能体推荐中', descText = '正在结合案件特征匹配推荐部门，请稍候...') {
   const modal = document.getElementById('workflowWaitingModal');
+  const title = document.getElementById('workflowWaitingTitle');
+  const desc = document.getElementById('workflowWaitingDesc');
+  if (title) {
+    title.textContent = titleText;
+  }
+  if (desc) {
+    desc.textContent = descText;
+  }
   if (modal) {
     modal.classList.remove('hidden');
   }
@@ -796,7 +994,7 @@ async function onGuideNodeConfirm() {
   }
 
   try {
-    showWorkflowWaitingModal();
+    showWorkflowWaitingModal('智能体推荐中', '调解建议生成中');
     const res = await fetch(`${API_BASE}/dify/workflow-confirm`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},

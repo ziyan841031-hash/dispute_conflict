@@ -98,6 +98,50 @@ public class DifyClient {
         return invoke(endpoint, request, apiKey);
     }
 
+
+
+    /**
+     * 以自定义inputs调用工作流并解析SSE报文。
+     */
+    public Object runWorkflowWithInputs(Map<String, Object> inputs, String currentApiKey, String scene) {
+        // 拼接请求地址。
+        String url = difyBaseUrl + extractWorkflowEndpoint;
+        // 生成链路追踪ID。
+        String traceId = UUID.randomUUID().toString();
+        // 创建请求头。
+        HttpHeaders headers = new HttpHeaders();
+        // 设置内容类型。
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        // 设置认证令牌。
+        headers.setBearerAuth(currentApiKey);
+        // 设置追踪ID请求头（优先级最高）。
+        headers.set("X-Trace-Id", traceId);
+
+        // 创建请求体Map。
+        Map<String, Object> body = new HashMap<>();
+        // 设置输入参数（必填）。
+        body.put("inputs", inputs == null ? new HashMap<String, Object>() : inputs);
+        // 设置响应模式（必填）。
+        body.put("response_mode", "streaming");
+        // 设置用户标识（必填）。
+        body.put("user", extractUser);
+        // 设置可选文件列表（当前无文件时传空列表）。
+        body.put("files", Collections.emptyList());
+        // 设置链路追踪ID（可选，兜底透传）。
+        body.put("trace_id", traceId);
+
+        // 打印请求日志。
+        log.info("Dify{}请求: url={}, inputKeys={}, traceId={}", scene, url, body.get("inputs"), traceId);
+        // 构造请求实体。
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        // 发起POST请求。
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        // 打印响应状态日志。
+        log.info("Dify{}响应: status={}, traceId={}", scene, response.getStatusCodeValue(), traceId);
+        // 解析SSE报文并返回结构化结果。
+        return parseWorkflowSseResponse(response.getBody());
+    }
+
     /**
      * 调用Dify要素提取工作流并解析SSE报文。
      */

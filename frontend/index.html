@@ -12,6 +12,7 @@
     <h1>矛盾纠纷系统管理</h1>
     <a class="active" href="index.html">控台首页</a>
     <a href="cases.html">案件管理</a>
+    <a href="stats.html">案件统计</a>
   </aside>
   <main class="content">
     <section class="card">
@@ -43,14 +44,13 @@
 </div>
 
 <div id="parseModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>案件解析中...</h3>
+  <div class="modal-content workflow-waiting-content parse-modal-content">
+    <div class="workflow-waiting-spinner" aria-hidden="true"></div>
     <ul class="parse-list">
-      <li id="step-audio"><span id="icon-audio" class="status-icon">○</span> 语音识别中</li>
-      <li><span id="icon-text" class="status-icon">○</span> 智能体要素提取中</li>
-      <li><span id="icon-classify" class="status-icon">○</span> 智能分类中</li>
+      <li id="step-audio" class="parse-step"><span id="icon-audio" class="status-icon">○</span><span class="parse-step-text">语音识别中</span></li>
+      <li class="parse-step"><span id="icon-text" class="status-icon">○</span><span class="parse-step-text">智能体要素提取中</span></li>
+      <li class="parse-step"><span id="icon-classify" class="status-icon">○</span><span class="parse-step-text">智能分类中</span></li>
     </ul>
-    <button onclick="closeParseModal()">关闭</button>
   </div>
 </div>
 

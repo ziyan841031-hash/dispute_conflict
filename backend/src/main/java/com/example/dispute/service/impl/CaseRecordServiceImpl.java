@@ -156,7 +156,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
 
         // 保存案件数据。
         CaseRecord record = saveCase(defaultVal(request.getEventSource(), "其他线下接待"),
-                defaultVal(parsedSummary, request.getCaseText()), null, null,
+                request.getCaseText(), null, null,
                 defaultVal(parsedPartyName, request.getPartyName()),
                 defaultVal(parsedCounterpartyName, request.getCounterpartyName()),
                 request.getDisputeType(), null, request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver(),
