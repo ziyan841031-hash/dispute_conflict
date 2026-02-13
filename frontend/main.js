@@ -66,11 +66,57 @@ function finishParseAndGoCases() {
 // 提交Excel案件。
 async function submitExcel() {
   const file = document.getElementById('excelFile').files[0];
-  // 组装文件上传表单。
-  const form = new FormData();
-  form.append('file', file);
-  const res = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
-  await res.json();
+  if (!file) {
+    alert('请先选择Excel文件');
+    return;
+  }
+
+  openParseModal('excel');
+  setParseModalMessage('Excel案件批量受理', '表格解析中...');
+  updateExcelProgress(0, 0);
+  setLoading('text');
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const excelRes = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
+    const excelJson = await excelRes.json();
+    const caseTextList = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
+
+    markDone('text');
+    setParseModalMessage('Excel案件批量受理', '案件受理中...');
+    const total = caseTextList.length;
+    updateExcelProgress(total, 0);
+
+    let finished = 0;
+    for (const caseText of caseTextList) {
+      setLoading('classify');
+      const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({caseText: String(caseText || ''), eventSource: '部门流转'})
+      });
+      const textJson = await textRes.json();
+      const caseId = textJson && textJson.data ? textJson.data.id : null;
+
+      const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({caseId, caseText: String(caseText || '')})
+      });
+      await classifyRes.json();
+
+      finished += 1;
+      updateExcelProgress(total, finished);
+    }
+
+    markDone('classify');
+    finishParseAndGoCases();
+  } catch (error) {
+    console.error(error);
+    alert('Excel案件处理失败，请稍后重试');
+    closeParseModal();
+  }
 }
 
 // 提交音频案件。
@@ -126,6 +172,22 @@ function openParseModal(mode) {
   if (audioStep) {
     audioStep.classList.toggle('hidden', mode !== 'audio');
   }
+  const textStepText = document.querySelector('#icon-text + .parse-step-text');
+  const classifyStepText = document.querySelector('#icon-classify + .parse-step-text');
+  if (textStepText) {
+    textStepText.textContent = mode === 'excel' ? '表格解析中' : '智能体要素提取中';
+  }
+  if (classifyStepText) {
+    classifyStepText.textContent = mode === 'excel' ? '案件受理中' : '智能分类中';
+  }
+  setParseModalMessage('案件处理中', '请稍候...');
+  const progressEl = document.getElementById('excelProgressText');
+  if (progressEl) {
+    progressEl.classList.toggle('hidden', mode !== 'excel');
+    if (mode !== 'excel') {
+      progressEl.textContent = '';
+    }
+  }
   refreshAllIcons();
   document.getElementById('parseModal').classList.remove('hidden');
 }
@@ -135,9 +197,33 @@ function closeParseModal() {
   document.getElementById('parseModal').classList.add('hidden');
 }
 
+
+function setParseModalMessage(title, tip) {
+  const titleEl = document.getElementById('parseModalTitle');
+  const tipEl = document.getElementById('parseModalTip');
+  if (titleEl) {
+    titleEl.textContent = title;
+  }
+  if (tipEl) {
+    tipEl.textContent = tip;
+  }
+}
+
+function updateExcelProgress(total, done) {
+  const progressEl = document.getElementById('excelProgressText');
+  if (!progressEl) {
+    return;
+  }
+  progressEl.classList.remove('hidden');
+  progressEl.textContent = `文件待受理：${total}，文件已受理：${done}`;
+}
+
 // 设置处理中图标。
 function setLoading(type) {
   const icon = document.getElementById(`icon-${type}`);
+  if (!icon) {
+    return;
+  }
   icon.textContent = '◔';
   icon.classList.add('loading');
   icon.classList.remove('done');
@@ -147,6 +233,9 @@ function setLoading(type) {
 function markDone(type) {
   parseStatus[type] = true;
   const icon = document.getElementById(`icon-${type}`);
+  if (!icon) {
+    return;
+  }
   icon.textContent = '✔';
   icon.classList.add('done');
   icon.classList.remove('loading');
@@ -162,6 +251,9 @@ function refreshAllIcons() {
 // 刷新单个图标。
 function refreshOneIcon(type) {
   const icon = document.getElementById(`icon-${type}`);
+  if (!icon) {
+    return;
+  }
   if (parseStatus[type]) {
     icon.textContent = '✔';
     icon.classList.add('done');

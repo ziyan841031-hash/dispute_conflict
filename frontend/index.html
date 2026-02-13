@@ -24,6 +24,8 @@
           <option value="线下接待">线下接待</option>
           <option value="网上反映">网上反映</option>
           <option value="主动排查">主动排查</option>
+          <option value="来电求助">来电求助</option>
+          <option value="部门流转">部门流转</option>
         </select>
       </div>
       <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
@@ -47,11 +49,14 @@
 <div id="parseModal" class="modal hidden">
   <div class="modal-content workflow-waiting-content parse-modal-content">
     <div class="workflow-waiting-spinner" aria-hidden="true"></div>
+    <h3 id="parseModalTitle">案件处理中</h3>
+    <p id="parseModalTip">请稍候...</p>
     <ul class="parse-list">
       <li id="step-audio" class="parse-step"><span id="icon-audio" class="status-icon">○</span><span class="parse-step-text">语音识别中</span></li>
       <li class="parse-step"><span id="icon-text" class="status-icon">○</span><span class="parse-step-text">智能体要素提取中</span></li>
       <li class="parse-step"><span id="icon-classify" class="status-icon">○</span><span class="parse-step-text">智能分类中</span></li>
     </ul>
+    <p id="excelProgressText" class="hidden"></p>
   </div>
 </div>
 
