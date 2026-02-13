@@ -223,16 +223,19 @@ public class DifyController {
 
             String finalQuestion;
             if (bizType == 0) {
-                finalQuestion = "你是一名" + role + question;
+                finalQuestion = "你是一名" + role + "。" + question;
             } else if (bizType == 1) {
                 if (!StringUtils.hasText(rawResponse) || "0".equals(rawResponse)) {
                     return ApiResponse.fail("获取失败请稍后再试");
                 }
                 Map<String, Object> summaryMap = callXbgChat(token, rawResponse + " 保持原文意思，生成精简摘要");
                 String summaryText = extractAnswerText(summaryMap);
-                finalQuestion = "你是一名" + role + summaryText + question;
+                finalQuestion = "你是一名" + role + "。" + summaryText + question;
             } else {
-                finalQuestion = question;
+                if (!StringUtils.hasText(rawResponse) || "0".equals(rawResponse)) {
+                    return ApiResponse.fail("获取失败请稍后再试");
+                }
+                finalQuestion = rawResponse + "。" + question;
             }
 
             Map<String, Object> resultMap = callXbgChat(token, finalQuestion);
@@ -268,13 +271,13 @@ public class DifyController {
         if (resultMap == null) {
             return "";
         }
-        Object direct = firstNonNull(resultMap.get("answer"), resultMap.get("text"), resultMap.get("output"), resultMap.get("content"));
+        Object direct = firstNonNull(firstNonNull(resultMap.get("answer"), resultMap.get("text")), firstNonNull(resultMap.get("output"), resultMap.get("content")));
         if (direct != null) {
             return String.valueOf(direct);
         }
         Object dataObj = resultMap.get("data");
         if (dataObj instanceof Map) {
-            Object nested = firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text"), ((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content"));
+            Object nested = firstNonNull(firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text")), firstNonNull(((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content")));
             if (nested != null) {
                 return String.valueOf(nested);
             }

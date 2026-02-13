@@ -1532,8 +1532,7 @@ async function askLawAgentRecommendation(tag) {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        question: `${lawAgentLastRawResponse}
-${tag}`,
+        question: tag,
         role: lawAgentRole,
         token: lawAgentLoginToken,
         type: 2,
