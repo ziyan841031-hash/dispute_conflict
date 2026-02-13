@@ -1097,7 +1097,8 @@ function renderTimeline(data) {
 
   const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
   const diversionDone = formatTimelineTime(diversionCompletedAt);
-  const statusEnter = formatTimelineTime(diversionCompletedAt);
+  const statusEnterTime = parseTimelineDate(diversionCompletedAt);
+  const statusEnter = formatTimelineTime(statusEnterTime);
   const mediationDone = formatTimelineTime(mediationCompletedAt);
   const showCurrentProcessingTime = mediationStatus === '调解中';
 
@@ -1179,7 +1180,7 @@ function renderTimeline(data) {
       if (!target) {
         return;
       }
-      target.textContent = formatTimelineTime(new Date());
+      target.textContent = formatTimelineDuration(statusEnterTime, new Date());
     };
     refresh();
     timelineTickTimer = setInterval(refresh, 1000);
@@ -1198,11 +1199,34 @@ function formatTimelineTime(value) {
   if (!value) {
     return '-';
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const date = parseTimelineDate(value);
+  if (!date) {
     return String(value);
   }
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+}
+
+function parseTimelineDate(value) {
+  if (!value) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
+function formatTimelineDuration(start, end) {
+  if (!start || !end) {
+    return '-';
+  }
+  const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainSeconds = seconds % 60;
+  return `${days}天${hours}时${minutes}分${remainSeconds}秒`;
 }
 
 function onTimelineUrge() {
