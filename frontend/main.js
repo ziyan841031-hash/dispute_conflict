@@ -1146,6 +1146,9 @@ async function onGuideNodeConfirm() {
       workflowAdviceRecord = record;
       assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
       assistantDataCache.mediationAdvice = record.mediationAdvice || assistantDataCache.mediationAdvice || '';
+      assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
+      assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+      assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
       workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
       currentWorkflowNodeId = 'status';
       syncWorkflowLockMeta();
@@ -1157,6 +1160,8 @@ async function onGuideNodeConfirm() {
     hideWorkflowWaitingModal();
     syncWorkflowLockMeta();
     renderGuide(assistantDataCache);
+    renderTimeline(assistantDataCache);
+    renderAssistantTop(assistantDataCache);
   }
 }
 
