@@ -855,18 +855,38 @@ public class CaseStatsController {
                 "Arial Unicode MS",
                 "Dialog"
         };
+        final String sample = "中文字体测试";
         try {
             String[] names = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
             Set<String> available = new HashSet<String>(Arrays.asList(names));
             for (String item : preferred) {
-                if (available.contains(item)) {
-                    return item;
+                String matched = findMatchedFamily(item, available);
+                if (matched != null && new Font(matched, Font.PLAIN, 16).canDisplayUpTo(sample) == -1) {
+                    return matched;
+                }
+            }
+            for (String family : names) {
+                if (new Font(family, Font.PLAIN, 16).canDisplayUpTo(sample) == -1) {
+                    return family;
                 }
             }
         } catch (Exception ex) {
             return "Dialog";
         }
         return "Dialog";
+    }
+
+    private static String findMatchedFamily(String preferred, Set<String> available) {
+        if (available.contains(preferred)) {
+            return preferred;
+        }
+        String preferredLower = preferred.toLowerCase();
+        for (String family : available) {
+            if (family != null && family.toLowerCase().contains(preferredLower)) {
+                return family;
+            }
+        }
+        return null;
     }
 
     /**
