@@ -1395,6 +1395,8 @@ function bindFlowInteraction() {
 
 let lawAgentRole = '普通市民';
 let lawAgentLoginToken = '';
+let lawAgentRequestType = 0;
+let lawAgentLastRawResponse = '0';
 
 function openRealtimeTranscription() {
   alert('语音实时转录功能建设中，敬请期待');
@@ -1460,9 +1462,16 @@ function refreshLawRoleButtons() {
 
 function closeLawServiceDialog() {
   const modal = document.getElementById('lawAgentModal');
+  const list = document.getElementById('lawAgentChatList');
   if (modal) {
     modal.classList.add('hidden');
   }
+  if (list) {
+    list.innerHTML = '';
+    list.dataset.inited = '';
+  }
+  lawAgentRequestType = 0;
+  lawAgentLastRawResponse = '0';
 }
 
 function onLawAgentInputKeydown(event) {
@@ -1484,35 +1493,103 @@ async function sendLawAgentMessage() {
   appendLawAgentMessage('user', question);
   input.value = '';
 
-  let answer = '';
+  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
   try {
     const res = await fetch(`${API_BASE}/dify/chat-message`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({question, role: lawAgentRole, token: lawAgentLoginToken})
+      body: JSON.stringify({
+        question,
+        role: lawAgentRole,
+        token: lawAgentLoginToken,
+        type: lawAgentRequestType,
+        rawResponse: lawAgentLastRawResponse
+      })
     });
     const json = await res.json();
     const payload = json && json.data ? json.data : {};
     const dataObj = payload && payload.data ? payload.data : payload;
-    answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
+    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
+    const rawResponse = dataObj.rawResponse || answer || '';
+    if (answer) {
+      updateLawAgentMessage(waitingNode, answer, lawAgentRequestType !== 2);
+      lawAgentLastRawResponse = rawResponse || lawAgentLastRawResponse;
+      lawAgentRequestType = 1;
+      return;
+    }
   } catch (error) {
-    answer = '';
   }
+  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+}
 
-  if (!answer) {
-    answer = '已收到您的问题。当前无法获取在线回复，请稍后重试。';
+async function askLawAgentRecommendation(tag) {
+  if (!lawAgentLoginToken || !lawAgentLastRawResponse || lawAgentLastRawResponse === '0') {
+    return;
   }
-  appendLawAgentMessage('assistant', answer);
+  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        question: `${lawAgentLastRawResponse}
+${tag}`,
+        role: lawAgentRole,
+        token: lawAgentLoginToken,
+        type: 2,
+        rawResponse: lawAgentLastRawResponse
+      })
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : {};
+    const dataObj = payload && payload.data ? payload.data : payload;
+    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
+    if (answer) {
+      updateLawAgentMessage(waitingNode, answer, false);
+      return;
+    }
+  } catch (error) {
+  }
+  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
 }
 
 function appendLawAgentMessage(role, text) {
   const list = document.getElementById('lawAgentChatList');
   if (!list) {
-    return;
+    return null;
   }
   const item = document.createElement('div');
   item.className = `law-agent-msg ${role === 'user' ? 'user' : 'assistant'}`;
   item.textContent = text || '';
   list.appendChild(item);
   list.scrollTop = list.scrollHeight;
+  return item;
+}
+
+function updateLawAgentMessage(node, text, withRecommendLinks) {
+  if (!node) {
+    return;
+  }
+  node.textContent = text || '';
+  if (withRecommendLinks) {
+    const actions = document.createElement('div');
+    actions.className = 'law-agent-recommend-links';
+    const lawLink = document.createElement('button');
+    lawLink.type = 'button';
+    lawLink.className = 'law-agent-link-btn';
+    lawLink.textContent = '相关法条推荐';
+    lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
+    const caseLink = document.createElement('button');
+    caseLink.type = 'button';
+    caseLink.className = 'law-agent-link-btn';
+    caseLink.textContent = '相关类案推荐';
+    caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
+    actions.appendChild(lawLink);
+    actions.appendChild(caseLink);
+    node.appendChild(actions);
+  }
+  const list = document.getElementById('lawAgentChatList');
+  if (list) {
+    list.scrollTop = list.scrollHeight;
+  }
 }

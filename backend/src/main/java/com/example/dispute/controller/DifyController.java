@@ -212,34 +212,74 @@ public class DifyController {
             String question = request == null ? "" : String.valueOf(request.getOrDefault("question", ""));
             String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
             String token = request == null ? "" : String.valueOf(request.getOrDefault("token", ""));
+            String rawResponse = request == null ? "0" : String.valueOf(request.getOrDefault("rawResponse", "0"));
+            int bizType = 0;
+            if (request != null && request.get("type") != null) {
+                bizType = Integer.parseInt(String.valueOf(request.get("type")));
+            }
             if (!StringUtils.hasText(question) || !StringUtils.hasText(token)) {
                 return ApiResponse.fail("获取失败请稍后再试");
             }
 
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("question", question);
-            payload.put("type", "case");
-            payload.put("search", false);
-            payload.put("role", role);
-            log.info("xbg chat req: {}", objectMapper.writeValueAsString(payload));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", token);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
-            RestTemplate restTemplate = new RestTemplate();
-            String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/completions", entity, String.class);
-            log.info("xbg chat result: {}", result);
-
-            if (!StringUtils.hasText(result)) {
-                return ApiResponse.fail("获取失败请稍后再试");
+            String finalQuestion;
+            if (bizType == 0) {
+                finalQuestion = "你是一名" + role + question;
+            } else if (bizType == 1) {
+                if (!StringUtils.hasText(rawResponse) || "0".equals(rawResponse)) {
+                    return ApiResponse.fail("获取失败请稍后再试");
+                }
+                Map<String, Object> summaryMap = callXbgChat(token, rawResponse + " 保持原文意思，生成精简摘要");
+                String summaryText = extractAnswerText(summaryMap);
+                finalQuestion = "你是一名" + role + summaryText + question;
+            } else {
+                finalQuestion = question;
             }
-            Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
+
+            Map<String, Object> resultMap = callXbgChat(token, finalQuestion);
+            resultMap.put("rawResponse", extractAnswerText(resultMap));
             return ApiResponse.success(resultMap);
         } catch (Exception ex) {
             log.warn("xbg chat failed: {}", ex.getMessage());
             return ApiResponse.fail("获取失败请稍后再试");
         }
+    }
+
+    private Map<String, Object> callXbgChat(String token, String question) throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("question", question);
+        payload.put("type", "case");
+        payload.put("search", false);
+        log.info("xbg chat req: {}", objectMapper.writeValueAsString(payload));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", token);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+        RestTemplate restTemplate = new RestTemplate();
+        String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/completions", entity, String.class);
+        log.info("xbg chat result: {}", result);
+        if (!StringUtils.hasText(result)) {
+            throw new IllegalArgumentException("xbg chat empty result");
+        }
+        return objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
+    }
+
+    private String extractAnswerText(Map<String, Object> resultMap) {
+        if (resultMap == null) {
+            return "";
+        }
+        Object direct = firstNonNull(resultMap.get("answer"), resultMap.get("text"), resultMap.get("output"), resultMap.get("content"));
+        if (direct != null) {
+            return String.valueOf(direct);
+        }
+        Object dataObj = resultMap.get("data");
+        if (dataObj instanceof Map) {
+            Object nested = firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text"), ((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content"));
+            if (nested != null) {
+                return String.valueOf(nested);
+            }
+        }
+        return "";
     }
 
     /**
