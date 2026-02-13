@@ -41,6 +41,7 @@ import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.awt.BasicStroke;
 import java.awt.image.BufferedImage;
@@ -77,6 +78,7 @@ public class CaseStatsController {
     private static final int PPT_WIDTH = 1366;
     private static final int PPT_HEIGHT = 768;
     private static final int MARGIN = 36;
+    private static final String CHINESE_FONT_FAMILY = resolveChineseFontFamily();
 
     private final CaseStatsBatchMapper batchMapper;
     private final CaseStatsDetailMapper detailMapper;
@@ -447,7 +449,7 @@ public class CaseStatsController {
         titleP.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
         XSLFTextRun titleR = titleP.addNewTextRun();
         titleR.setText(title);
-        titleR.setFontFamily("Microsoft YaHei");
+        titleR.setFontFamily(CHINESE_FONT_FAMILY);
         titleR.setBold(true);
         titleR.setFontSize(44.0);
         titleR.setFontColor(new Color(30, 64, 175));
@@ -458,7 +460,7 @@ public class CaseStatsController {
         subP.setTextAlign(org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER);
         XSLFTextRun subR = subP.addNewTextRun();
         subR.setText("矛盾纠纷案件统计专题");
-        subR.setFontFamily("Microsoft YaHei");
+        subR.setFontFamily(CHINESE_FONT_FAMILY);
         subR.setFontSize(24.0);
         subR.setFontColor(new Color(71, 85, 105));
     }
@@ -476,7 +478,7 @@ public class CaseStatsController {
         XSLFTextParagraph titleP = titleBox.addNewTextParagraph();
         XSLFTextRun titleR = titleP.addNewTextRun();
         titleR.setText(title == null ? "" : title.trim());
-        titleR.setFontFamily("Microsoft YaHei");
+        titleR.setFontFamily(CHINESE_FONT_FAMILY);
         titleR.setBold(true);
         titleR.setFontSize(30.0);
 
@@ -548,7 +550,7 @@ public class CaseStatsController {
             para.setLineSpacing(110.0);
             XSLFTextRun run = para.addNewTextRun();
             run.setText(itemText);
-            run.setFontFamily("Microsoft YaHei");
+            run.setFontFamily(CHINESE_FONT_FAMILY);
             run.setBold(true);
             run.setFontSize(18.0);
             run.setFontColor(new Color(30, 41, 59));
@@ -582,7 +584,7 @@ public class CaseStatsController {
         setupGraphics(g);
         int left = 100, right = 1080, top = 100, bottom = 620;
         drawAxis(g, left, top, right, bottom);
-        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 24));
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.PLAIN, 24));
         long max = Math.max(1L, data.values().stream().mapToLong(Long::longValue).max().orElse(1L));
         if (top3Series != null) {
             for (Map<String, Long> m : top3Series.values()) {
@@ -673,7 +675,7 @@ public class CaseStatsController {
         }
         String value = text.trim();
         java.awt.Font original = g.getFont();
-        g.setFont(new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 18));
+        g.setFont(new java.awt.Font(CHINESE_FONT_FAMILY, java.awt.Font.BOLD, 18));
         int charHeight = g.getFontMetrics().getHeight();
         int totalHeight = value.length() * charHeight;
         int startY = barTop + Math.max(charHeight, (barH - totalHeight) / 2 + charHeight - 4);
@@ -841,6 +843,32 @@ public class CaseStatsController {
         }
     }
 
+
+    private static String resolveChineseFontFamily() {
+        String[] preferred = {
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Noto Sans CJK SC",
+                "WenQuanYi Zen Hei",
+                "SimHei",
+                "SimSun",
+                "Arial Unicode MS",
+                "Dialog"
+        };
+        try {
+            String[] names = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+            Set<String> available = new HashSet<String>(Arrays.asList(names));
+            for (String item : preferred) {
+                if (available.contains(item)) {
+                    return item;
+                }
+            }
+        } catch (Exception ex) {
+            return "Dialog";
+        }
+        return "Dialog";
+    }
+
     /**
      * 创建统一尺寸图表画布并绘制标题。
      */
@@ -850,7 +878,7 @@ public class CaseStatsController {
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, img.getWidth(), img.getHeight());
         g.setColor(Color.BLACK);
-        g.setFont(new Font("Microsoft YaHei", Font.BOLD, 30));
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.BOLD, 30));
         g.drawString(title, 30, 50);
         g.dispose();
         return img;
@@ -861,7 +889,7 @@ public class CaseStatsController {
      */
     private void setupGraphics(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setFont(new Font("Microsoft YaHei", Font.PLAIN, 21));
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.PLAIN, 21));
     }
 
     /**
