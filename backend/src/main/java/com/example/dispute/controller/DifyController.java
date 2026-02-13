@@ -54,6 +54,9 @@ public class DifyController {
     @Value("${dify.mediator-suggestion-api-key:replace-with-mediator-suggestion-key}")
     private String mediatorSuggestionApiKey;
 
+    @Value("${dify.summary-api-key:replace-with-summary-key}")
+    private String summaryApiKey;
+
     @Value("${xiaobaogong.app-id:}")
     private String xbgAppId;
 
@@ -228,8 +231,7 @@ public class DifyController {
                 if (!StringUtils.hasText(rawResponse) || "0".equals(rawResponse)) {
                     return ApiResponse.fail("获取失败请稍后再试");
                 }
-                Map<String, Object> summaryMap = callXbgChat(token, rawResponse + " 保持原文意思，生成精简摘要");
-                String summaryText = extractAnswerText(summaryMap);
+                String summaryText = buildSummaryByDify(rawResponse);
                 finalQuestion = "你是一名" + role + "。" + summaryText + question;
             } else {
                 if (!StringUtils.hasText(rawResponse) || "0".equals(rawResponse)) {
@@ -245,6 +247,54 @@ public class DifyController {
             log.warn("xbg chat failed: {}", ex.getMessage());
             return ApiResponse.fail("获取失败请稍后再试");
         }
+    }
+
+    private String buildSummaryByDify(String rawResponse) {
+        try {
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("content", rawResponse);
+            Object difyResult = difyClient.runWorkflowWithInputs(inputs, summaryApiKey, "摘要生成");
+            String summary = extractSummaryFromDifyResponse(difyResult);
+            if (StringUtils.hasText(summary)) {
+                return summary;
+            }
+        } catch (Exception ex) {
+            log.warn("dify summary failed: {}", ex.getMessage());
+        }
+        return rawResponse;
+    }
+
+    private String extractSummaryFromDifyResponse(Object difyResult) {
+        if (!(difyResult instanceof Map)) {
+            return "";
+        }
+        Map<?, ?> root = (Map<?, ?>) difyResult;
+        Object directSummary = root.get("summary");
+        if (directSummary != null && StringUtils.hasText(String.valueOf(directSummary))) {
+            return String.valueOf(directSummary);
+        }
+        Object outputsObj = root.get("outputs");
+        if (outputsObj instanceof Map) {
+            Object outputsSummary = ((Map<?, ?>) outputsObj).get("summary");
+            if (outputsSummary != null && StringUtils.hasText(String.valueOf(outputsSummary))) {
+                return String.valueOf(outputsSummary);
+            }
+        }
+        Object dataObj = root.get("data");
+        if (dataObj instanceof Map) {
+            Object dataSummary = ((Map<?, ?>) dataObj).get("summary");
+            if (dataSummary != null && StringUtils.hasText(String.valueOf(dataSummary))) {
+                return String.valueOf(dataSummary);
+            }
+            Object nestedOutputs = ((Map<?, ?>) dataObj).get("outputs");
+            if (nestedOutputs instanceof Map) {
+                Object nestedSummary = ((Map<?, ?>) nestedOutputs).get("summary");
+                if (nestedSummary != null && StringUtils.hasText(String.valueOf(nestedSummary))) {
+                    return String.valueOf(nestedSummary);
+                }
+            }
+        }
+        return "";
     }
 
     private Map<String, Object> callXbgChat(String token, String question) throws Exception {
