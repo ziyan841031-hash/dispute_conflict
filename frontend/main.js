@@ -1392,6 +1392,10 @@ function bindFlowInteraction() {
   });
 }
 
+
+let lawAgentRole = '普通市民';
+let lawAgentLoginToken = '';
+
 function openRealtimeTranscription() {
   alert('语音实时转录功能建设中，敬请期待');
 }
@@ -1400,16 +1404,57 @@ function openAddToolTip() {
   alert('更多智能工具即将上线');
 }
 
-function openLawServiceDialog() {
+async function openLawServiceDialog() {
   const modal = document.getElementById('lawAgentModal');
   const list = document.getElementById('lawAgentChatList');
   if (!modal || !list) {
     return;
   }
+  const loginOk = await loginLawServiceAgent();
+  if (!loginOk) {
+    alert('获取失败请稍后再试');
+    return;
+  }
   modal.classList.remove('hidden');
+  refreshLawRoleButtons();
   if (!list.dataset.inited) {
     appendLawAgentMessage('assistant', '您好，我是法律服务对话智能体。请描述您的问题，我将为您提供法律参考建议。');
     list.dataset.inited = '1';
+  }
+}
+
+
+async function loginLawServiceAgent() {
+  try {
+    const res = await fetch(`${API_BASE}/dify/xbg/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({role: lawAgentRole})
+    });
+    const json = await res.json();
+    if (!json || json.code !== 0 || !json.data) {
+      return false;
+    }
+    lawAgentLoginToken = json.data;
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function selectLawAgentRole(role) {
+  lawAgentRole = role === '解纷工作人员' ? '解纷工作人员' : '普通市民';
+  refreshLawRoleButtons();
+}
+
+function refreshLawRoleButtons() {
+  const citizen = document.getElementById('lawRoleCitizen');
+  const worker = document.getElementById('lawRoleWorker');
+  if (citizen) {
+    citizen.classList.toggle('active', lawAgentRole === '普通市民');
+  }
+  if (worker) {
+    worker.classList.toggle('active', lawAgentRole === '解纷工作人员');
   }
 }
 

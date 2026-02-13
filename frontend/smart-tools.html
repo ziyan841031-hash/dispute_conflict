@@ -42,6 +42,10 @@
       <h3 id="lawAgentTitle">法律服务对话智能体</h3>
       <button type="button" onclick="closeLawServiceDialog()">关闭</button>
     </div>
+    <div class="law-agent-role-tabs">
+      <button id="lawRoleCitizen" type="button" class="law-agent-role-btn active" onclick="selectLawAgentRole('普通市民')">普通市民</button>
+      <button id="lawRoleWorker" type="button" class="law-agent-role-btn" onclick="selectLawAgentRole('解纷工作人员')">解纷工作人员</button>
+    </div>
     <div id="lawAgentChatList" class="law-agent-chat-list"></div>
     <div class="law-agent-input-row">
       <input id="lawAgentInput" type="text" placeholder="请输入您的法律问题..." onkeydown="onLawAgentInputKeydown(event)">

@@ -11,15 +11,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 import java.util.Map;
 
 /**
@@ -45,6 +53,15 @@ public class DifyController {
     // 纠纷调解员建议API密钥。
     @Value("${dify.mediator-suggestion-api-key:replace-with-mediator-suggestion-key}")
     private String mediatorSuggestionApiKey;
+
+    @Value("${xiaobaogong.app-id:}")
+    private String xbgAppId;
+
+    @Value("${xiaobaogong.secret:}")
+    private String xbgSecret;
+
+    @Value("${xiaobaogong.base-url:https://api.xiaobaogong.com}")
+    private String xbgBaseUrl;
 
     /**
      * 构造函数。
@@ -142,6 +159,51 @@ public class DifyController {
     }
 
     /**
+     * 获取小包公登录Token。
+     */
+    @PostMapping("/xbg/login")
+    public ApiResponse<String> loginXiaoBaoGong(@RequestBody(required = false) Map<String, Object> request) {
+        try {
+            long timestamp = System.currentTimeMillis() / 1000;
+            String nonce = UUID.randomUUID().toString().replace("-", "");
+            String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
+            if (!"解纷工作人员".equals(role)) {
+                role = "普通市民";
+            }
+            String signStr = String.format("timestamp=%s&nonce=%s&secret=%s&timestamp=%s",
+                    timestamp, nonce, xbgSecret, timestamp);
+            String signature = sha256(signStr);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("signature", signature);
+            payload.put("appid", xbgAppId);
+            payload.put("nonce", nonce);
+            payload.put("timestamp", timestamp);
+            payload.put("mode", "third");
+            payload.put("username", role);
+            log.info("xbg login req: {}", objectMapper.writeValueAsString(payload));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+            RestTemplate restTemplate = new RestTemplate();
+            String result = restTemplate.postForObject(xbgBaseUrl + "/v2-api/signature", entity, String.class);
+            log.info("xbg login result: {}", result);
+
+            Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
+            Number statusCode = (Number) resultMap.get("statusCode");
+            Object data = resultMap.get("data");
+            if (statusCode != null && statusCode.intValue() == 1 && data != null) {
+                return ApiResponse.success(String.valueOf(data));
+            }
+            return ApiResponse.fail("获取失败请稍后再试");
+        } catch (Exception ex) {
+            log.warn("xbg login failed: {}", ex.getMessage());
+            return ApiResponse.fail("获取失败请稍后再试");
+        }
+    }
+
+    /**
      * 调用Dify聊天接口。
      */
     @PostMapping("/chat-message") // 映射聊天接口。
@@ -221,6 +283,16 @@ public class DifyController {
             log.warn("Dify workflow 流水落库失败: {}", ex.getMessage());
             return null;
         }
+    }
+
+    private String sha256(String raw) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder();
+        for (byte b : hash) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 
     private String resolveMediationStatus(Map<String, Object> answerMap, Map<String, Object> flowMap) {
