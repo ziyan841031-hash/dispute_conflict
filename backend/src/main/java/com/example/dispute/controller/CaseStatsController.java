@@ -42,10 +42,12 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.FontFormatException;
 import java.awt.RenderingHints;
 import java.awt.BasicStroke;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -847,9 +849,13 @@ public class CaseStatsController {
     private static String resolveChineseFontFamily() {
         String[] preferred = {
                 "Microsoft YaHei",
+                "微软雅黑",
                 "PingFang SC",
                 "Noto Sans CJK SC",
+                "Noto Sans SC",
+                "Source Han Sans SC",
                 "WenQuanYi Zen Hei",
+                "WenQuanYi Micro Hei",
                 "SimHei",
                 "SimSun",
                 "Arial Unicode MS",
@@ -857,6 +863,14 @@ public class CaseStatsController {
         };
         final String sample = "中文字体测试";
         try {
+            String customPath = firstNonBlank(System.getProperty("cjk.font.path"), System.getenv("CJK_FONT_PATH"));
+            if (customPath != null) {
+                String loadedFamily = registerCustomFont(customPath, sample);
+                if (loadedFamily != null) {
+                    return loadedFamily;
+                }
+            }
+
             String[] names = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
             Set<String> available = new HashSet<String>(Arrays.asList(names));
             for (String item : preferred) {
@@ -870,10 +884,35 @@ public class CaseStatsController {
                     return family;
                 }
             }
+            log.warn("未检测到可显示中文的系统字体，图表中文可能显示方框。可通过 -Dcjk.font.path=/path/font.ttf 或环境变量 CJK_FONT_PATH 指定字体文件。");
         } catch (Exception ex) {
+            log.warn("解析中文字体失败，回退Dialog: {}", ex.getMessage());
             return "Dialog";
         }
         return "Dialog";
+    }
+
+    private static String registerCustomFont(String path, String sample) {
+        File fontFile = new File(path);
+        if (!fontFile.exists() || !fontFile.isFile()) {
+            log.warn("自定义中文字体文件不存在: {}", path);
+            return null;
+        }
+        try (FileInputStream inputStream = new FileInputStream(fontFile)) {
+            Font font = Font.createFont(Font.TRUETYPE_FONT, inputStream);
+            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
+            String family = font.getFamily();
+            if (new Font(family, Font.PLAIN, 16).canDisplayUpTo(sample) == -1) {
+                log.info("已加载自定义中文字体: {}", family);
+                return family;
+            }
+            log.warn("自定义字体不支持中文显示: {}", family);
+        } catch (FontFormatException ex) {
+            log.warn("自定义字体格式错误: {}", ex.getMessage());
+        } catch (Exception ex) {
+            log.warn("加载自定义字体失败: {}", ex.getMessage());
+        }
+        return null;
     }
 
     private static String findMatchedFamily(String preferred, Set<String> available) {
@@ -881,10 +920,35 @@ public class CaseStatsController {
             return preferred;
         }
         String preferredLower = preferred.toLowerCase();
+        String[] tokens = preferredLower.split("\\s+");
         for (String family : available) {
-            if (family != null && family.toLowerCase().contains(preferredLower)) {
+            if (family == null) {
+                continue;
+            }
+            String familyLower = family.toLowerCase();
+            if (familyLower.contains(preferredLower)) {
                 return family;
             }
+            boolean allHit = true;
+            for (String token : tokens) {
+                if (!token.isEmpty() && !familyLower.contains(token)) {
+                    allHit = false;
+                    break;
+                }
+            }
+            if (allHit) {
+                return family;
+            }
+        }
+        return null;
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.trim().isEmpty()) {
+            return a.trim();
+        }
+        if (b != null && !b.trim().isEmpty()) {
+            return b.trim();
         }
         return null;
     }
