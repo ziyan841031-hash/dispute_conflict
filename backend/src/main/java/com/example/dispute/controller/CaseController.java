@@ -26,8 +26,16 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import javax.validation.Valid;
+import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,15 +117,67 @@ public class CaseController {
      * 处理Excel案件入库。
      */
     @PostMapping("/ingest/excel") // 定义Excel入库接口。
-    public ApiResponse<CaseRecord> ingestExcel(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<List<String>> ingestExcel(@RequestParam("file") MultipartFile file) {
         // 打印请求文件日志。
         log.info("Excel入库请求: fileName={}", file.getOriginalFilename());
         // 调用服务执行入库。
-        CaseRecord record = caseRecordService.ingestExcel(file);
+        List<String> result = caseRecordService.ingestExcel(file);
         // 打印响应结果日志。
-        log.info("Excel入库响应: caseNo={}", record.getCaseNo());
+        log.info("Excel入库响应: size={}", result.size());
         // 返回统一成功响应。
-        return ApiResponse.success(record);
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 导出当前查询页案件为Excel。
+     */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCases(CaseQueryRequest request) {
+        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
+        List<CaseRecord> records = pageData.getRecords();
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("案件导出");
+            String[] headers = {
+                    "案件编号(case_no)", "纠纷类型(dispute_type)", "当事人(dispute_type)", "当事人身份证号(party_id)", "当事人电话(party_phone)",
+                    "当事人地址(party_address)", "对方当事人(counterparty_name)", "对方当事人身份证号(counterparty_id)",
+                    "对方当事人电话(counterparty_phone)", "对方当事人地址(counterparty_address)", "事件来源(event_source)", "摘要(facts_summary)"
+            };
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+            for (int i = 0; i < records.size(); i++) {
+                CaseRecord r = records.get(i);
+                CaseClassifyRecord classifyRecord = caseClassifyRecordMapper.selectOne(new LambdaQueryWrapper<CaseClassifyRecord>()
+                        .eq(CaseClassifyRecord::getCaseId, r.getId())
+                        .orderByDesc(CaseClassifyRecord::getCreatedAt)
+                        .last("limit 1"));
+                Row row = sheet.createRow(i + 1);
+                row.createCell(0).setCellValue(nullSafe(r.getCaseNo()));
+                row.createCell(1).setCellValue(nullSafe(r.getDisputeType()));
+                row.createCell(2).setCellValue(nullSafe(r.getPartyName()));
+                row.createCell(3).setCellValue(nullSafe(r.getPartyId()));
+                row.createCell(4).setCellValue(nullSafe(r.getPartyPhone()));
+                row.createCell(5).setCellValue(nullSafe(r.getPartyAddress()));
+                row.createCell(6).setCellValue(nullSafe(r.getCounterpartyName()));
+                row.createCell(7).setCellValue(nullSafe(r.getCounterpartyId()));
+                row.createCell(8).setCellValue(nullSafe(r.getCounterpartyPhone()));
+                row.createCell(9).setCellValue(nullSafe(r.getCounterpartyAddress()));
+                row.createCell(10).setCellValue(nullSafe(r.getEventSource()));
+                row.createCell(11).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
+            }
+            workbook.write(out);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=cases-export.xlsx")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(out.toByteArray());
+        } catch (Exception ex) {
+            throw new RuntimeException("导出失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
     }
 
     /**

@@ -23,9 +23,10 @@
         <input id="disputeType" placeholder="纠纷类型">
         <select id="eventSource">
           <option value="">全部事件来源</option>
-          <option value="TEXT">TEXT</option>
-          <option value="EXCEL">EXCEL</option>
-          <option value="AUDIO">AUDIO</option>
+          <option value="线下接待">线下接待</option>
+          <option value="网上反映">网上反映</option>
+          <option value="主动排查">主动排查</option>
+          <option value="来电求助">来电求助</option>
         </select>
         <select id="riskLevel">
           <option value="">全部风险等级</option>
@@ -34,6 +35,7 @@
           <option value="高">高</option>
         </select>
         <button onclick="loadCases()">查询</button>
+        <button type="button" onclick="exportCasesCurrentPage()">导出</button>
       </div>
       <div class="table-wrap">
         <table class="cases-table">

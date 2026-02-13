@@ -8,6 +8,9 @@ const parseStatus = {
   classify: false
 };
 
+let casesPageNo = 1;
+const CASES_PAGE_SIZE = 20;
+
 // 提交文字案件。
 async function submitText() {
   // 打开解析弹窗。
@@ -91,7 +94,7 @@ async function submitAudio() {
   setLoading('text');
   const textPayload = {
     caseText: recognizedText,
-    eventSource: '来电求助'
+    eventSource: '线下接待'
   };
   const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
     method: 'POST',
@@ -176,7 +179,7 @@ async function loadCases() {
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: 1, pageSize: 20});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
   const res = await fetch(`${API_BASE}/cases?${params}`);
   const json = await res.json();
   const tbody = document.getElementById('caseTableBody');
@@ -189,6 +192,31 @@ async function loadCases() {
     tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
+}
+
+async function exportCasesCurrentPage() {
+  const keyword = document.getElementById('keyword').value;
+  const disputeType = document.getElementById('disputeType').value;
+  const eventSource = document.getElementById('eventSource').value;
+  const riskLevel = document.getElementById('riskLevel').value;
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
+  try {
+    const res = await fetch(`${API_BASE}/cases/export?${params.toString()}`);
+    if (!res.ok) {
+      throw new Error('导出失败');
+    }
+    const blob = await res.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = `cases-export-page-${casesPageNo}.xlsx`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    alert('导出失败，请稍后重试');
+  }
 }
 
 
