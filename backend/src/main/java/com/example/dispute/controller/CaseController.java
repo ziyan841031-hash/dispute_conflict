@@ -138,9 +138,9 @@ public class CaseController {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("案件导出");
             String[] headers = {
-                    "案件编号(case_no)", "纠纷类型(dispute_type)", "当事人(dispute_type)", "当事人身份证号(party_id)", "当事人电话(party_phone)",
-                    "当事人地址(party_address)", "对方当事人(counterparty_name)", "对方当事人身份证号(counterparty_id)",
-                    "对方当事人电话(counterparty_phone)", "对方当事人地址(counterparty_address)", "事件来源(event_source)", "摘要(facts_summary)"
+                    "案件编号", "纠纷类型", "当事人", "当事人身份证号", "当事人电话",
+                    "当事人地址", "对方当事人", "对方当事人身份证号",
+                    "对方当事人电话", "对方当事人地址", "事件来源", "摘要"
             };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {

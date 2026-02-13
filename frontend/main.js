@@ -94,7 +94,7 @@ async function submitAudio() {
   setLoading('text');
   const textPayload = {
     caseText: recognizedText,
-    eventSource: '线下接待'
+    eventSource: '来电求助'
   };
   const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
     method: 'POST',
