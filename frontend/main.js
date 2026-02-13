@@ -1467,6 +1467,12 @@ function closeLawServiceDialog() {
     modal.classList.add('hidden');
   }
   if (list) {
+    list.querySelectorAll('.law-agent-msg').forEach(item => {
+      if (item._typingTimer) {
+        clearInterval(item._typingTimer);
+        item._typingTimer = null;
+      }
+    });
     list.innerHTML = '';
     list.dataset.inited = '';
   }
@@ -1569,26 +1575,65 @@ function updateLawAgentMessage(node, text, withRecommendLinks) {
   if (!node) {
     return;
   }
-  node.textContent = text || '';
-  if (withRecommendLinks) {
-    const actions = document.createElement('div');
-    actions.className = 'law-agent-recommend-links';
-    const lawLink = document.createElement('button');
-    lawLink.type = 'button';
-    lawLink.className = 'law-agent-link-btn';
-    lawLink.textContent = '相关法条推荐';
-    lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
-    const caseLink = document.createElement('button');
-    caseLink.type = 'button';
-    caseLink.className = 'law-agent-link-btn';
-    caseLink.textContent = '相关类案推荐';
-    caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
-    actions.appendChild(lawLink);
-    actions.appendChild(caseLink);
-    node.appendChild(actions);
+  animateLawAgentTyping(node, text || '', () => {
+    if (withRecommendLinks) {
+      const actions = document.createElement('div');
+      actions.className = 'law-agent-recommend-links';
+      const lawLink = document.createElement('button');
+      lawLink.type = 'button';
+      lawLink.className = 'law-agent-link-btn';
+      lawLink.textContent = '相关法条推荐';
+      lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
+      const caseLink = document.createElement('button');
+      caseLink.type = 'button';
+      caseLink.className = 'law-agent-link-btn';
+      caseLink.textContent = '相关类案推荐';
+      caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
+      actions.appendChild(lawLink);
+      actions.appendChild(caseLink);
+      node.appendChild(actions);
+    }
+    const list = document.getElementById('lawAgentChatList');
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+    }
+  });
+}
+
+function animateLawAgentTyping(node, text, onDone) {
+  if (!node) {
+    return;
   }
-  const list = document.getElementById('lawAgentChatList');
-  if (list) {
-    list.scrollTop = list.scrollHeight;
+  if (node._typingTimer) {
+    clearInterval(node._typingTimer);
+    node._typingTimer = null;
   }
+  node.textContent = '';
+  const content = String(text || '');
+  let index = 0;
+  const step = () => {
+    index += 1;
+    node.textContent = content.slice(0, index);
+    const list = document.getElementById('lawAgentChatList');
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+    }
+    if (index >= content.length) {
+      if (node._typingTimer) {
+        clearInterval(node._typingTimer);
+        node._typingTimer = null;
+      }
+      if (onDone) {
+        onDone();
+      }
+    }
+  };
+  if (!content) {
+    if (onDone) {
+      onDone();
+    }
+    return;
+  }
+  step();
+  node._typingTimer = setInterval(step, 22);
 }
