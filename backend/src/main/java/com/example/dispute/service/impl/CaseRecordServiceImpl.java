@@ -674,7 +674,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             // 获取第一个sheet。
             Sheet sheet = workbook.getSheetAt(0);
             List<String> result = new ArrayList<>();
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            boolean firstRowChecked = false;
+            for (int i = 0; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) {
                     continue;
@@ -684,6 +685,12 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                     continue;
                 }
                 String content = contentCell.toString() == null ? "" : contentCell.toString().trim();
+                if (!firstRowChecked) {
+                    firstRowChecked = true;
+                    if ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content)) {
+                        continue;
+                    }
+                }
                 if (!content.isEmpty()) {
                     result.add(content);
                 }
