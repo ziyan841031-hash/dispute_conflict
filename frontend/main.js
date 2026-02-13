@@ -1489,11 +1489,12 @@ async function sendLawAgentMessage() {
     const res = await fetch(`${API_BASE}/dify/chat-message`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({query: question})
+      body: JSON.stringify({question, role: lawAgentRole, token: lawAgentLoginToken})
     });
     const json = await res.json();
     const payload = json && json.data ? json.data : {};
-    answer = payload.answer || payload.text || payload.output || '';
+    const dataObj = payload && payload.data ? payload.data : payload;
+    answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
   } catch (error) {
     answer = '';
   }

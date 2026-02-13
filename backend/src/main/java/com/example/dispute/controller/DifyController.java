@@ -204,18 +204,42 @@ public class DifyController {
     }
 
     /**
-     * 调用Dify聊天接口。
+     * 调用法律服务聊天接口。
      */
     @PostMapping("/chat-message") // 映射聊天接口。
-    public ApiResponse<Object> chatMessage(@RequestBody DifyInvokeRequest request) {
-        // 打印请求日志。
-        log.info("Dify chat 请求: query={}", request.getQuery());
-        // 发起远程调用。
-        Object data = difyClient.invoke("/chat-messages", request);
-        // 打印响应日志。
-        log.info("Dify chat 响应成功");
-        // 返回统一成功响应。
-        return ApiResponse.success(data);
+    public ApiResponse<Object> chatMessage(@RequestBody(required = false) Map<String, Object> request) {
+        try {
+            String question = request == null ? "" : String.valueOf(request.getOrDefault("question", ""));
+            String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
+            String token = request == null ? "" : String.valueOf(request.getOrDefault("token", ""));
+            if (!StringUtils.hasText(question) || !StringUtils.hasText(token)) {
+                return ApiResponse.fail("获取失败请稍后再试");
+            }
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("question", question);
+            payload.put("type", "case");
+            payload.put("search", false);
+            payload.put("role", role);
+            log.info("xbg chat req: {}", objectMapper.writeValueAsString(payload));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", token);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+            RestTemplate restTemplate = new RestTemplate();
+            String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/completions", entity, String.class);
+            log.info("xbg chat result: {}", result);
+
+            if (!StringUtils.hasText(result)) {
+                return ApiResponse.fail("获取失败请稍后再试");
+            }
+            Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
+            return ApiResponse.success(resultMap);
+        } catch (Exception ex) {
+            log.warn("xbg chat failed: {}", ex.getMessage());
+            return ApiResponse.fail("获取失败请稍后再试");
+        }
     }
 
     /**
