@@ -1404,7 +1404,7 @@ let lawAgentRequestType = 0;
 let lawAgentLastRawResponse = '0';
 
 function openRealtimeTranscription() {
-  alert('语音实时转录功能建设中，敬请期待');
+  window.open('http://218.78.134.191:17989', '_blank');
 }
 
 function openAddToolTip() {
