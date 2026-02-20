@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS case_record (
     case_text TEXT NOT NULL,
     source_file_name VARCHAR(255),
     audio_duration_sec INTEGER,
+    audio_file_url VARCHAR(500),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -46,6 +47,7 @@ COMMENT ON COLUMN case_record.register_time IS '登记时间';
 COMMENT ON COLUMN case_record.case_text IS '案件描述文本';
 COMMENT ON COLUMN case_record.source_file_name IS '源文件名';
 COMMENT ON COLUMN case_record.audio_duration_sec IS '音频时长(秒)';
+COMMENT ON COLUMN case_record.audio_file_url IS '音频文件URL';
 COMMENT ON COLUMN case_record.created_at IS '创建时间';
 COMMENT ON COLUMN case_record.updated_at IS '更新时间';
 
@@ -62,6 +64,7 @@ ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_id VARCHAR(32);
 ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_phone VARCHAR(32);
 ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_address VARCHAR(255);
 ALTER TABLE case_record ADD COLUMN IF NOT EXISTS dispute_location VARCHAR(255);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS audio_file_url VARCHAR(500);
 
 
 

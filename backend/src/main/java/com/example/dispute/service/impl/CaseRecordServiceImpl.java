@@ -162,7 +162,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 request.getDisputeType(), null, request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver(),
                 parsedPartyId, parsedPartyPhone, parsedPartyAddress,
                 parsedCounterpartyId, parsedCounterpartyPhone, parsedCounterpartyAddress,
-                parsedDisputeLocation);
+                parsedDisputeLocation, request.getAudioFileUrl());
         // 打印服务日志。
         log.info("服务层-文本入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -186,14 +186,18 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      * 音频案件入库。
      */
     @Override // 重写接口方法。
-    public String ingestAudio(MultipartFile file) {
+    public Map<String, String> ingestAudio(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-音频入库开始: fileName={}", file.getOriginalFilename());
         // 上传音频到OSS并获取URL。
         String audioUrl = uploadAudioToOss(file);
         log.info("语音文件已上传，路径：{}", audioUrl);
 
-        return soundIdentify(audioUrl);
+        String text = soundIdentify(audioUrl);
+        Map<String, String> result = new HashMap<>();
+        result.put("audioFileUrl", audioUrl);
+        result.put("text", defaultVal(text, ""));
+        return result;
     }
 
     /**
@@ -386,7 +390,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                                 String riskLevel, String handlingProgress, String receiver,
                                 String partyId, String partyPhone, String partyAddress,
                                 String counterpartyId, String counterpartyPhone, String counterpartyAddress,
-                                String disputeLocation) {
+                                String disputeLocation, String audioFileUrl) {
         // 获取当前时间。
         LocalDateTime now = LocalDateTime.now();
         // 创建实体对象。
@@ -431,6 +435,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         record.setSourceFileName(fileName);
         // 设置音频时长。
         record.setAudioDurationSec(audioDurationSec);
+        // 设置音频文件地址。
+        record.setAudioFileUrl(defaultVal(audioFileUrl, null));
         // 设置创建时间。
         record.setCreatedAt(now);
         // 设置更新时间。

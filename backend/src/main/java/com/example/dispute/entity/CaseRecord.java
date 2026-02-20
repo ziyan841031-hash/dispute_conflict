@@ -75,6 +75,9 @@ public class CaseRecord {
     @TableField("audio_duration_sec")
     private Integer audioDurationSec;
 
+    @TableField("audio_file_url")
+    private String audioFileUrl;
+
     @TableField("created_at")
     private LocalDateTime createdAt;
 

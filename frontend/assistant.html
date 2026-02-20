@@ -52,12 +52,22 @@
   <div class="modal-content case-material-modal-content">
     <div class="case-material-header">
       <h3 id="caseMaterialTitle">案件详情</h3>
+      <button id="openCaseOptimizeBtn" type="button" class="case-optimize-trigger">✨ 优化建议</button>
       <button id="closeCaseMaterialBtn" type="button">关闭</button>
     </div>
     <div id="caseMaterialContent" class="case-material-content"></div>
   </div>
 </div>
 
+<div id="caseOptimizeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="caseOptimizeTitle">
+  <div class="modal-content case-optimize-modal-content">
+    <div class="case-material-header">
+      <h3 id="caseOptimizeTitle">处置优化建议</h3>
+      <button type="button" onclick="closeCaseOptimizeDialog()">关闭</button>
+    </div>
+    <div id="caseOptimizeContent" class="case-optimize-content"></div>
+  </div>
+</div>
 
 <div id="workflowWaitingModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflowWaitingTitle">
   <div class="modal-content workflow-waiting-content">

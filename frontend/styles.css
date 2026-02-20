@@ -767,3 +767,31 @@ table { width: 100%; border-collapse: collapse; }
   color: #1d4ed8;
   background: transparent;
 }
+
+
+.case-optimize-trigger {
+  background: #f59e0b;
+  margin-right: 8px;
+}
+
+.case-optimize-trigger:hover {
+  background: #d97706;
+}
+
+.case-optimize-modal-content {
+  width: min(700px, 92vw);
+}
+
+.case-optimize-content {
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px 14px;
+}
+
+.case-optimize-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #0f172a;
+  line-height: 1.8;
+}

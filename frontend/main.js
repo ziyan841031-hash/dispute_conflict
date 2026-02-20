@@ -134,13 +134,16 @@ async function submitAudio() {
   form.append('file', file);
   const audioRes = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
   const audioJson = await audioRes.json();
-  const recognizedText = audioJson && audioJson.data ? audioJson.data : '';
+  const audioData = audioJson && audioJson.data ? audioJson.data : {};
+  const recognizedText = (audioData && audioData.text) ? audioData.text : '';
+  const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
   markDone('audio');
 
   setLoading('text');
   const textPayload = {
     caseText: recognizedText,
-    eventSource: '来电求助'
+    eventSource: '来电求助',
+    audioFileUrl
   };
   const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
     method: 'POST',
@@ -281,7 +284,7 @@ async function loadCases() {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
     const actionBtn = `<button onclick="openAssistant(${item.id})">智能助手</button>`;
-    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
+    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td>${item.audioFileUrl ? `<a href=\"${item.audioFileUrl}\" target=\"_blank\" rel=\"noopener\">现在下载</a>` : '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -834,6 +837,7 @@ function showCaseMaterial(data) {
   const modal = document.getElementById('caseMaterialModal');
   const contentBox = document.getElementById('caseMaterialContent');
   const closeBtn = document.getElementById('closeCaseMaterialBtn');
+  const optimizeBtn = document.getElementById('openCaseOptimizeBtn');
   if (!modal || !contentBox) {
     return;
   }
@@ -904,6 +908,11 @@ function showCaseMaterial(data) {
   if (closeBtn) {
     closeBtn.onclick = closeCaseMaterial;
   }
+  if (optimizeBtn) {
+    optimizeBtn.onclick = function () {
+      openCaseOptimizeDialog(safeData);
+    };
+  }
   modal.onclick = function (event) {
     if (event.target === modal) {
       closeCaseMaterial();
@@ -914,6 +923,37 @@ function showCaseMaterial(data) {
 // 关闭案件原始材料弹框。
 function closeCaseMaterial() {
   const modal = document.getElementById('caseMaterialModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+
+function openCaseOptimizeDialog(data) {
+  const modal = document.getElementById('caseOptimizeModal');
+  const content = document.getElementById('caseOptimizeContent');
+  if (!modal || !content) {
+    return;
+  }
+  const risk = String((data && data.riskLevel) || '未知').trim();
+  const dispute = String((data && data.disputeType) || '纠纷事项').trim();
+  const tips = [];
+  tips.push(`1）建议补充${dispute}相关证据清单（合同、转账记录、聊天记录等）。`);
+  tips.push('2）建议建立一次会谈纪要，明确双方诉求、分歧点及可协商边界。');
+  if (risk === '高') {
+    tips.push('3）当前风险等级较高，建议48小时内安排线下调解并同步督办。');
+  } else if (risk === '中') {
+    tips.push('3）建议3个工作日内完成一次回访，持续跟踪矛盾变化。');
+  } else {
+    tips.push('3）建议保持每周一次回访，提前发现升级信号。');
+  }
+  tips.push('4）建议将处理进展同步至系统时间轴，便于后续复盘与协同。');
+  content.innerHTML = `<ul class="case-optimize-list">${tips.map(t => `<li>${t}</li>`).join('')}</ul>`;
+  modal.classList.remove('hidden');
+}
+
+function closeCaseOptimizeDialog() {
+  const modal = document.getElementById('caseOptimizeModal');
   if (modal) {
     modal.classList.add('hidden');
   }
