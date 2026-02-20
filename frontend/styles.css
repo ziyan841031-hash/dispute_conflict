@@ -817,3 +817,10 @@ table { width: 100%; border-collapse: collapse; }
 .case-material-action-btn:hover {
   transform: translateY(-1px);
 }
+
+
+.case-material-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
