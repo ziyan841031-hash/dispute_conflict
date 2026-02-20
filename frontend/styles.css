@@ -825,6 +825,16 @@ table { width: 100%; border-collapse: collapse; }
   gap: 8px;
 }
 
+
+.case-material-action-btn.audio-counting {
+  animation: audioCountdownPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes audioCountdownPulse {
+  0% { transform: scale(1); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); }
+  50% { transform: scale(1.03); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24); }
+  100% { transform: scale(1); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); }
+}
 .case-material-action-btn-audio {
   border-color: #cbd5e1;
   color: #0f172a;

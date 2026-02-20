@@ -936,15 +936,18 @@ function closeCaseMaterial() {
   if (caseAudioPlayer) {
     caseAudioPlayer.pause();
   }
+  stopCaseAudioCountdown();
   const audioBtn = document.getElementById('playCaseAudioBtn');
   if (audioBtn) {
     audioBtn.textContent = '▶ 音频';
+    audioBtn.classList.remove('audio-counting');
   }
 }
 
 
 let currentCaseOptimizeData = null;
 let caseAudioPlayer = null;
+let caseAudioCountdownTimer = null;
 
 function openCaseOptimizeDialog(data) {
   const modal = document.getElementById('caseOptimizeModal');
@@ -1029,27 +1032,68 @@ function toggleCaseAudioPlay(data) {
     if (caseAudioPlayer) {
       caseAudioPlayer.pause();
     }
+    stopCaseAudioCountdown();
     caseAudioPlayer = new Audio(audioUrl);
     caseAudioPlayer.addEventListener('loadedmetadata', () => {
       if (Number.isFinite(caseAudioPlayer.duration) && caseAudioPlayer.duration > 0) {
         btn.textContent = `▶ 音频 ${formatAudioDuration(caseAudioPlayer.duration)}`;
       }
     });
+    caseAudioPlayer.addEventListener('timeupdate', () => {
+      if (!caseAudioPlayer.paused) {
+        renderCaseAudioRemaining();
+      }
+    });
     caseAudioPlayer.addEventListener('ended', () => {
-      btn.textContent = `▶ 音频${formatAudioDurationSuffix(caseAudioPlayer)}`;
+      stopCaseAudioCountdown();
+      btn.classList.remove('audio-counting');
+      btn.textContent = '▶ 音频 00:00';
     });
   }
 
   if (caseAudioPlayer.paused) {
     caseAudioPlayer.play().then(() => {
-      btn.textContent = `⏸ 音频${formatAudioDurationSuffix(caseAudioPlayer)}`;
+      btn.classList.add('audio-counting');
+      renderCaseAudioRemaining();
+      startCaseAudioCountdown();
     }).catch(() => {
       alert('音频播放失败，请检查链接是否可访问');
     });
     return;
   }
   caseAudioPlayer.pause();
-  btn.textContent = `▶ 音频${formatAudioDurationSuffix(caseAudioPlayer)}`;
+  stopCaseAudioCountdown();
+  btn.classList.remove('audio-counting');
+  renderCaseAudioRemaining('▶');
+}
+
+function startCaseAudioCountdown() {
+  stopCaseAudioCountdown();
+  caseAudioCountdownTimer = setInterval(() => {
+    renderCaseAudioRemaining();
+  }, 1000);
+}
+
+function stopCaseAudioCountdown() {
+  if (caseAudioCountdownTimer) {
+    clearInterval(caseAudioCountdownTimer);
+    caseAudioCountdownTimer = null;
+  }
+}
+
+function renderCaseAudioRemaining(icon = '⏸') {
+  const btn = document.getElementById('playCaseAudioBtn');
+  if (!btn || !caseAudioPlayer) {
+    return;
+  }
+  const duration = Number(caseAudioPlayer.duration);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    btn.textContent = `${icon} 音频`;
+    return;
+  }
+  const current = Number(caseAudioPlayer.currentTime) || 0;
+  const remaining = Math.max(0, duration - current);
+  btn.textContent = `${icon} 音频 ${formatAudioDuration(remaining)}`;
 }
 
 function formatAudioDuration(seconds) {
@@ -1059,12 +1103,6 @@ function formatAudioDuration(seconds) {
   return `${String(minute).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
 }
 
-function formatAudioDurationSuffix(player) {
-  if (!player || !Number.isFinite(player.duration) || player.duration <= 0) {
-    return '';
-  }
-  return ` ${formatAudioDuration(player.duration)}`;
-}
 
 async function loadOptimizationFeedbacks() {
   const tbody = document.getElementById('feedbackTableBody');
