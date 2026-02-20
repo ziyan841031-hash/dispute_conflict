@@ -284,7 +284,7 @@ async function loadCases() {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
     const actionBtn = `<button onclick="openAssistant(${item.id})">智能助手</button>`;
-    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td>${item.audioFileUrl ? `<a href=\"${item.audioFileUrl}\" target=\"_blank\" rel=\"noopener\">现在下载</a>` : '-'}</td><td class="action-col">${actionBtn}</td>`;
+    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td>${item.audioFileUrl ? `<a href=\"${item.audioFileUrl}\" target=\"_blank\" rel=\"noopener\">下载</a>` : '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
 }
