@@ -15,6 +15,7 @@
     <a href="cases.html">案件管理</a>
     <a href="stats.html">案件统计</a>
     <a href="smart-tools.html">智能工具</a>
+    <a href="feedback-list.html">评价列表</a>
   </aside>
   <main class="content">
     <section class="card assistant-header-card">
@@ -53,6 +54,7 @@
     <div class="case-material-header">
       <h3 id="caseMaterialTitle">案件详情</h3>
       <div class="case-material-actions">
+        <button id="playCaseAudioBtn" type="button" class="case-material-action-btn case-material-action-btn-audio" title="播放音频">▶ 音频</button>
         <button id="openCaseOptimizeBtn" type="button" class="case-material-action-btn case-material-action-btn-primary">✨ 优化建议</button>
         <button id="closeCaseMaterialBtn" type="button" class="case-material-action-btn case-material-action-btn-secondary">关闭</button>
       </div>
@@ -64,10 +66,14 @@
 <div id="caseOptimizeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="caseOptimizeTitle">
   <div class="modal-content case-optimize-modal-content">
     <div class="case-material-header">
-      <h3 id="caseOptimizeTitle">处置优化建议</h3>
+      <h3 id="caseOptimizeTitle">优化建议对话</h3>
       <button type="button" onclick="closeCaseOptimizeDialog()">关闭</button>
     </div>
     <div id="caseOptimizeContent" class="case-optimize-content"></div>
+    <div class="case-optimize-input-row">
+      <input id="caseOptimizeInput" type="text" placeholder="请输入您的评价建议..." onkeydown="onCaseOptimizeInputKeydown(event)">
+      <button type="button" onclick="submitCaseOptimizeFeedback()">提交</button>
+    </div>
   </div>
 </div>
 

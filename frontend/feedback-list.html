@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 评价列表</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">控台首页</a>
+    <a href="cases.html">案件管理</a>
+    <a href="stats.html">案件统计</a>
+    <a href="smart-tools.html">智能工具</a>
+    <a class="active" href="feedback-list.html">评价列表</a>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h2>客户评价建议列表</h2>
+      <div class="table-wrap">
+        <table class="cases-table">
+          <thead>
+          <tr>
+            <th>ID</th><th>案件ID</th><th>案件编号</th><th>评价建议内容</th><th>提交时间</th>
+          </tr>
+          </thead>
+          <tbody id="feedbackTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="main.js"></script>
+<script>loadOptimizationFeedbacks();</script>
+</body>
+</html>

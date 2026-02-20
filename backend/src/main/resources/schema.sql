@@ -271,3 +271,20 @@ ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS street_chart_path VARCHAR(
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS type_chart_path VARCHAR(512);
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS district_chart_path VARCHAR(512);
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS report_file_path VARCHAR(512);
+
+CREATE TABLE IF NOT EXISTS case_optimization_feedback (
+    id BIGSERIAL PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    case_no VARCHAR(64),
+    suggestion_content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+COMMENT ON TABLE case_optimization_feedback IS '案件优化建议反馈表';
+COMMENT ON COLUMN case_optimization_feedback.case_id IS '关联案件ID';
+COMMENT ON COLUMN case_optimization_feedback.case_no IS '案件编号';
+COMMENT ON COLUMN case_optimization_feedback.suggestion_content IS '客户提交的评价建议内容';
+COMMENT ON COLUMN case_optimization_feedback.created_at IS '创建时间';
+
+CREATE INDEX IF NOT EXISTS idx_case_optimization_feedback_case_id ON case_optimization_feedback(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_optimization_feedback_created_at ON case_optimization_feedback(created_at DESC);

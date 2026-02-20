@@ -284,7 +284,7 @@ async function loadCases() {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
     const actionBtn = `<button onclick="openAssistant(${item.id})">智能助手</button>`;
-    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td>${item.audioFileUrl ? `<a href=\"${item.audioFileUrl}\" target=\"_blank\" rel=\"noopener\">下载</a>` : '-'}</td><td class="action-col">${actionBtn}</td>`;
+    tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -838,6 +838,7 @@ function showCaseMaterial(data) {
   const contentBox = document.getElementById('caseMaterialContent');
   const closeBtn = document.getElementById('closeCaseMaterialBtn');
   const optimizeBtn = document.getElementById('openCaseOptimizeBtn');
+  const audioBtn = document.getElementById('playCaseAudioBtn');
   if (!modal || !contentBox) {
     return;
   }
@@ -913,6 +914,12 @@ function showCaseMaterial(data) {
       openCaseOptimizeDialog(safeData);
     };
   }
+  if (audioBtn) {
+    audioBtn.textContent = '▶ 音频';
+    audioBtn.onclick = function () {
+      toggleCaseAudioPlay(safeData);
+    };
+  }
   modal.onclick = function (event) {
     if (event.target === modal) {
       closeCaseMaterial();
@@ -926,30 +933,78 @@ function closeCaseMaterial() {
   if (modal) {
     modal.classList.add('hidden');
   }
+  if (caseAudioPlayer) {
+    caseAudioPlayer.pause();
+  }
+  const audioBtn = document.getElementById('playCaseAudioBtn');
+  if (audioBtn) {
+    audioBtn.textContent = '▶ 音频';
+  }
 }
 
+
+let currentCaseOptimizeData = null;
+let caseAudioPlayer = null;
 
 function openCaseOptimizeDialog(data) {
   const modal = document.getElementById('caseOptimizeModal');
   const content = document.getElementById('caseOptimizeContent');
+  const input = document.getElementById('caseOptimizeInput');
   if (!modal || !content) {
     return;
   }
-  const risk = String((data && data.riskLevel) || '未知').trim();
-  const dispute = String((data && data.disputeType) || '纠纷事项').trim();
-  const tips = [];
-  tips.push(`1）建议补充${dispute}相关证据清单（合同、转账记录、聊天记录等）。`);
-  tips.push('2）建议建立一次会谈纪要，明确双方诉求、分歧点及可协商边界。');
-  if (risk === '高') {
-    tips.push('3）当前风险等级较高，建议48小时内安排线下调解并同步督办。');
-  } else if (risk === '中') {
-    tips.push('3）建议3个工作日内完成一次回访，持续跟踪矛盾变化。');
-  } else {
-    tips.push('3）建议保持每周一次回访，提前发现升级信号。');
+  currentCaseOptimizeData = data || {};
+  const caseNo = formatDetailValue(currentCaseOptimizeData.caseNo);
+  content.innerHTML = `
+    <div class="case-optimize-chat-msg bot">您好，感谢您使用本系统。请您用一句话描述本案办理中最希望优化的点，我们会持续改进。</div>
+    <div class="case-optimize-chat-meta">当前案件编号：${caseNo}</div>
+  `;
+  if (input) {
+    input.value = '';
   }
-  tips.push('4）建议将处理进展同步至系统时间轴，便于后续复盘与协同。');
-  content.innerHTML = `<ul class="case-optimize-list">${tips.map(t => `<li>${t}</li>`).join('')}</ul>`;
   modal.classList.remove('hidden');
+}
+
+function onCaseOptimizeInputKeydown(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    submitCaseOptimizeFeedback();
+  }
+}
+
+async function submitCaseOptimizeFeedback() {
+  const input = document.getElementById('caseOptimizeInput');
+  const content = document.getElementById('caseOptimizeContent');
+  if (!input || !content) {
+    return;
+  }
+  const text = String(input.value || '').trim();
+  if (!text) {
+    alert('请输入评价建议');
+    return;
+  }
+  const caseId = currentCaseOptimizeData && currentCaseOptimizeData.caseId;
+  if (!caseId) {
+    alert('案件信息缺失，无法提交建议');
+    return;
+  }
+  content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg user">${text}</div>`);
+  input.value = '';
+  try {
+    const res = await fetch(`${API_BASE}/cases/optimization-feedback`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({caseId, content: text})
+    });
+    const json = await res.json();
+    if (json && json.code === 0) {
+      content.insertAdjacentHTML('beforeend', '<div class="case-optimize-chat-msg bot">感谢您的评价建议，已提交成功。</div>');
+      return;
+    }
+    content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg bot">提交失败：${(json && json.message) || '请稍后重试'}</div>`);
+  } catch (error) {
+    content.insertAdjacentHTML('beforeend', '<div class="case-optimize-chat-msg bot">提交失败，请稍后重试。</div>');
+  }
 }
 
 function closeCaseOptimizeDialog() {
@@ -957,8 +1012,75 @@ function closeCaseOptimizeDialog() {
   if (modal) {
     modal.classList.add('hidden');
   }
+  currentCaseOptimizeData = null;
 }
 
+function toggleCaseAudioPlay(data) {
+  const btn = document.getElementById('playCaseAudioBtn');
+  if (!btn) {
+    return;
+  }
+  const audioUrl = data && data.audioFileUrl ? String(data.audioFileUrl) : '';
+  if (!audioUrl) {
+    alert('当前案件暂无音频文件');
+    return;
+  }
+  if (!caseAudioPlayer || caseAudioPlayer.src !== audioUrl) {
+    if (caseAudioPlayer) {
+      caseAudioPlayer.pause();
+    }
+    caseAudioPlayer = new Audio(audioUrl);
+    caseAudioPlayer.addEventListener('loadedmetadata', () => {
+      if (Number.isFinite(caseAudioPlayer.duration) && caseAudioPlayer.duration > 0) {
+        btn.textContent = `▶ 音频 ${formatAudioDuration(caseAudioPlayer.duration)}`;
+      }
+    });
+    caseAudioPlayer.addEventListener('ended', () => {
+      btn.textContent = `▶ 音频${formatAudioDurationSuffix(caseAudioPlayer)}`;
+    });
+  }
+
+  if (caseAudioPlayer.paused) {
+    caseAudioPlayer.play().then(() => {
+      btn.textContent = `⏸ 音频${formatAudioDurationSuffix(caseAudioPlayer)}`;
+    }).catch(() => {
+      alert('音频播放失败，请检查链接是否可访问');
+    });
+    return;
+  }
+  caseAudioPlayer.pause();
+  btn.textContent = `▶ 音频${formatAudioDurationSuffix(caseAudioPlayer)}`;
+}
+
+function formatAudioDuration(seconds) {
+  const sec = Math.max(0, Math.floor(Number(seconds) || 0));
+  const minute = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return `${String(minute).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+}
+
+function formatAudioDurationSuffix(player) {
+  if (!player || !Number.isFinite(player.duration) || player.duration <= 0) {
+    return '';
+  }
+  return ` ${formatAudioDuration(player.duration)}`;
+}
+
+async function loadOptimizationFeedbacks() {
+  const tbody = document.getElementById('feedbackTableBody');
+  if (!tbody) {
+    return;
+  }
+  const res = await fetch(`${API_BASE}/cases/optimization-feedbacks`);
+  const json = await res.json();
+  const rows = Array.isArray(json && json.data) ? json.data : [];
+  tbody.innerHTML = '';
+  rows.forEach((item) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${item.id || '-'}</td><td>${item.caseId || '-'}</td><td>${item.caseNo || '-'}</td><td>${item.suggestionContent || '-'}</td><td>${item.createdAt || '-'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
 
 // 展示工作流推荐等待弹框。
 function showWorkflowWaitingModal(titleText = '智能体推荐中', descText = '正在结合案件特征匹配推荐部门，请稍候...') {

@@ -824,3 +824,51 @@ table { width: 100%; border-collapse: collapse; }
   align-items: center;
   gap: 8px;
 }
+
+.case-material-action-btn-audio {
+  border-color: #cbd5e1;
+  color: #0f172a;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.case-optimize-content {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.case-optimize-chat-msg {
+  max-width: 90%;
+  border-radius: 12px;
+  padding: 8px 10px;
+  line-height: 1.6;
+}
+
+.case-optimize-chat-msg.bot {
+  align-self: flex-start;
+  background: #eef2ff;
+  color: #1e293b;
+}
+
+.case-optimize-chat-msg.user {
+  align-self: flex-end;
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.case-optimize-chat-meta {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.case-optimize-input-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.case-optimize-input-row input {
+  flex: 1;
+}

@@ -7,9 +7,11 @@ import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
+import com.example.dispute.entity.CaseOptimizationFeedback;
 import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
+import com.example.dispute.mapper.CaseOptimizationFeedbackMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
 import org.slf4j.Logger;
@@ -39,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 /**
  * 案件控制器。
@@ -58,6 +61,8 @@ public class CaseController {
     private final CaseClassifyRecordMapper caseClassifyRecordMapper;
     // 定义纠纷处置工作流Mapper对象。
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
+    // 定义优化建议Mapper对象。
+    private final CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -66,7 +71,8 @@ public class CaseController {
      */
     public CaseController(CaseRecordService caseRecordService, CaseRecordMapper caseRecordMapper,
                           CaseClassifyRecordMapper caseClassifyRecordMapper,
-                          CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper) {
+                          CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper,
+                          CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
         // 注入案件Mapper。
@@ -75,6 +81,8 @@ public class CaseController {
         this.caseClassifyRecordMapper = caseClassifyRecordMapper;
         // 注入工作流Mapper。
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
+        // 注入优化建议Mapper。
+        this.caseOptimizationFeedbackMapper = caseOptimizationFeedbackMapper;
     }
 
     /**
@@ -273,6 +281,8 @@ public class CaseController {
         result.put("caseText", record.getCaseText());
         result.put("registerTime", record.getRegisterTime());
         result.put("updatedAt", record.getUpdatedAt());
+        result.put("audioFileUrl", record.getAudioFileUrl());
+        result.put("audioDurationSec", record.getAudioDurationSec());
 
         if (workflowRecord != null) {
             result.put("mediationStatus", workflowRecord.getMediationStatus());
@@ -299,6 +309,45 @@ public class CaseController {
             result.put("classifyCreatedAt", classifyRecord.getCreatedAt());
         }
         return ApiResponse.success(result);
+    }
+
+    /**
+     * 提交客户优化建议。
+     */
+    @PostMapping("/optimization-feedback")
+    public ApiResponse<CaseOptimizationFeedback> submitOptimizationFeedback(@RequestBody Map<String, Object> request) {
+        Object caseIdObj = request.get("caseId");
+        String content = request.get("content") == null ? "" : String.valueOf(request.get("content")).trim();
+        if (caseIdObj == null) {
+            throw new IllegalArgumentException("caseId不能为空");
+        }
+        if (content.isEmpty()) {
+            throw new IllegalArgumentException("评价建议内容不能为空");
+        }
+
+        Long caseId = Long.valueOf(String.valueOf(caseIdObj));
+        CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
+        if (caseRecord == null) {
+            throw new IllegalArgumentException("未找到案件记录: " + caseId);
+        }
+
+        CaseOptimizationFeedback feedback = new CaseOptimizationFeedback();
+        feedback.setCaseId(caseId);
+        feedback.setCaseNo(caseRecord.getCaseNo());
+        feedback.setSuggestionContent(content);
+        feedback.setCreatedAt(LocalDateTime.now());
+        caseOptimizationFeedbackMapper.insert(feedback);
+        return ApiResponse.success(feedback);
+    }
+
+    /**
+     * 查询客户优化建议列表。
+     */
+    @GetMapping("/optimization-feedbacks")
+    public ApiResponse<List<CaseOptimizationFeedback>> listOptimizationFeedbacks() {
+        List<CaseOptimizationFeedback> feedbackList = caseOptimizationFeedbackMapper.selectList(new LambdaQueryWrapper<CaseOptimizationFeedback>()
+                .orderByDesc(CaseOptimizationFeedback::getCreatedAt));
+        return ApiResponse.success(feedbackList);
     }
 
 
