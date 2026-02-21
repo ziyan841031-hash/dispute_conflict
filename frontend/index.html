@@ -16,32 +16,77 @@
     <a href="smart-tools.html">智能工具</a>
     <a href="feedback-list.html">评价列表</a>
   </aside>
-  <main class="content">
-    <section class="card">
-      <h2>案件描述上传</h2>
-      <div class="upload">
-        <label>事件来源：</label>
-        <select id="eventSource">
-          <option value="线下接待">线下接待</option>
-          <option value="网上反映">网上反映</option>
-          <option value="主动排查">主动排查</option>
-          <option value="来电求助">来电求助</option>
-          <option value="部门流转">部门流转</option>
-        </select>
-      </div>
-      <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
-      <button onclick="submitText()">提交文字案件</button>
-      <div class="upload">
-        <label>上传Excel表格：</label>
-        <input type="file" id="excelFile" accept=".xlsx,.xls">
-        <button onclick="submitExcel()">提交Excel案件</button>
-      </div>
+  <main class="content ios-home-content">
+    <section class="card ios-home-hero">
+      <h2>智能解纷控台</h2>
+      <p>围绕案源受理、批量导入与智能工具，提供一站式 iOS 风格工作台。</p>
     </section>
 
-    <section class="card">
-      <h2>音频上传</h2>
-      <input type="file" id="audioFile" accept="audio/*">
-      <button onclick="submitAudio()">提交音频转写</button>
+    <section class="ios-home-grid">
+      <article class="card ios-module-card">
+        <div class="ios-module-header">
+          <h3>多模态案源受理</h3>
+          <span class="ios-module-tag">文本 + 音频</span>
+        </div>
+        <div class="upload">
+          <label>事件来源：</label>
+          <select id="eventSource">
+            <option value="线下接待">线下接待</option>
+            <option value="网上反映">网上反映</option>
+            <option value="主动排查">主动排查</option>
+            <option value="来电求助">来电求助</option>
+            <option value="部门流转">部门流转</option>
+          </select>
+        </div>
+        <div class="ios-input-group">
+          <label for="caseText">文本上传</label>
+          <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
+          <button type="button" onclick="submitText()">提交文本案件</button>
+        </div>
+        <div class="ios-input-group">
+          <label for="audioFile">音频上传</label>
+          <input type="file" id="audioFile" accept="audio/*">
+          <button type="button" onclick="submitAudio()">提交音频转写</button>
+        </div>
+      </article>
+
+      <article class="card ios-module-card">
+        <div class="ios-module-header">
+          <h3>批量案件导入</h3>
+          <span class="ios-module-tag">Excel</span>
+        </div>
+        <p class="ios-module-desc">适用于部门流转/历史积压案件快速导入，系统将自动完成解析与分类。</p>
+        <div class="ios-input-group">
+          <label for="excelFile">上传 Excel 表格</label>
+          <input type="file" id="excelFile" accept=".xlsx,.xls">
+          <button type="button" onclick="submitExcel()">提交批量导入</button>
+        </div>
+      </article>
+
+      <article class="card ios-module-card">
+        <div class="ios-module-header">
+          <h3>智能工具导航</h3>
+          <span class="ios-module-tag">快捷入口</span>
+        </div>
+        <div class="ios-tools-grid">
+          <a class="ios-tool-tile" href="http://218.78.134.191:17989" target="_blank" rel="noopener">
+            <span class="ios-tool-icon">🎙️</span>
+            <span>语音实时转录</span>
+          </a>
+          <a class="ios-tool-tile" href="smart-tools.html">
+            <span class="ios-tool-icon">⚖️</span>
+            <span>法律服务对话</span>
+          </a>
+          <a class="ios-tool-tile" href="smart-tools.html">
+            <span class="ios-tool-icon">🧠</span>
+            <span>智能工具中心</span>
+          </a>
+          <a class="ios-tool-tile" href="feedback-list.html">
+            <span class="ios-tool-icon">💬</span>
+            <span>评价反馈</span>
+          </a>
+        </div>
+      </article>
     </section>
 
   </main>
