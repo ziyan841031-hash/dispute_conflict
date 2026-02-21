@@ -283,7 +283,7 @@ async function loadCases() {
   (json.data.records || []).forEach(item => {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
-    const actionBtn = `<button onclick="openAssistant(${item.id})">智能助手</button>`;
+    const actionBtn = `<button onclick="openAssistant(${item.id})">案件管理</button>`;
     tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
@@ -1176,8 +1176,37 @@ function openFeedbackDetail(feedbackId) {
     data = {};
   }
   const difyResponse = data && data.difyResponse ? String(data.difyResponse) : '';
-  pre.textContent = difyResponse || '暂无接口响应报文';
+  pre.textContent = formatFeedbackDetailText(difyResponse);
   modal.classList.remove('hidden');
+}
+
+function formatFeedbackDetailText(rawText) {
+  const text = String(rawText || '').trim();
+  if (!text) {
+    return '暂无接口响应报文';
+  }
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') {
+      const summary = [];
+      const outputs = parsed.outputs && typeof parsed.outputs === 'object' ? parsed.outputs : null;
+      const dataOutputs = parsed.data && parsed.data.outputs && typeof parsed.data.outputs === 'object' ? parsed.data.outputs : null;
+      if (outputs) {
+        summary.push('[outputs]');
+        summary.push(JSON.stringify(outputs, null, 2));
+      }
+      if (dataOutputs) {
+        summary.push('[data.outputs]');
+        summary.push(JSON.stringify(dataOutputs, null, 2));
+      }
+      if (!summary.length) {
+        summary.push(JSON.stringify(parsed, null, 2));
+      }
+      return summary.join('\n\n');
+    }
+  } catch (error) {
+  }
+  return text;
 }
 
 function closeFeedbackDetailModal() {

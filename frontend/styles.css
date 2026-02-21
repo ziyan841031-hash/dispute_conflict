@@ -962,16 +962,16 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-home-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-areas:
-    "main main"
-    "left right";
+  grid-template-columns: 1.55fr 1fr;
   gap: 14px;
 }
 
-.ios-module-main { grid-area: main; }
-.ios-module-left { grid-area: left; }
-.ios-module-right { grid-area: right; }
+.ios-home-grid-two {
+  align-items: stretch;
+}
+
+.ios-module-main { min-height: 620px; }
+.ios-module-tools { min-height: 620px; display: flex; flex-direction: column; }
 
 .ios-module-card {
   border-radius: 18px;
@@ -1090,14 +1090,35 @@ table { width: 100%; border-collapse: collapse; }
 @media (max-width: 1180px) {
   .ios-home-grid {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "main"
-      "left"
-      "right";
   }
   .ios-input-dual { grid-template-columns: 1fr; }
+  .ios-module-main, .ios-module-tools { min-height: auto; }
 }
 
 .feedback-popup-layout { min-height: auto; }
 .feedback-popup-content { padding: 12px; width: 100%; }
 .feedback-popup-content .card { margin-bottom: 0; }
+
+.ios-submodule-wrap {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 12px;
+}
+
+.ios-submodule-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.ios-submodule-card h4 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.ios-tools-grid-single {
+  grid-template-columns: 1fr;
+  margin-top: 10px;
+}
