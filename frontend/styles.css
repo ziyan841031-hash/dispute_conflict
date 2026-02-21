@@ -1097,3 +1097,7 @@ table { width: 100%; border-collapse: collapse; }
   }
   .ios-input-dual { grid-template-columns: 1fr; }
 }
+
+.feedback-popup-layout { min-height: auto; }
+.feedback-popup-content { padding: 12px; width: 100%; }
+.feedback-popup-content .card { margin-bottom: 0; }

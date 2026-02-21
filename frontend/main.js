@@ -1711,7 +1711,7 @@ function closeHomeToolDialog() {
 }
 
 function openHomeFeedbackDialog() {
-  openHomeToolDialog('评价反馈', 'feedback-list.html');
+  openHomeToolDialog('评价反馈', 'feedback-list.html?popup=1');
 }
 
 async function openLawServiceDialog() {

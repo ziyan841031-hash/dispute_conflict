@@ -42,6 +42,28 @@
   </div>
 </div>
 
+
+<script>
+  function applyFeedbackPopupMode() {
+    const isPopup = window !== window.top || new URLSearchParams(window.location.search).get('popup') === '1';
+    if (!isPopup) {
+      return;
+    }
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.remove();
+    }
+    const layout = document.querySelector('.layout');
+    if (layout) {
+      layout.classList.add('feedback-popup-layout');
+    }
+    const content = document.querySelector('.content');
+    if (content) {
+      content.classList.add('feedback-popup-content');
+    }
+  }
+  applyFeedbackPopupMode();
+</script>
 <script src="main.js"></script>
 <script>loadOptimizationFeedbacks();</script>
 </body>
