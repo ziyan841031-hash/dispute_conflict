@@ -1671,11 +1671,47 @@ let lawAgentRequestType = 0;
 let lawAgentLastRawResponse = '0';
 
 function openRealtimeTranscription() {
-  window.open('http://218.78.134.191:17989', '_blank');
+  openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
 }
 
 function openAddToolTip() {
   alert('更多智能工具即将上线');
+}
+
+
+function openHomeToolDialog(title, url) {
+  const modal = document.getElementById('homeToolModal');
+  const frame = document.getElementById('homeToolFrame');
+  const titleEl = document.getElementById('homeToolTitle');
+  if (!modal || !frame || !titleEl) {
+    if (url) {
+      window.open(url, '_blank');
+    }
+    return;
+  }
+  titleEl.textContent = title || '工具窗口';
+  frame.src = url || 'about:blank';
+  modal.classList.remove('hidden');
+  modal.onclick = function (event) {
+    if (event.target === modal) {
+      closeHomeToolDialog();
+    }
+  };
+}
+
+function closeHomeToolDialog() {
+  const modal = document.getElementById('homeToolModal');
+  const frame = document.getElementById('homeToolFrame');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+  if (frame) {
+    frame.src = 'about:blank';
+  }
+}
+
+function openHomeFeedbackDialog() {
+  openHomeToolDialog('评价反馈', 'feedback-list.html');
 }
 
 async function openLawServiceDialog() {
