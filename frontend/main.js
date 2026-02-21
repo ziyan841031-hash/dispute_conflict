@@ -1188,21 +1188,58 @@ function formatFeedbackDetailText(rawText) {
   try {
     const parsed = JSON.parse(text);
     if (parsed && typeof parsed === 'object') {
-      const summary = [];
       const outputs = parsed.outputs && typeof parsed.outputs === 'object' ? parsed.outputs : null;
       const dataOutputs = parsed.data && parsed.data.outputs && typeof parsed.data.outputs === 'object' ? parsed.data.outputs : null;
-      if (outputs) {
-        summary.push('[outputs]');
-        summary.push(JSON.stringify(outputs, null, 2));
+      const textParts = [];
+
+      const pushIfText = (value) => {
+        if (value === null || value === undefined) {
+          return;
+        }
+        if (typeof value === 'string') {
+          const v = value.trim();
+          if (v) {
+            textParts.push(v);
+          }
+          return;
+        }
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          textParts.push(String(value));
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach(pushIfText);
+          return;
+        }
+        if (typeof value === 'object') {
+          Object.keys(value).forEach((key) => {
+            pushIfText(value[key]);
+          });
+        }
+      };
+
+      const collectPreferred = (obj) => {
+        if (!obj || typeof obj !== 'object') {
+          return;
+        }
+        pushIfText(obj.text);
+        pushIfText(obj.answer);
+        pushIfText(obj.result);
+        pushIfText(obj.result_json);
+        pushIfText(obj.summary);
+        pushIfText(obj.advice);
+      };
+
+      collectPreferred(outputs);
+      collectPreferred(dataOutputs);
+      if (!textParts.length) {
+        pushIfText(parsed);
       }
-      if (dataOutputs) {
-        summary.push('[data.outputs]');
-        summary.push(JSON.stringify(dataOutputs, null, 2));
+
+      const deduped = Array.from(new Set(textParts.map((item) => item.trim()).filter(Boolean)));
+      if (deduped.length) {
+        return deduped.join('\n\n');
       }
-      if (!summary.length) {
-        summary.push(JSON.stringify(parsed, null, 2));
-      }
-      return summary.join('\n\n');
     }
   } catch (error) {
   }
