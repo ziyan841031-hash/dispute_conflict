@@ -1115,9 +1115,48 @@ async function loadOptimizationFeedbacks() {
   tbody.innerHTML = '';
   rows.forEach((item) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${item.id || '-'}</td><td>${item.caseId || '-'}</td><td>${item.caseNo || '-'}</td><td>${item.suggestionContent || '-'}</td><td>${item.createdAt || '-'}</td>`;
+    const detailBtn = `<button type="button" onclick="openFeedbackDetail(${item.id || 0})">详情</button>`;
+    tr.innerHTML = `<td>${item.id || '-'}</td><td>${item.caseId || '-'}</td><td>${item.caseNo || '-'}</td><td>${item.suggestionContent || '-'}</td><td>${item.createdAt || '-'}</td><td>${detailBtn}</td>`;
+    tr.dataset.feedbackRow = JSON.stringify(item || {});
     tbody.appendChild(tr);
   });
+}
+
+function openFeedbackDetail(feedbackId) {
+  const modal = document.getElementById('feedbackDetailModal');
+  const pre = document.getElementById('feedbackDetailContent');
+  if (!modal || !pre) {
+    return;
+  }
+  const row = Array.from(document.querySelectorAll('#feedbackTableBody tr')).find((tr) => {
+    try {
+      const data = JSON.parse(tr.dataset.feedbackRow || '{}');
+      return String(data.id || '') === String(feedbackId || '');
+    } catch (error) {
+      return false;
+    }
+  });
+  if (!row) {
+    pre.textContent = '-';
+    modal.classList.remove('hidden');
+    return;
+  }
+  let data = {};
+  try {
+    data = JSON.parse(row.dataset.feedbackRow || '{}');
+  } catch (error) {
+    data = {};
+  }
+  const difyResponse = data && data.difyResponse ? String(data.difyResponse) : '';
+  pre.textContent = difyResponse || '暂无接口响应报文';
+  modal.classList.remove('hidden');
+}
+
+function closeFeedbackDetailModal() {
+  const modal = document.getElementById('feedbackDetailModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
 }
 
 // 展示工作流推荐等待弹框。
