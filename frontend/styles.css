@@ -882,3 +882,17 @@ table { width: 100%; border-collapse: collapse; }
 .case-optimize-input-row input {
   flex: 1;
 }
+
+.case-optimize-input-row textarea {
+  flex: 1;
+  min-height: 180px;
+  resize: vertical;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.case-optimize-input-row button {
+  align-self: flex-end;
+}

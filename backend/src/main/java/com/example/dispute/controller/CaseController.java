@@ -14,9 +14,11 @@ import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
 import com.example.dispute.mapper.CaseOptimizationFeedbackMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
+import com.example.dispute.client.DifyClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -63,6 +65,11 @@ public class CaseController {
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
     // 定义优化建议Mapper对象。
     private final CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper;
+    // 定义Dify客户端。
+    private final DifyClient difyClient;
+
+    @Value("${dify.correction-api-key:replace-with-correction-key}")
+    private String correctionApiKey;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -72,7 +79,8 @@ public class CaseController {
     public CaseController(CaseRecordService caseRecordService, CaseRecordMapper caseRecordMapper,
                           CaseClassifyRecordMapper caseClassifyRecordMapper,
                           CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper,
-                          CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper) {
+                          CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper,
+                          DifyClient difyClient) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
         // 注入案件Mapper。
@@ -83,6 +91,8 @@ public class CaseController {
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
         // 注入优化建议Mapper。
         this.caseOptimizationFeedbackMapper = caseOptimizationFeedbackMapper;
+        // 注入Dify客户端。
+        this.difyClient = difyClient;
     }
 
     /**
@@ -317,11 +327,15 @@ public class CaseController {
     @PostMapping("/optimization-feedback")
     public ApiResponse<CaseOptimizationFeedback> submitOptimizationFeedback(@RequestBody Map<String, Object> request) {
         Object caseIdObj = request.get("caseId");
-        String content = request.get("content") == null ? "" : String.valueOf(request.get("content")).trim();
+        String caseText = request.get("caseText") == null ? "" : String.valueOf(request.get("caseText")).trim();
+        String correctionHint = request.get("correctionHint") == null ? "" : String.valueOf(request.get("correctionHint")).trim();
         if (caseIdObj == null) {
             throw new IllegalArgumentException("caseId不能为空");
         }
-        if (content.isEmpty()) {
+        if (caseText.isEmpty()) {
+            throw new IllegalArgumentException("案件原文不能为空");
+        }
+        if (correctionHint.isEmpty()) {
             throw new IllegalArgumentException("评价建议内容不能为空");
         }
 
@@ -331,10 +345,18 @@ public class CaseController {
             throw new IllegalArgumentException("未找到案件记录: " + caseId);
         }
 
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("case_text", caseText);
+        inputs.put("correction_hint", correctionHint);
+        Object difyResult = difyClient.runWorkflowWithInputs(inputs, correctionApiKey, "纠错建议");
+
         CaseOptimizationFeedback feedback = new CaseOptimizationFeedback();
         feedback.setCaseId(caseId);
         feedback.setCaseNo(caseRecord.getCaseNo());
-        feedback.setSuggestionContent(content);
+        feedback.setCaseText(caseText);
+        feedback.setSuggestionContent(correctionHint);
+        feedback.setDifyResponse(toJsonSafe(difyResult));
+        feedback.setParsedResponse(extractParsedResponse(difyResult));
         feedback.setCreatedAt(LocalDateTime.now());
         caseOptimizationFeedbackMapper.insert(feedback);
         return ApiResponse.success(feedback);
@@ -349,6 +371,53 @@ public class CaseController {
                 .orderByDesc(CaseOptimizationFeedback::getCreatedAt));
         return ApiResponse.success(feedbackList);
     }
+
+
+    private String extractParsedResponse(Object difyResult) {
+        if (!(difyResult instanceof Map)) {
+            return "";
+        }
+        Map<?, ?> root = (Map<?, ?>) difyResult;
+        Object outputs = root.get("outputs");
+        if (outputs instanceof Map) {
+            Object text = ((Map<?, ?>) outputs).get("text");
+            if (text == null) {
+                text = ((Map<?, ?>) outputs).get("result");
+            }
+            if (text == null) {
+                text = ((Map<?, ?>) outputs).get("answer");
+            }
+            if (text != null) {
+                return String.valueOf(text);
+            }
+        }
+        Object data = root.get("data");
+        if (data instanceof Map) {
+            Object dataOutputs = ((Map<?, ?>) data).get("outputs");
+            if (dataOutputs instanceof Map) {
+                Object text = ((Map<?, ?>) dataOutputs).get("text");
+                if (text == null) {
+                    text = ((Map<?, ?>) dataOutputs).get("result");
+                }
+                if (text == null) {
+                    text = ((Map<?, ?>) dataOutputs).get("answer");
+                }
+                if (text != null) {
+                    return String.valueOf(text);
+                }
+            }
+        }
+        return "";
+    }
+
+    private String toJsonSafe(Object value) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(value);
+        } catch (Exception ex) {
+            return String.valueOf(value);
+        }
+    }
+
 
 
     private String buildJudgementBasisText(String judgementBasis) {

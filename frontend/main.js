@@ -969,7 +969,7 @@ function openCaseOptimizeDialog(data) {
 }
 
 function onCaseOptimizeInputKeydown(event) {
-  if (event.key === 'Enter') {
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     submitCaseOptimizeFeedback();
   }
@@ -981,8 +981,8 @@ async function submitCaseOptimizeFeedback() {
   if (!input || !content) {
     return;
   }
-  const text = String(input.value || '').trim();
-  if (!text) {
+  const correctionHint = String(input.value || '').trim();
+  if (!correctionHint) {
     alert('请输入评价建议');
     return;
   }
@@ -991,13 +991,13 @@ async function submitCaseOptimizeFeedback() {
     alert('案件信息缺失，无法提交建议');
     return;
   }
-  content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg user">${text}</div>`);
+  content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg user">${correctionHint}</div>`);
   input.value = '';
   try {
     const res = await fetch(`${API_BASE}/cases/optimization-feedback`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({caseId, content: text})
+      body: JSON.stringify({caseId, caseText: String((currentCaseOptimizeData && currentCaseOptimizeData.caseText) || ''), correctionHint})
     });
     const json = await res.json();
     if (json && json.code === 0) {

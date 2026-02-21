@@ -24,6 +24,15 @@ public class CaseOptimizationFeedback {
     @TableField("suggestion_content")
     private String suggestionContent;
 
+    @TableField("case_text")
+    private String caseText;
+
+    @TableField("dify_response")
+    private String difyResponse;
+
+    @TableField("parsed_response")
+    private String parsedResponse;
+
     @TableField("created_at")
     private LocalDateTime createdAt;
 }
