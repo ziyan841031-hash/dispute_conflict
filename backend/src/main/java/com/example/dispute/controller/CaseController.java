@@ -355,7 +355,7 @@ public class CaseController {
         feedback.setCaseNo(caseRecord.getCaseNo());
         feedback.setCaseText(caseText);
         feedback.setSuggestionContent(correctionHint);
-        feedback.setDifyResponse(toJsonSafe(difyResult));
+        feedback.setDifyResponse(extractParsedResponse(difyResult));
         feedback.setParsedResponse(extractParsedResponse(difyResult));
         feedback.setCreatedAt(LocalDateTime.now());
         caseOptimizationFeedbackMapper.insert(feedback);
@@ -382,7 +382,7 @@ public class CaseController {
         if (outputs instanceof Map) {
             Object text = ((Map<?, ?>) outputs).get("text");
             if (text == null) {
-                text = ((Map<?, ?>) outputs).get("result");
+                text = ((Map<?, ?>) outputs).get("result_json");
             }
             if (text == null) {
                 text = ((Map<?, ?>) outputs).get("answer");
@@ -397,7 +397,7 @@ public class CaseController {
             if (dataOutputs instanceof Map) {
                 Object text = ((Map<?, ?>) dataOutputs).get("text");
                 if (text == null) {
-                    text = ((Map<?, ?>) dataOutputs).get("result");
+                    text = ((Map<?, ?>) dataOutputs).get("result_json");
                 }
                 if (text == null) {
                     text = ((Map<?, ?>) dataOutputs).get("answer");
@@ -409,15 +409,6 @@ public class CaseController {
         }
         return "";
     }
-
-    private String toJsonSafe(Object value) {
-        try {
-            return OBJECT_MAPPER.writeValueAsString(value);
-        } catch (Exception ex) {
-            return String.valueOf(value);
-        }
-    }
-
 
 
     private String buildJudgementBasisText(String judgementBasis) {
