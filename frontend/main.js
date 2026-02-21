@@ -1116,7 +1116,7 @@ async function loadOptimizationFeedbacks() {
   rows.forEach((item) => {
     const tr = document.createElement('tr');
     const detailBtn = `<button type="button" onclick="openFeedbackDetail(${item.id || 0})">详情</button>`;
-    tr.innerHTML = `<td>${item.id || '-'}</td><td>${item.caseId || '-'}</td><td>${item.caseNo || '-'}</td><td>${item.suggestionContent || '-'}</td><td>${item.createdAt || '-'}</td><td>${detailBtn}</td>`;
+    tr.innerHTML = `<td>${item.id || '-'}</td><td>${item.caseId || '-'}</td><td>${item.caseNo || '-'}</td><td>${item.suggestionContent || '-'}</td><td>${item.createdAt || '-'}</td><td class="action-col">${detailBtn}</td>`;
     tr.dataset.feedbackRow = JSON.stringify(item || {});
     tbody.appendChild(tr);
   });
