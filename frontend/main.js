@@ -948,6 +948,7 @@ function closeCaseMaterial() {
 let currentCaseOptimizeData = null;
 let caseAudioPlayer = null;
 let caseAudioCountdownTimer = null;
+let caseOptimizeSubmitting = false;
 
 function openCaseOptimizeDialog(data) {
   const modal = document.getElementById('caseOptimizeModal');
@@ -978,7 +979,8 @@ function onCaseOptimizeInputKeydown(event) {
 async function submitCaseOptimizeFeedback() {
   const input = document.getElementById('caseOptimizeInput');
   const content = document.getElementById('caseOptimizeContent');
-  if (!input || !content) {
+  const submitBtn = document.getElementById('caseOptimizeSubmitBtn');
+  if (!input || !content || caseOptimizeSubmitting) {
     return;
   }
   const correctionHint = String(input.value || '').trim();
@@ -991,7 +993,16 @@ async function submitCaseOptimizeFeedback() {
     alert('案件信息缺失，无法提交建议');
     return;
   }
+  caseOptimizeSubmitting = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+  input.disabled = true;
+
   content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg user">${correctionHint}</div>`);
+  const waitingId = `optimize-waiting-${Date.now()}`;
+  content.insertAdjacentHTML('beforeend', `<div id="${waitingId}" class="case-optimize-chat-msg bot case-optimize-waiting">智能体分析中<span class="dotting">...</span></div>`);
+  content.scrollTop = content.scrollHeight;
   input.value = '';
   try {
     const res = await fetch(`${API_BASE}/cases/optimization-feedback`, {
@@ -1000,13 +1011,28 @@ async function submitCaseOptimizeFeedback() {
       body: JSON.stringify({caseId, caseText: String((currentCaseOptimizeData && currentCaseOptimizeData.caseText) || ''), correctionHint})
     });
     const json = await res.json();
+    const waitingEl = document.getElementById(waitingId);
+    if (waitingEl) {
+      waitingEl.remove();
+    }
     if (json && json.code === 0) {
       content.insertAdjacentHTML('beforeend', '<div class="case-optimize-chat-msg bot">感谢您的评价建议，已提交成功。</div>');
       return;
     }
     content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg bot">提交失败：${(json && json.message) || '请稍后重试'}</div>`);
   } catch (error) {
+    const waitingEl = document.getElementById(waitingId);
+    if (waitingEl) {
+      waitingEl.remove();
+    }
     content.insertAdjacentHTML('beforeend', '<div class="case-optimize-chat-msg bot">提交失败，请稍后重试。</div>');
+  } finally {
+    caseOptimizeSubmitting = false;
+    input.disabled = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
+    content.scrollTop = content.scrollHeight;
   }
 }
 
@@ -1016,7 +1042,9 @@ function closeCaseOptimizeDialog() {
     modal.classList.add('hidden');
   }
   currentCaseOptimizeData = null;
+  caseOptimizeSubmitting = false;
 }
+
 
 function toggleCaseAudioPlay(data) {
   const btn = document.getElementById('playCaseAudioBtn');

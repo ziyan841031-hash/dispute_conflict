@@ -913,3 +913,26 @@ table { width: 100%; border-collapse: collapse; }
   word-break: break-all;
   font-size: 13px;
 }
+
+.case-optimize-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.case-optimize-input-row button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dotting {
+  display: inline-block;
+  width: 18px;
+  overflow: hidden;
+  animation: dottingFrames 1.2s steps(4, end) infinite;
+}
+
+@keyframes dottingFrames {
+  from { width: 0; }
+  to { width: 18px; }
+}
