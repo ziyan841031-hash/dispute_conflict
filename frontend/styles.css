@@ -1001,8 +1001,8 @@ table { width: 100%; border-collapse: collapse; }
   align-items: stretch;
 }
 
-.ios-module-main { min-height: 620px; }
-.ios-module-tools { min-height: 420px; display: flex; flex-direction: column; }
+.ios-module-main { min-height: auto; }
+.ios-module-tools { min-height: auto; display: flex; flex-direction: column; }
 
 .ios-module-card {
   border-radius: 18px;
@@ -1064,10 +1064,9 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-tools-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(130px, 160px));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 6px;
-  justify-content: space-between;
 }
 
 .ios-tool-tile {
@@ -1084,7 +1083,6 @@ table { width: 100%; border-collapse: collapse; }
   font-size: 13px;
   font-weight: 600;
   width: 100%;
-  max-width: 160px;
   cursor: pointer;
 }
 
@@ -1134,9 +1132,9 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-submodule-wrap {
   display: grid;
-  grid-template-columns: 1.35fr 1fr;
+  grid-template-columns: 1.2fr 1fr;
   gap: 12px;
-  align-items: stretch;
+  align-items: start;
 }
 
 
@@ -1149,11 +1147,6 @@ table { width: 100%; border-collapse: collapse; }
 @media (max-width: 760px) {
   .ios-tools-grid {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
-    justify-content: stretch;
-  }
-
-  .ios-tool-tile {
-    max-width: none;
   }
 }
 
