@@ -1064,8 +1064,8 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-tools-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
   margin-top: 6px;
 }
 
@@ -1075,10 +1075,12 @@ table { width: 100%; border-collapse: collapse; }
   border: 1px solid #dbeafe;
   border-radius: 14px;
   background: #f8fbff;
-  padding: 14px 10px;
+  padding: 10px;
+  aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -1132,9 +1134,9 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-submodule-wrap {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
 }
 
 
@@ -1148,6 +1150,31 @@ table { width: 100%; border-collapse: collapse; }
   .ios-tools-grid {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
   }
+}
+
+.ios-submodule-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ios-submodule-single .ios-input-dual {
+  flex: 1;
+  align-items: end;
+}
+
+.ios-submodule-single .ios-input-group,
+.ios-submodule-batch .ios-input-group {
+  flex: 1;
+}
+
+.ios-submodule-single .ios-input-group button,
+.ios-submodule-batch .ios-input-group button {
+  margin-top: auto;
+}
+
+.ios-tool-tile-more .ios-tool-icon {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
 }
 
 .ios-submodule-card {

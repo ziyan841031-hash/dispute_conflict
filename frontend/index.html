@@ -27,7 +27,7 @@
           <span class="ios-module-tag">单案件 + 批量</span>
         </div>
         <div class="ios-submodule-wrap">
-          <section class="ios-submodule-card">
+          <section class="ios-submodule-card ios-submodule-single">
             <h4>单案件导入（文本 + 音频）</h4>
             <div class="upload">
               <label>事件来源：</label>
@@ -53,7 +53,7 @@
             </div>
           </section>
 
-          <section class="ios-submodule-card">
+          <section class="ios-submodule-card ios-submodule-batch">
             <h4>批量导入（Excel）</h4>
             <p class="ios-module-desc">支持一键导入批量案件并自动完成解析、分类与受理进度更新。</p>
             <div class="ios-input-group">
@@ -81,6 +81,10 @@
           <button type="button" class="ios-tool-tile" onclick="openHomeFeedbackDialog()">
             <span class="ios-tool-icon">💬</span>
             <span>评价反馈</span>
+          </button>
+          <button type="button" class="ios-tool-tile ios-tool-tile-more" onclick="openAddToolTip()">
+            <span class="ios-tool-icon">➕</span>
+            <span>更多工具</span>
           </button>
         </div>
       </article>
