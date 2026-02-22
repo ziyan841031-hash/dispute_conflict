@@ -10,47 +10,125 @@
 <div class="layout">
   <aside class="sidebar">
     <h1>矛盾纠纷系统管理</h1>
-    <a class="active" href="index.html">控台首页</a>
+    <a class="active" href="index.html">智能工具</a>
     <a href="cases.html">案件管理</a>
     <a href="stats.html">案件统计</a>
   </aside>
-  <main class="content">
-    <section class="card">
-      <h2>案件描述上传</h2>
-      <div class="upload">
-        <label>事件来源：</label>
-        <select id="eventSource">
-          <option value="来电求助">来电求助</option>
-          <option value="物业纠纷">物业纠纷</option>
-          <option value="其他线下接待">其他线下接待</option>
-        </select>
-      </div>
-      <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
-      <button onclick="submitText()">提交文字案件</button>
-      <div class="upload">
-        <label>上传Excel表格：</label>
-        <input type="file" id="excelFile" accept=".xlsx,.xls">
-        <button onclick="submitExcel()">提交Excel案件</button>
-      </div>
+  <main class="content ios-home-content">
+    <section class="card ios-home-hero">
+      <h2>智能工具</h2>
+      
     </section>
 
-    <section class="card">
-      <h2>音频上传</h2>
-      <input type="file" id="audioFile" accept="audio/*">
-      <button onclick="submitAudio()">提交音频转写</button>
+    <section class="ios-home-grid ios-home-grid-two">
+      <article class="card ios-module-card ios-module-main">
+        <div class="ios-module-header">
+          <h3>多模态案源导入</h3>
+          <span class="ios-module-tag">单案件 + 批量</span>
+        </div>
+        <div class="ios-submodule-wrap">
+          <section class="ios-submodule-card">
+            <h4>单案件导入（文本 + 音频）</h4>
+            <div class="upload">
+              <label>事件来源：</label>
+              <select id="eventSource">
+                <option value="线下接待">线下接待</option>
+                <option value="网上反映">网上反映</option>
+                <option value="主动排查">主动排查</option>
+                <option value="来电求助">来电求助</option>
+                <option value="部门流转">部门流转</option>
+              </select>
+            </div>
+            <div class="ios-input-dual">
+              <div class="ios-input-group">
+                <label for="caseText">文本上传</label>
+                <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
+                <button type="button" onclick="submitText()">提交文本案件</button>
+              </div>
+              <div class="ios-input-group">
+                <label for="audioFile">音频上传</label>
+                <input type="file" id="audioFile" accept="audio/*">
+                <button type="button" onclick="submitAudio()">提交音频转写</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="ios-submodule-card">
+            <h4>批量导入（Excel）</h4>
+            <p class="ios-module-desc">支持一键导入批量案件并自动完成解析、分类与受理进度更新。</p>
+            <div class="ios-input-group">
+              <label for="excelFile">上传 Excel 表格</label>
+              <input type="file" id="excelFile" accept=".xlsx,.xls">
+              <button type="button" onclick="submitExcel()">提交批量导入</button>
+            </div>
+          </section>
+        </div>
+      </article>
+
+      <article class="card ios-module-card ios-module-tools">
+        <div class="ios-module-header">
+          <h3>智能工具</h3>
+        </div>
+        <div class="ios-tools-grid ios-tools-grid-single">
+          <button type="button" class="ios-tool-tile" onclick="openRealtimeTranscription()">
+            <span class="ios-tool-icon">🎙️</span>
+            <span>语音实时转录</span>
+          </button>
+          <button type="button" class="ios-tool-tile" onclick="openLawServiceDialog()">
+            <span class="ios-tool-icon">⚖️</span>
+            <span>法律服务对话</span>
+          </button>
+          <button type="button" class="ios-tool-tile" onclick="openHomeFeedbackDialog()">
+            <span class="ios-tool-icon">💬</span>
+            <span>评价反馈</span>
+          </button>
+        </div>
+      </article>
     </section>
 
   </main>
 </div>
 
+
+<div id="homeToolModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="homeToolTitle">
+  <div class="modal-content home-tool-modal-content">
+    <div class="case-material-header">
+      <h3 id="homeToolTitle">工具窗口</h3>
+      <button type="button" onclick="closeHomeToolDialog()">关闭</button>
+    </div>
+    <iframe id="homeToolFrame" class="home-tool-frame" title="工具窗口"></iframe>
+  </div>
+</div>
+
+<div id="lawAgentModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lawAgentTitle">
+  <div class="modal-content law-agent-modal-content">
+    <div class="case-material-header">
+      <h3 id="lawAgentTitle">法律服务对话智能体</h3>
+      <button type="button" onclick="closeLawServiceDialog()">关闭</button>
+    </div>
+    <div class="law-agent-role-tabs">
+      <button id="lawRoleCitizen" type="button" class="law-agent-role-btn active" onclick="selectLawAgentRole('普通市民')">普通市民</button>
+      <button id="lawRoleWorker" type="button" class="law-agent-role-btn" onclick="selectLawAgentRole('解纷工作人员')">解纷工作人员</button>
+    </div>
+    <div id="lawAgentChatList" class="law-agent-chat-list"></div>
+    <div class="law-agent-input-row">
+      <input id="lawAgentInput" type="text" placeholder="请输入您的法律问题..." onkeydown="onLawAgentInputKeydown(event)">
+      <button type="button" onclick="sendLawAgentMessage()">发送</button>
+    </div>
+  </div>
+</div>
+
 <div id="parseModal" class="modal hidden">
   <div class="modal-content workflow-waiting-content parse-modal-content">
     <div class="workflow-waiting-spinner" aria-hidden="true"></div>
+    <h3 id="parseModalTitle">案件处理中</h3>
+    <p id="parseModalTip">请稍候...</p>
     <ul class="parse-list">
       <li id="step-audio" class="parse-step"><span id="icon-audio" class="status-icon">○</span><span class="parse-step-text">语音识别中</span></li>
       <li class="parse-step"><span id="icon-text" class="status-icon">○</span><span class="parse-step-text">智能体要素提取中</span></li>
       <li class="parse-step"><span id="icon-classify" class="status-icon">○</span><span class="parse-step-text">智能分类中</span></li>
     </ul>
+    <p id="excelProgressText" class="hidden"></p>
   </div>
 </div>
 

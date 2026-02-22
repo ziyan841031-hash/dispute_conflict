@@ -29,6 +29,8 @@ dify:
   disposal-api-key: replace-with-disposal-key
   mediator-suggestion-api-key: replace-with-mediator-suggestion-key
   case-stats-api-key: replace-with-case-stats-key
+  summary-api-key: replace-with-summary-key
+  correction-api-key: replace-with-correction-key
 
 oss:
   endpoint: https://oss-cn-hangzhou.aliyuncs.com
@@ -56,3 +58,9 @@ logging:
       max-file-size: 20MB
       max-history: 30
       total-size-cap: 2GB
+
+
+xiaobaogong:
+  app-id: replace-with-xbg-app-id
+  secret: replace-with-xbg-secret
+  base-url: https://api.xiaobaogong.com

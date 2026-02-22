@@ -8,6 +8,9 @@ const parseStatus = {
   classify: false
 };
 
+let casesPageNo = 1;
+const CASES_PAGE_SIZE = 20;
+
 // 提交文字案件。
 async function submitText() {
   // 打开解析弹窗。
@@ -63,11 +66,57 @@ function finishParseAndGoCases() {
 // 提交Excel案件。
 async function submitExcel() {
   const file = document.getElementById('excelFile').files[0];
-  // 组装文件上传表单。
-  const form = new FormData();
-  form.append('file', file);
-  const res = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
-  await res.json();
+  if (!file) {
+    alert('请先选择Excel文件');
+    return;
+  }
+
+  openParseModal('excel');
+  setParseModalMessage('Excel案件批量受理', '表格解析中...');
+  updateExcelProgress(0, 0);
+  setLoading('text');
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const excelRes = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
+    const excelJson = await excelRes.json();
+    const caseTextList = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
+
+    markDone('text');
+    setParseModalMessage('Excel案件批量受理', '案件受理中...');
+    const total = caseTextList.length;
+    updateExcelProgress(total, 0);
+
+    let finished = 0;
+    for (const caseText of caseTextList) {
+      setLoading('classify');
+      const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({caseText: String(caseText || ''), eventSource: '部门流转'})
+      });
+      const textJson = await textRes.json();
+      const caseId = textJson && textJson.data ? textJson.data.id : null;
+
+      const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({caseId, caseText: String(caseText || '')})
+      });
+      await classifyRes.json();
+
+      finished += 1;
+      updateExcelProgress(total, finished);
+    }
+
+    markDone('classify');
+    finishParseAndGoCases();
+  } catch (error) {
+    console.error(error);
+    alert('Excel案件处理失败，请稍后重试');
+    closeParseModal();
+  }
 }
 
 // 提交音频案件。
@@ -85,13 +134,16 @@ async function submitAudio() {
   form.append('file', file);
   const audioRes = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
   const audioJson = await audioRes.json();
-  const recognizedText = audioJson && audioJson.data ? audioJson.data : '';
+  const audioData = audioJson && audioJson.data ? audioJson.data : {};
+  const recognizedText = (audioData && audioData.text) ? audioData.text : '';
+  const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
   markDone('audio');
 
   setLoading('text');
   const textPayload = {
     caseText: recognizedText,
-    eventSource: '来电求助'
+    eventSource: '来电求助',
+    audioFileUrl
   };
   const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
     method: 'POST',
@@ -123,6 +175,22 @@ function openParseModal(mode) {
   if (audioStep) {
     audioStep.classList.toggle('hidden', mode !== 'audio');
   }
+  const textStepText = document.querySelector('#icon-text + .parse-step-text');
+  const classifyStepText = document.querySelector('#icon-classify + .parse-step-text');
+  if (textStepText) {
+    textStepText.textContent = mode === 'excel' ? '表格解析中' : '智能体要素提取中';
+  }
+  if (classifyStepText) {
+    classifyStepText.textContent = mode === 'excel' ? '案件受理中' : '智能分类中';
+  }
+  setParseModalMessage('案件处理中', '请稍候...');
+  const progressEl = document.getElementById('excelProgressText');
+  if (progressEl) {
+    progressEl.classList.toggle('hidden', mode !== 'excel');
+    if (mode !== 'excel') {
+      progressEl.textContent = '';
+    }
+  }
   refreshAllIcons();
   document.getElementById('parseModal').classList.remove('hidden');
 }
@@ -132,9 +200,33 @@ function closeParseModal() {
   document.getElementById('parseModal').classList.add('hidden');
 }
 
+
+function setParseModalMessage(title, tip) {
+  const titleEl = document.getElementById('parseModalTitle');
+  const tipEl = document.getElementById('parseModalTip');
+  if (titleEl) {
+    titleEl.textContent = title;
+  }
+  if (tipEl) {
+    tipEl.textContent = tip;
+  }
+}
+
+function updateExcelProgress(total, done) {
+  const progressEl = document.getElementById('excelProgressText');
+  if (!progressEl) {
+    return;
+  }
+  progressEl.classList.remove('hidden');
+  progressEl.textContent = `文件待受理：${total}，文件已受理：${done}`;
+}
+
 // 设置处理中图标。
 function setLoading(type) {
   const icon = document.getElementById(`icon-${type}`);
+  if (!icon) {
+    return;
+  }
   icon.textContent = '◔';
   icon.classList.add('loading');
   icon.classList.remove('done');
@@ -144,6 +236,9 @@ function setLoading(type) {
 function markDone(type) {
   parseStatus[type] = true;
   const icon = document.getElementById(`icon-${type}`);
+  if (!icon) {
+    return;
+  }
   icon.textContent = '✔';
   icon.classList.add('done');
   icon.classList.remove('loading');
@@ -159,6 +254,9 @@ function refreshAllIcons() {
 // 刷新单个图标。
 function refreshOneIcon(type) {
   const icon = document.getElementById(`icon-${type}`);
+  if (!icon) {
+    return;
+  }
   if (parseStatus[type]) {
     icon.textContent = '✔';
     icon.classList.add('done');
@@ -176,7 +274,7 @@ async function loadCases() {
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: 1, pageSize: 20});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
   const res = await fetch(`${API_BASE}/cases?${params}`);
   const json = await res.json();
   const tbody = document.getElementById('caseTableBody');
@@ -185,10 +283,35 @@ async function loadCases() {
   (json.data.records || []).forEach(item => {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
-    const actionBtn = `<button onclick="openAssistant(${item.id})">智能助手</button>`;
+    const actionBtn = `<button onclick="openAssistant(${item.id})">案件管理</button>`;
     tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
+}
+
+async function exportCasesCurrentPage() {
+  const keyword = document.getElementById('keyword').value;
+  const disputeType = document.getElementById('disputeType').value;
+  const eventSource = document.getElementById('eventSource').value;
+  const riskLevel = document.getElementById('riskLevel').value;
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
+  try {
+    const res = await fetch(`${API_BASE}/cases/export?${params.toString()}`);
+    if (!res.ok) {
+      throw new Error('导出失败');
+    }
+    const blob = await res.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = `cases-export-page-${casesPageNo}.xlsx`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    alert('导出失败，请稍后重试');
+  }
 }
 
 
@@ -285,19 +408,30 @@ async function importStatsExcel() {
     alert('请先选择Excel文件');
     return;
   }
+  const generatingModal = document.getElementById('statsGeneratingModal');
+  if (generatingModal) {
+    generatingModal.classList.remove('hidden');
+  }
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
-  const json = await res.json();
-  if (json && json.code === 0) {
-    alert('导入成功');
-    if (fileInput) {
-      fileInput.value = '';
+  try {
+    const res = await fetch(`${API_BASE}/case-stats/import-excel`, {method: 'POST', body: form});
+    const json = await res.json();
+    if (json && json.code === 0) {
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      await loadStatsBatches();
+      return;
     }
-    await loadStatsBatches();
-    return;
+    alert((json && json.message) || '导入失败');
+  } catch (error) {
+    alert('导入失败');
+  } finally {
+    if (generatingModal) {
+      generatingModal.classList.add('hidden');
+    }
   }
-  alert((json && json.message) || '导入失败');
 }
 
 // 打开统计明细弹窗。
@@ -361,6 +495,7 @@ let workflowAdviceRecord = null;
 let workflowAdviceLoading = false;
 let assistantInitialWorkflowDone = false;
 let assistantCanvasReady = false;
+let timelineTickTimer = null;
 const THIRD_LEVEL_NODE_MAP = {
   people: '人民调解',
   admin: '行政调解',
@@ -702,6 +837,8 @@ function showCaseMaterial(data) {
   const modal = document.getElementById('caseMaterialModal');
   const contentBox = document.getElementById('caseMaterialContent');
   const closeBtn = document.getElementById('closeCaseMaterialBtn');
+  const optimizeBtn = document.getElementById('openCaseOptimizeBtn');
+  const audioBtn = document.getElementById('playCaseAudioBtn');
   if (!modal || !contentBox) {
     return;
   }
@@ -772,6 +909,17 @@ function showCaseMaterial(data) {
   if (closeBtn) {
     closeBtn.onclick = closeCaseMaterial;
   }
+  if (optimizeBtn) {
+    optimizeBtn.onclick = function () {
+      openCaseOptimizeDialog(safeData);
+    };
+  }
+  if (audioBtn) {
+    audioBtn.textContent = '▶ 音频';
+    audioBtn.onclick = function () {
+      toggleCaseAudioPlay(safeData);
+    };
+  }
   modal.onclick = function (event) {
     if (event.target === modal) {
       closeCaseMaterial();
@@ -785,8 +933,325 @@ function closeCaseMaterial() {
   if (modal) {
     modal.classList.add('hidden');
   }
+  if (caseAudioPlayer) {
+    caseAudioPlayer.pause();
+  }
+  stopCaseAudioCountdown();
+  const audioBtn = document.getElementById('playCaseAudioBtn');
+  if (audioBtn) {
+    audioBtn.textContent = '▶ 音频';
+    audioBtn.classList.remove('audio-counting');
+  }
 }
 
+
+let currentCaseOptimizeData = null;
+let caseAudioPlayer = null;
+let caseAudioCountdownTimer = null;
+let caseOptimizeSubmitting = false;
+
+function openCaseOptimizeDialog(data) {
+  const modal = document.getElementById('caseOptimizeModal');
+  const content = document.getElementById('caseOptimizeContent');
+  const input = document.getElementById('caseOptimizeInput');
+  if (!modal || !content) {
+    return;
+  }
+  currentCaseOptimizeData = data || {};
+  const caseNo = formatDetailValue(currentCaseOptimizeData.caseNo);
+  content.innerHTML = `
+    <div class="case-optimize-chat-msg bot">您好，感谢您使用本系统。请您用一句话描述本案办理中最希望优化的点，我们会持续改进。</div>
+    <div class="case-optimize-chat-meta">当前案件编号：${caseNo}</div>
+  `;
+  if (input) {
+    input.value = '';
+  }
+  modal.classList.remove('hidden');
+}
+
+function onCaseOptimizeInputKeydown(event) {
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    submitCaseOptimizeFeedback();
+  }
+}
+
+async function submitCaseOptimizeFeedback() {
+  const input = document.getElementById('caseOptimizeInput');
+  const content = document.getElementById('caseOptimizeContent');
+  const submitBtn = document.getElementById('caseOptimizeSubmitBtn');
+  if (!input || !content || caseOptimizeSubmitting) {
+    return;
+  }
+  const correctionHint = String(input.value || '').trim();
+  if (!correctionHint) {
+    alert('请输入评价建议');
+    return;
+  }
+  const caseId = currentCaseOptimizeData && currentCaseOptimizeData.caseId;
+  if (!caseId) {
+    alert('案件信息缺失，无法提交建议');
+    return;
+  }
+  caseOptimizeSubmitting = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+  input.disabled = true;
+
+  content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg user">${correctionHint}</div>`);
+  const waitingId = `optimize-waiting-${Date.now()}`;
+  content.insertAdjacentHTML('beforeend', `<div id="${waitingId}" class="case-optimize-chat-msg bot case-optimize-waiting">智能体分析中<span class="dotting">...</span></div>`);
+  content.scrollTop = content.scrollHeight;
+  input.value = '';
+  try {
+    const res = await fetch(`${API_BASE}/cases/optimization-feedback`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({caseId, caseText: String((currentCaseOptimizeData && currentCaseOptimizeData.caseText) || ''), correctionHint})
+    });
+    const json = await res.json();
+    const waitingEl = document.getElementById(waitingId);
+    if (waitingEl) {
+      waitingEl.remove();
+    }
+    if (json && json.code === 0) {
+      content.insertAdjacentHTML('beforeend', '<div class="case-optimize-chat-msg bot">感谢您的评价建议，已提交成功。</div>');
+      return;
+    }
+    content.insertAdjacentHTML('beforeend', `<div class="case-optimize-chat-msg bot">提交失败：${(json && json.message) || '请稍后重试'}</div>`);
+  } catch (error) {
+    const waitingEl = document.getElementById(waitingId);
+    if (waitingEl) {
+      waitingEl.remove();
+    }
+    content.insertAdjacentHTML('beforeend', '<div class="case-optimize-chat-msg bot">提交失败，请稍后重试。</div>');
+  } finally {
+    caseOptimizeSubmitting = false;
+    input.disabled = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
+    content.scrollTop = content.scrollHeight;
+  }
+}
+
+function closeCaseOptimizeDialog() {
+  const modal = document.getElementById('caseOptimizeModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+  currentCaseOptimizeData = null;
+  caseOptimizeSubmitting = false;
+}
+
+
+function toggleCaseAudioPlay(data) {
+  const btn = document.getElementById('playCaseAudioBtn');
+  if (!btn) {
+    return;
+  }
+  const audioUrl = data && data.audioFileUrl ? String(data.audioFileUrl) : '';
+  if (!audioUrl) {
+    alert('当前案件暂无音频文件');
+    return;
+  }
+  if (!caseAudioPlayer || caseAudioPlayer.src !== audioUrl) {
+    if (caseAudioPlayer) {
+      caseAudioPlayer.pause();
+    }
+    stopCaseAudioCountdown();
+    caseAudioPlayer = new Audio(audioUrl);
+    caseAudioPlayer.addEventListener('loadedmetadata', () => {
+      if (Number.isFinite(caseAudioPlayer.duration) && caseAudioPlayer.duration > 0) {
+        btn.textContent = `▶ 音频 ${formatAudioDuration(caseAudioPlayer.duration)}`;
+      }
+    });
+    caseAudioPlayer.addEventListener('timeupdate', () => {
+      if (!caseAudioPlayer.paused) {
+        renderCaseAudioRemaining();
+      }
+    });
+    caseAudioPlayer.addEventListener('ended', () => {
+      stopCaseAudioCountdown();
+      btn.classList.remove('audio-counting');
+      btn.textContent = '▶ 音频 00:00';
+    });
+  }
+
+  if (caseAudioPlayer.paused) {
+    caseAudioPlayer.play().then(() => {
+      btn.classList.add('audio-counting');
+      renderCaseAudioRemaining();
+      startCaseAudioCountdown();
+    }).catch(() => {
+      alert('音频播放失败，请检查链接是否可访问');
+    });
+    return;
+  }
+  caseAudioPlayer.pause();
+  stopCaseAudioCountdown();
+  btn.classList.remove('audio-counting');
+  renderCaseAudioRemaining('▶');
+}
+
+function startCaseAudioCountdown() {
+  stopCaseAudioCountdown();
+  caseAudioCountdownTimer = setInterval(() => {
+    renderCaseAudioRemaining();
+  }, 1000);
+}
+
+function stopCaseAudioCountdown() {
+  if (caseAudioCountdownTimer) {
+    clearInterval(caseAudioCountdownTimer);
+    caseAudioCountdownTimer = null;
+  }
+}
+
+function renderCaseAudioRemaining(icon = '⏸') {
+  const btn = document.getElementById('playCaseAudioBtn');
+  if (!btn || !caseAudioPlayer) {
+    return;
+  }
+  const duration = Number(caseAudioPlayer.duration);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    btn.textContent = `${icon} 音频`;
+    return;
+  }
+  const current = Number(caseAudioPlayer.currentTime) || 0;
+  const remaining = Math.max(0, duration - current);
+  btn.textContent = `${icon} 音频 ${formatAudioDuration(remaining)}`;
+}
+
+function formatAudioDuration(seconds) {
+  const sec = Math.max(0, Math.floor(Number(seconds) || 0));
+  const minute = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return `${String(minute).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+}
+
+
+async function loadOptimizationFeedbacks() {
+  const tbody = document.getElementById('feedbackTableBody');
+  if (!tbody) {
+    return;
+  }
+  const res = await fetch(`${API_BASE}/cases/optimization-feedbacks`);
+  const json = await res.json();
+  const rows = Array.isArray(json && json.data) ? json.data : [];
+  tbody.innerHTML = '';
+  rows.forEach((item) => {
+    const tr = document.createElement('tr');
+    const detailBtn = `<button type="button" onclick="openFeedbackDetail(${item.id || 0})">详情</button>`;
+    tr.innerHTML = `<td>${item.id || '-'}</td><td>${item.caseId || '-'}</td><td>${item.caseNo || '-'}</td><td>${item.suggestionContent || '-'}</td><td>${item.createdAt || '-'}</td><td class="action-col">${detailBtn}</td>`;
+    tr.dataset.feedbackRow = JSON.stringify(item || {});
+    tbody.appendChild(tr);
+  });
+}
+
+function openFeedbackDetail(feedbackId) {
+  const modal = document.getElementById('feedbackDetailModal');
+  const pre = document.getElementById('feedbackDetailContent');
+  if (!modal || !pre) {
+    return;
+  }
+  const row = Array.from(document.querySelectorAll('#feedbackTableBody tr')).find((tr) => {
+    try {
+      const data = JSON.parse(tr.dataset.feedbackRow || '{}');
+      return String(data.id || '') === String(feedbackId || '');
+    } catch (error) {
+      return false;
+    }
+  });
+  if (!row) {
+    pre.textContent = '-';
+    modal.classList.remove('hidden');
+    return;
+  }
+  let data = {};
+  try {
+    data = JSON.parse(row.dataset.feedbackRow || '{}');
+  } catch (error) {
+    data = {};
+  }
+  const difyResponse = data && data.difyResponse ? String(data.difyResponse) : '';
+  pre.textContent = formatFeedbackDetailText(difyResponse);
+  modal.classList.remove('hidden');
+}
+
+function formatFeedbackDetailText(rawText) {
+  const text = String(rawText || '').trim();
+  if (!text) {
+    return '暂无接口响应报文';
+  }
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') {
+      const outputs = parsed.outputs && typeof parsed.outputs === 'object' ? parsed.outputs : null;
+      const dataOutputs = parsed.data && parsed.data.outputs && typeof parsed.data.outputs === 'object' ? parsed.data.outputs : null;
+      const textParts = [];
+
+      const pushIfText = (value) => {
+        if (value === null || value === undefined) {
+          return;
+        }
+        if (typeof value === 'string') {
+          const v = value.trim();
+          if (v) {
+            textParts.push(v);
+          }
+          return;
+        }
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          textParts.push(String(value));
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach(pushIfText);
+          return;
+        }
+        if (typeof value === 'object') {
+          Object.keys(value).forEach((key) => {
+            pushIfText(value[key]);
+          });
+        }
+      };
+
+      const collectPreferred = (obj) => {
+        if (!obj || typeof obj !== 'object') {
+          return;
+        }
+        pushIfText(obj.text);
+        pushIfText(obj.answer);
+        pushIfText(obj.result);
+        pushIfText(obj.result_json);
+        pushIfText(obj.summary);
+        pushIfText(obj.advice);
+      };
+
+      collectPreferred(outputs);
+      collectPreferred(dataOutputs);
+      if (!textParts.length) {
+        pushIfText(parsed);
+      }
+
+      const deduped = Array.from(new Set(textParts.map((item) => item.trim()).filter(Boolean)));
+      if (deduped.length) {
+        return deduped.join('\n\n');
+      }
+    }
+  } catch (error) {
+  }
+  return text;
+}
+
+function closeFeedbackDetailModal() {
+  const modal = document.getElementById('feedbackDetailModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
 
 // 展示工作流推荐等待弹框。
 function showWorkflowWaitingModal(titleText = '智能体推荐中', descText = '正在结合案件特征匹配推荐部门，请稍候...') {
@@ -1014,6 +1479,9 @@ async function onGuideNodeConfirm() {
       workflowAdviceRecord = record;
       assistantDataCache.mediationStatus = record.mediationStatus || '调解中';
       assistantDataCache.mediationAdvice = record.mediationAdvice || assistantDataCache.mediationAdvice || '';
+      assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
+      assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+      assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
       workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
       currentWorkflowNodeId = 'status';
       syncWorkflowLockMeta();
@@ -1025,6 +1493,8 @@ async function onGuideNodeConfirm() {
     hideWorkflowWaitingModal();
     syncWorkflowLockMeta();
     renderGuide(assistantDataCache);
+    renderTimeline(assistantDataCache);
+    renderAssistantTop(assistantDataCache);
   }
 }
 
@@ -1043,18 +1513,158 @@ function onGuideOrgChange(orgName) {
 // 渲染案件时间线（竖状）。
 function renderTimeline(data) {
   const box = document.getElementById('timelineList');
+  if (!box) {
+    return;
+  }
+  if (timelineTickTimer) {
+    clearInterval(timelineTickTimer);
+    timelineTickTimer = null;
+  }
+
+  const diversionCompletedAt = data.diversionCompletedAt;
+  const mediationCompletedAt = data.mediationCompletedAt;
+  const mediationStatus = String(data.mediationStatus || '').trim();
+
+  const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
+  const diversionDone = formatTimelineTime(diversionCompletedAt);
+  const statusEnterTime = parseTimelineDate(diversionCompletedAt);
+  const statusEnter = formatTimelineTime(statusEnterTime);
+  const mediationDone = formatTimelineTime(mediationCompletedAt);
+  const showCurrentProcessingTime = mediationStatus === '调解中';
+
+  const actionButtons = mediationStatus === '调解中'
+    ? `
+      <div class="timeline-action-row timeline-action-row-top">
+        <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">⚡ 催办</button>
+        <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">🛡 督办</button>
+      </div>
+    `
+    : '';
+
   const timeline = [
-    {name: '已受理', enter: data.registerTime || '-', done: data.classifyCreatedAt || '-'},
-    {name: '调解分流', enter: data.classifyCreatedAt || '-', done: data.updatedAt || '-'},
-    {name: '调解状态', enter: data.updatedAt || '-', done: '-'},
-    {name: '案件归档', enter: '-', done: data.handlingProgress || '待归档'}
+    {
+      name: '调解状态',
+      enter: statusEnter,
+      done: showCurrentProcessingTime
+        ? '<span id="timelineCurrentProcessingTime" class="timeline-dynamic-time">-</span>'
+        : mediationDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间',
+      extra: actionButtons
+    },
+    {
+      name: '调解分流',
+      enter: diversionEnter,
+      done: diversionDone,
+      enterLabel: '进入时间',
+      doneLabel: '处理完成时间',
+      extra: ''
+    }
   ];
-  box.innerHTML = timeline.map(item => `
-    <div class="timeline-row">
-      <div class="timeline-left"><strong>${item.name}</strong><span>进入时间：${item.enter}</span></div>
-      <div class="timeline-right"><strong>处理完成时间</strong><span>${item.done}</span></div>
+
+  const statusPill = mediationStatus
+    ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
+    : '<span class="timeline-status-pill">已受理</span>';
+
+  const timelineHtml = timeline.map(item => {
+    const cards = [];
+    if (hasTimelineValue(item.enter)) {
+      cards.push(`
+        <div class="timeline-time-card">
+          <span class="timeline-time-label">${item.enterLabel}</span>
+          <span class="timeline-time-value">${item.enter}</span>
+        </div>
+      `);
+    }
+    if (hasTimelineValue(item.done)) {
+      cards.push(`
+        <div class="timeline-time-card">
+          <span class="timeline-time-label">${item.doneLabel}</span>
+          <span class="timeline-time-value">${item.done}</span>
+        </div>
+      `);
+    }
+    if (cards.length === 0 && !item.extra) {
+      return '';
+    }
+    return `
+      <div class="timeline-row timeline-row-ios">
+        <div class="timeline-stage-title">${item.name}</div>
+        <div class="timeline-time-grid">${cards.join('')}</div>
+        ${item.extra || ''}
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="timeline-ios-head">
+      <strong>办理状态时间轴</strong>
+      ${statusPill}
     </div>
-  `).join('');
+    ${timelineHtml}
+  `;
+
+  if (showCurrentProcessingTime) {
+    const target = document.getElementById('timelineCurrentProcessingTime');
+    const refresh = () => {
+      if (!target) {
+        return;
+      }
+      target.textContent = formatTimelineDuration(statusEnterTime, new Date());
+    };
+    refresh();
+    timelineTickTimer = setInterval(refresh, 1000);
+  }
+}
+
+function hasTimelineValue(value) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  const text = String(value).trim();
+  return text !== '' && text !== '-';
+}
+
+function formatTimelineTime(value) {
+  if (!value) {
+    return '-';
+  }
+  const date = parseTimelineDate(value);
+  if (!date) {
+    return String(value);
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+}
+
+function parseTimelineDate(value) {
+  if (!value) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
+function formatTimelineDuration(start, end) {
+  if (!start || !end) {
+    return '-';
+  }
+  const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainSeconds = seconds % 60;
+  return `${days}天${hours}时${minutes}分${remainSeconds}秒`;
+}
+
+function onTimelineUrge() {
+  alert('已发起催办');
+}
+
+function onTimelineSupervise() {
+  alert('已发起督办');
 }
 
 // 绑定流程图点击交互（从主节点到当前节点高亮）。
@@ -1118,4 +1728,286 @@ function bindFlowInteraction() {
       });
     });
   });
+}
+
+
+let lawAgentRole = '普通市民';
+let lawAgentLoginToken = '';
+let lawAgentRequestType = 0;
+let lawAgentLastRawResponse = '0';
+
+function openRealtimeTranscription() {
+  openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
+}
+
+function openAddToolTip() {
+  alert('更多智能工具即将上线');
+}
+
+
+function openHomeToolDialog(title, url) {
+  const modal = document.getElementById('homeToolModal');
+  const frame = document.getElementById('homeToolFrame');
+  const titleEl = document.getElementById('homeToolTitle');
+  if (!modal || !frame || !titleEl) {
+    if (url) {
+      window.open(url, '_blank');
+    }
+    return;
+  }
+  titleEl.textContent = title || '工具窗口';
+  frame.src = url || 'about:blank';
+  modal.classList.remove('hidden');
+  modal.onclick = function (event) {
+    if (event.target === modal) {
+      closeHomeToolDialog();
+    }
+  };
+}
+
+function closeHomeToolDialog() {
+  const modal = document.getElementById('homeToolModal');
+  const frame = document.getElementById('homeToolFrame');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+  if (frame) {
+    frame.src = 'about:blank';
+  }
+}
+
+function openHomeFeedbackDialog() {
+  openHomeToolDialog('评价反馈', 'feedback-list.html?popup=1');
+}
+
+async function openLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  const list = document.getElementById('lawAgentChatList');
+  if (!modal || !list) {
+    return;
+  }
+  const loginOk = await loginLawServiceAgent();
+  if (!loginOk) {
+    alert('获取失败请稍后再试');
+    return;
+  }
+  modal.classList.remove('hidden');
+  refreshLawRoleButtons();
+  if (!list.dataset.inited) {
+    appendLawAgentMessage('assistant', '您好，我是法律服务对话智能体。请描述您的问题，我将为您提供法律参考建议。');
+    list.dataset.inited = '1';
+  }
+}
+
+
+async function loginLawServiceAgent() {
+  try {
+    const res = await fetch(`${API_BASE}/dify/xbg/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({role: lawAgentRole})
+    });
+    const json = await res.json();
+    if (!json || json.code !== 0 || !json.data) {
+      return false;
+    }
+    lawAgentLoginToken = json.data;
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function selectLawAgentRole(role) {
+  lawAgentRole = role === '解纷工作人员' ? '解纷工作人员' : '普通市民';
+  refreshLawRoleButtons();
+}
+
+function refreshLawRoleButtons() {
+  const citizen = document.getElementById('lawRoleCitizen');
+  const worker = document.getElementById('lawRoleWorker');
+  if (citizen) {
+    citizen.classList.toggle('active', lawAgentRole === '普通市民');
+  }
+  if (worker) {
+    worker.classList.toggle('active', lawAgentRole === '解纷工作人员');
+  }
+}
+
+function closeLawServiceDialog() {
+  const modal = document.getElementById('lawAgentModal');
+  const list = document.getElementById('lawAgentChatList');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+  if (list) {
+    list.querySelectorAll('.law-agent-msg').forEach(item => {
+      if (item._typingTimer) {
+        clearInterval(item._typingTimer);
+        item._typingTimer = null;
+      }
+    });
+    list.innerHTML = '';
+    list.dataset.inited = '';
+  }
+  lawAgentRequestType = 0;
+  lawAgentLastRawResponse = '0';
+}
+
+function onLawAgentInputKeydown(event) {
+  if (event && event.key === 'Enter') {
+    event.preventDefault();
+    sendLawAgentMessage();
+  }
+}
+
+async function sendLawAgentMessage() {
+  const input = document.getElementById('lawAgentInput');
+  if (!input) {
+    return;
+  }
+  const question = String(input.value || '').trim();
+  if (!question) {
+    return;
+  }
+  appendLawAgentMessage('user', question);
+  input.value = '';
+
+  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        question,
+        role: lawAgentRole,
+        token: lawAgentLoginToken,
+        type: lawAgentRequestType,
+        rawResponse: lawAgentLastRawResponse
+      })
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : {};
+    const dataObj = payload && payload.data ? payload.data : payload;
+    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
+    const rawResponse = dataObj.rawResponse || answer || '';
+    if (answer) {
+      updateLawAgentMessage(waitingNode, answer, lawAgentRequestType !== 2);
+      lawAgentLastRawResponse = rawResponse || lawAgentLastRawResponse;
+      lawAgentRequestType = 1;
+      return;
+    }
+  } catch (error) {
+  }
+  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+}
+
+async function askLawAgentRecommendation(tag) {
+  if (!lawAgentLoginToken || !lawAgentLastRawResponse || lawAgentLastRawResponse === '0') {
+    return;
+  }
+  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        question: tag,
+        role: lawAgentRole,
+        token: lawAgentLoginToken,
+        type: 2,
+        rawResponse: lawAgentLastRawResponse
+      })
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : {};
+    const dataObj = payload && payload.data ? payload.data : payload;
+    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
+    if (answer) {
+      updateLawAgentMessage(waitingNode, answer, false);
+      return;
+    }
+  } catch (error) {
+  }
+  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+}
+
+function appendLawAgentMessage(role, text) {
+  const list = document.getElementById('lawAgentChatList');
+  if (!list) {
+    return null;
+  }
+  const item = document.createElement('div');
+  item.className = `law-agent-msg ${role === 'user' ? 'user' : 'assistant'}`;
+  item.textContent = text || '';
+  list.appendChild(item);
+  list.scrollTop = list.scrollHeight;
+  return item;
+}
+
+function updateLawAgentMessage(node, text, withRecommendLinks) {
+  if (!node) {
+    return;
+  }
+  animateLawAgentTyping(node, text || '', () => {
+    if (withRecommendLinks) {
+      const actions = document.createElement('div');
+      actions.className = 'law-agent-recommend-links';
+      const lawLink = document.createElement('button');
+      lawLink.type = 'button';
+      lawLink.className = 'law-agent-link-btn';
+      lawLink.textContent = '相关法条推荐';
+      lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
+      const caseLink = document.createElement('button');
+      caseLink.type = 'button';
+      caseLink.className = 'law-agent-link-btn';
+      caseLink.textContent = '相关类案推荐';
+      caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
+      actions.appendChild(lawLink);
+      actions.appendChild(caseLink);
+      node.appendChild(actions);
+    }
+    const list = document.getElementById('lawAgentChatList');
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+    }
+  });
+}
+
+function animateLawAgentTyping(node, text, onDone) {
+  if (!node) {
+    return;
+  }
+  if (node._typingTimer) {
+    clearInterval(node._typingTimer);
+    node._typingTimer = null;
+  }
+  node.textContent = '';
+  const content = String(text || '');
+  let index = 0;
+  const step = () => {
+    index += 1;
+    node.textContent = content.slice(0, index);
+    const list = document.getElementById('lawAgentChatList');
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+    }
+    if (index >= content.length) {
+      if (node._typingTimer) {
+        clearInterval(node._typingTimer);
+        node._typingTimer = null;
+      }
+      if (onDone) {
+        onDone();
+      }
+    }
+  };
+  if (!content) {
+    if (onDone) {
+      onDone();
+    }
+    return;
+  }
+  step();
+  node._typingTimer = setInterval(step, 22);
 }
