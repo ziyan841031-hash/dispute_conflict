@@ -29,20 +29,20 @@
         <div class="ios-submodule-wrap">
           <section class="ios-submodule-card ios-submodule-single">
             <h4>单案件导入（文本 + 音频）</h4>
-            <div class="upload">
-              <label>事件来源：</label>
-              <select id="eventSource">
-                <option value="线下接待">线下接待</option>
-                <option value="网上反映">网上反映</option>
-                <option value="主动排查">主动排查</option>
-                <option value="来电求助">来电求助</option>
-                <option value="部门流转">部门流转</option>
-              </select>
-            </div>
             <div class="ios-input-dual">
               <div class="ios-input-group">
                 <label for="caseText">文本上传</label>
                 <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
+                <div class="ios-source-wrap">
+                  <label for="eventSource">事件来源</label>
+                  <select id="eventSource">
+                    <option value="线下接待">线下接待</option>
+                    <option value="网上反映">网上反映</option>
+                    <option value="主动排查">主动排查</option>
+                    <option value="来电求助">来电求助</option>
+                    <option value="部门流转">部门流转</option>
+                  </select>
+                </div>
                 <button type="button" onclick="submitText()">提交文本案件</button>
               </div>
               <div class="ios-input-group">
@@ -55,7 +55,6 @@
 
           <section class="ios-submodule-card ios-submodule-batch">
             <h4>批量导入（Excel）</h4>
-            <p class="ios-module-desc">支持一键导入批量案件并自动完成解析、分类与受理进度更新。</p>
             <div class="ios-input-group">
               <label for="excelFile">上传 Excel 表格</label>
               <input type="file" id="excelFile" accept=".xlsx,.xls">
