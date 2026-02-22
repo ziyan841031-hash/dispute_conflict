@@ -967,11 +967,12 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 .ios-home-grid-two {
+  grid-template-columns: 1fr;
   align-items: stretch;
 }
 
 .ios-module-main { min-height: 620px; }
-.ios-module-tools { min-height: 620px; display: flex; flex-direction: column; }
+.ios-module-tools { min-height: 420px; display: flex; flex-direction: column; }
 
 .ios-module-card {
   border-radius: 18px;
