@@ -7,14 +7,18 @@ import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
+import com.example.dispute.entity.CaseOptimizationFeedback;
 import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
+import com.example.dispute.mapper.CaseOptimizationFeedbackMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.service.CaseRecordService;
+import com.example.dispute.client.DifyClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,11 +30,20 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import javax.validation.Valid;
+import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 /**
  * 案件控制器。
@@ -50,6 +63,13 @@ public class CaseController {
     private final CaseClassifyRecordMapper caseClassifyRecordMapper;
     // 定义纠纷处置工作流Mapper对象。
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
+    // 定义优化建议Mapper对象。
+    private final CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper;
+    // 定义Dify客户端。
+    private final DifyClient difyClient;
+
+    @Value("${dify.correction-api-key:replace-with-correction-key}")
+    private String correctionApiKey;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -58,7 +78,9 @@ public class CaseController {
      */
     public CaseController(CaseRecordService caseRecordService, CaseRecordMapper caseRecordMapper,
                           CaseClassifyRecordMapper caseClassifyRecordMapper,
-                          CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper) {
+                          CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper,
+                          CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper,
+                          DifyClient difyClient) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
         // 注入案件Mapper。
@@ -67,6 +89,10 @@ public class CaseController {
         this.caseClassifyRecordMapper = caseClassifyRecordMapper;
         // 注入工作流Mapper。
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
+        // 注入优化建议Mapper。
+        this.caseOptimizationFeedbackMapper = caseOptimizationFeedbackMapper;
+        // 注入Dify客户端。
+        this.difyClient = difyClient;
     }
 
     /**
@@ -109,26 +135,78 @@ public class CaseController {
      * 处理Excel案件入库。
      */
     @PostMapping("/ingest/excel") // 定义Excel入库接口。
-    public ApiResponse<CaseRecord> ingestExcel(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<List<String>> ingestExcel(@RequestParam("file") MultipartFile file) {
         // 打印请求文件日志。
         log.info("Excel入库请求: fileName={}", file.getOriginalFilename());
         // 调用服务执行入库。
-        CaseRecord record = caseRecordService.ingestExcel(file);
+        List<String> result = caseRecordService.ingestExcel(file);
         // 打印响应结果日志。
-        log.info("Excel入库响应: caseNo={}", record.getCaseNo());
+        log.info("Excel入库响应: size={}", result.size());
         // 返回统一成功响应。
-        return ApiResponse.success(record);
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 导出当前查询页案件为Excel。
+     */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCases(CaseQueryRequest request) {
+        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
+        List<CaseRecord> records = pageData.getRecords();
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("案件导出");
+            String[] headers = {
+                    "案件编号", "纠纷类型", "当事人", "当事人身份证号", "当事人电话",
+                    "当事人地址", "对方当事人", "对方当事人身份证号",
+                    "对方当事人电话", "对方当事人地址", "事件来源", "摘要"
+            };
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+            for (int i = 0; i < records.size(); i++) {
+                CaseRecord r = records.get(i);
+                CaseClassifyRecord classifyRecord = caseClassifyRecordMapper.selectOne(new LambdaQueryWrapper<CaseClassifyRecord>()
+                        .eq(CaseClassifyRecord::getCaseId, r.getId())
+                        .orderByDesc(CaseClassifyRecord::getCreatedAt)
+                        .last("limit 1"));
+                Row row = sheet.createRow(i + 1);
+                row.createCell(0).setCellValue(nullSafe(r.getCaseNo()));
+                row.createCell(1).setCellValue(nullSafe(r.getDisputeType()));
+                row.createCell(2).setCellValue(nullSafe(r.getPartyName()));
+                row.createCell(3).setCellValue(nullSafe(r.getPartyId()));
+                row.createCell(4).setCellValue(nullSafe(r.getPartyPhone()));
+                row.createCell(5).setCellValue(nullSafe(r.getPartyAddress()));
+                row.createCell(6).setCellValue(nullSafe(r.getCounterpartyName()));
+                row.createCell(7).setCellValue(nullSafe(r.getCounterpartyId()));
+                row.createCell(8).setCellValue(nullSafe(r.getCounterpartyPhone()));
+                row.createCell(9).setCellValue(nullSafe(r.getCounterpartyAddress()));
+                row.createCell(10).setCellValue(nullSafe(r.getEventSource()));
+                row.createCell(11).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
+            }
+            workbook.write(out);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=cases-export.xlsx")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(out.toByteArray());
+        } catch (Exception ex) {
+            throw new RuntimeException("导出失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
     }
 
     /**
      * 处理音频案件入库。
      */
     @PostMapping("/ingest/audio") // 定义音频入库接口。
-    public ApiResponse<String> ingestAudio(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<Map<String, String>> ingestAudio(@RequestParam("file") MultipartFile file) {
         // 打印请求文件日志。
         log.info("音频入库请求: fileName={}", file.getOriginalFilename());
         // 调用服务执行入库。
-        String record = caseRecordService.ingestAudio(file);
+        Map<String, String> record = caseRecordService.ingestAudio(file);
         // 打印响应结果日志。
         log.info("音频入库响应:{}", record);
         // 返回统一成功响应。
@@ -213,12 +291,17 @@ public class CaseController {
         result.put("caseText", record.getCaseText());
         result.put("registerTime", record.getRegisterTime());
         result.put("updatedAt", record.getUpdatedAt());
+        result.put("audioFileUrl", record.getAudioFileUrl());
+        result.put("audioDurationSec", record.getAudioDurationSec());
 
         if (workflowRecord != null) {
             result.put("mediationStatus", workflowRecord.getMediationStatus());
             result.put("flowLevel1", workflowRecord.getFlowLevel1());
             result.put("flowLevel2", workflowRecord.getFlowLevel2());
             result.put("flowLevel3", workflowRecord.getFlowLevel3());
+            result.put("workflowCreatedAt", workflowRecord.getCreatedAt());
+            result.put("diversionCompletedAt", workflowRecord.getDiversionCompletedAt());
+            result.put("mediationCompletedAt", workflowRecord.getMediationCompletedAt());
             result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
             result.put("recommendedMediationType", workflowRecord.getRecommendedMediationType());
             result.put("mediationAdvice", workflowRecord.getMediationAdvice());
@@ -236,6 +319,95 @@ public class CaseController {
             result.put("classifyCreatedAt", classifyRecord.getCreatedAt());
         }
         return ApiResponse.success(result);
+    }
+
+    /**
+     * 提交客户优化建议。
+     */
+    @PostMapping("/optimization-feedback")
+    public ApiResponse<CaseOptimizationFeedback> submitOptimizationFeedback(@RequestBody Map<String, Object> request) {
+        Object caseIdObj = request.get("caseId");
+        String caseText = request.get("caseText") == null ? "" : String.valueOf(request.get("caseText")).trim();
+        String correctionHint = request.get("correctionHint") == null ? "" : String.valueOf(request.get("correctionHint")).trim();
+        if (caseIdObj == null) {
+            throw new IllegalArgumentException("caseId不能为空");
+        }
+        if (caseText.isEmpty()) {
+            throw new IllegalArgumentException("案件原文不能为空");
+        }
+        if (correctionHint.isEmpty()) {
+            throw new IllegalArgumentException("评价建议内容不能为空");
+        }
+
+        Long caseId = Long.valueOf(String.valueOf(caseIdObj));
+        CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
+        if (caseRecord == null) {
+            throw new IllegalArgumentException("未找到案件记录: " + caseId);
+        }
+
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("case_text", caseText);
+        inputs.put("correction_hint", correctionHint);
+        Object difyResult = difyClient.runWorkflowWithInputs(inputs, correctionApiKey, "纠错建议");
+
+        CaseOptimizationFeedback feedback = new CaseOptimizationFeedback();
+        feedback.setCaseId(caseId);
+        feedback.setCaseNo(caseRecord.getCaseNo());
+        feedback.setCaseText(caseText);
+        feedback.setSuggestionContent(correctionHint);
+        feedback.setDifyResponse(extractParsedResponse(difyResult));
+        feedback.setParsedResponse(extractParsedResponse(difyResult));
+        feedback.setCreatedAt(LocalDateTime.now());
+        caseOptimizationFeedbackMapper.insert(feedback);
+        return ApiResponse.success(feedback);
+    }
+
+    /**
+     * 查询客户优化建议列表。
+     */
+    @GetMapping("/optimization-feedbacks")
+    public ApiResponse<List<CaseOptimizationFeedback>> listOptimizationFeedbacks() {
+        List<CaseOptimizationFeedback> feedbackList = caseOptimizationFeedbackMapper.selectList(new LambdaQueryWrapper<CaseOptimizationFeedback>()
+                .orderByDesc(CaseOptimizationFeedback::getCreatedAt));
+        return ApiResponse.success(feedbackList);
+    }
+
+
+    private String extractParsedResponse(Object difyResult) {
+        if (!(difyResult instanceof Map)) {
+            return "";
+        }
+        Map<?, ?> root = (Map<?, ?>) difyResult;
+        Object outputs = root.get("outputs");
+        if (outputs instanceof Map) {
+            Object text = ((Map<?, ?>) outputs).get("text");
+            if (text == null) {
+                text = ((Map<?, ?>) outputs).get("result_json");
+            }
+            if (text == null) {
+                text = ((Map<?, ?>) outputs).get("answer");
+            }
+            if (text != null) {
+                return String.valueOf(text);
+            }
+        }
+        Object data = root.get("data");
+        if (data instanceof Map) {
+            Object dataOutputs = ((Map<?, ?>) data).get("outputs");
+            if (dataOutputs instanceof Map) {
+                Object text = ((Map<?, ?>) dataOutputs).get("text");
+                if (text == null) {
+                    text = ((Map<?, ?>) dataOutputs).get("result_json");
+                }
+                if (text == null) {
+                    text = ((Map<?, ?>) dataOutputs).get("answer");
+                }
+                if (text != null) {
+                    return String.valueOf(text);
+                }
+            }
+        }
+        return "";
     }
 
 

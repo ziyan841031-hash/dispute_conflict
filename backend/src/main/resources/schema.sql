@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS case_record (
     case_text TEXT NOT NULL,
     source_file_name VARCHAR(255),
     audio_duration_sec INTEGER,
+    audio_file_url VARCHAR(500),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
@@ -46,6 +47,7 @@ COMMENT ON COLUMN case_record.register_time IS '登记时间';
 COMMENT ON COLUMN case_record.case_text IS '案件描述文本';
 COMMENT ON COLUMN case_record.source_file_name IS '源文件名';
 COMMENT ON COLUMN case_record.audio_duration_sec IS '音频时长(秒)';
+COMMENT ON COLUMN case_record.audio_file_url IS '音频文件URL';
 COMMENT ON COLUMN case_record.created_at IS '创建时间';
 COMMENT ON COLUMN case_record.updated_at IS '更新时间';
 
@@ -62,6 +64,7 @@ ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_id VARCHAR(32);
 ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_phone VARCHAR(32);
 ALTER TABLE case_record ADD COLUMN IF NOT EXISTS counterparty_address VARCHAR(255);
 ALTER TABLE case_record ADD COLUMN IF NOT EXISTS dispute_location VARCHAR(255);
+ALTER TABLE case_record ADD COLUMN IF NOT EXISTS audio_file_url VARCHAR(500);
 
 
 
@@ -178,6 +181,8 @@ CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
     flow_level_2 VARCHAR(50),
     flow_level_3 VARCHAR(50),
     mediation_status VARCHAR(50),
+    diversion_completed_at TIMESTAMP,
+    mediation_completed_at TIMESTAMP,
     mediation_advice TEXT,
     raw_response TEXT,
     created_at TIMESTAMP NOT NULL
@@ -197,6 +202,8 @@ COMMENT ON COLUMN case_disposal_workflow_record.flow_level_1 IS '纠纷流转一
 COMMENT ON COLUMN case_disposal_workflow_record.flow_level_2 IS '纠纷流转二级节点';
 COMMENT ON COLUMN case_disposal_workflow_record.flow_level_3 IS '纠纷流转三级节点';
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_status IS '调解状态';
+COMMENT ON COLUMN case_disposal_workflow_record.diversion_completed_at IS '分流完成时间';
+COMMENT ON COLUMN case_disposal_workflow_record.mediation_completed_at IS '调解完成时间';
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_advice IS '调解建议';
 COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '原始响应报文(JSON字符串)';
 COMMENT ON COLUMN case_disposal_workflow_record.created_at IS '创建时间';
@@ -205,6 +212,10 @@ CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_case_id ON case_dis
 CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_created_at ON case_disposal_workflow_record(created_at DESC);
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_status VARCHAR(50);
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS diversion_completed_at TIMESTAMP;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_completed_at TIMESTAMP;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_advice TEXT;
 
@@ -260,3 +271,30 @@ ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS street_chart_path VARCHAR(
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS type_chart_path VARCHAR(512);
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS district_chart_path VARCHAR(512);
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS report_file_path VARCHAR(512);
+
+CREATE TABLE IF NOT EXISTS case_optimization_feedback (
+    id BIGSERIAL PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    case_no VARCHAR(64),
+    case_text TEXT,
+    suggestion_content TEXT NOT NULL,
+    dify_response TEXT,
+    parsed_response TEXT,
+    created_at TIMESTAMP NOT NULL
+);
+
+COMMENT ON TABLE case_optimization_feedback IS '案件优化建议反馈表';
+COMMENT ON COLUMN case_optimization_feedback.case_id IS '关联案件ID';
+COMMENT ON COLUMN case_optimization_feedback.case_no IS '案件编号';
+COMMENT ON COLUMN case_optimization_feedback.case_text IS '案件原文';
+COMMENT ON COLUMN case_optimization_feedback.suggestion_content IS '客户提交的评价建议内容';
+COMMENT ON COLUMN case_optimization_feedback.dify_response IS 'Dify接口原始响应报文';
+COMMENT ON COLUMN case_optimization_feedback.parsed_response IS '解析后的响应内容';
+COMMENT ON COLUMN case_optimization_feedback.created_at IS '创建时间';
+
+CREATE INDEX IF NOT EXISTS idx_case_optimization_feedback_case_id ON case_optimization_feedback(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_optimization_feedback_created_at ON case_optimization_feedback(created_at DESC);
+
+ALTER TABLE case_optimization_feedback ADD COLUMN IF NOT EXISTS case_text TEXT;
+ALTER TABLE case_optimization_feedback ADD COLUMN IF NOT EXISTS dify_response TEXT;
+ALTER TABLE case_optimization_feedback ADD COLUMN IF NOT EXISTS parsed_response TEXT;
