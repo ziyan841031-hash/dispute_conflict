@@ -1745,6 +1745,10 @@ let lawAgentChatPending = false;
 let lawAgentRecommendPending = false;
 let lawAgentApiPending = false;
 
+
+let homeToolLoadTimer = null;
+let homeToolLoadDone = false;
+
 function openRealtimeTranscription() {
   openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
 }
@@ -1764,7 +1768,26 @@ function openHomeToolDialog(title, url) {
     }
     return;
   }
+
   titleEl.textContent = title || '工具窗口';
+  homeToolLoadDone = false;
+  if (homeToolLoadTimer) {
+    clearTimeout(homeToolLoadTimer);
+    homeToolLoadTimer = null;
+  }
+
+  frame.onload = function () {
+    homeToolLoadDone = true;
+    if (homeToolLoadTimer) {
+      clearTimeout(homeToolLoadTimer);
+      homeToolLoadTimer = null;
+    }
+  };
+
+  frame.onerror = function () {
+    homeToolLoadDone = false;
+  };
+
   frame.src = url || 'about:blank';
   modal.classList.remove('hidden');
   modal.onclick = function (event) {
@@ -1772,16 +1795,34 @@ function openHomeToolDialog(title, url) {
       closeHomeToolDialog();
     }
   };
+
+  if (url && /^https?:/i.test(url)) {
+    homeToolLoadTimer = setTimeout(() => {
+      if (!homeToolLoadDone) {
+        const shouldOpen = window.confirm('当前页面可能不支持 iframe 加载，是否改为新窗口打开？');
+        if (shouldOpen) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      }
+    }, 8000);
+  }
 }
 
 function closeHomeToolDialog() {
   const modal = document.getElementById('homeToolModal');
   const frame = document.getElementById('homeToolFrame');
+  if (homeToolLoadTimer) {
+    clearTimeout(homeToolLoadTimer);
+    homeToolLoadTimer = null;
+  }
+  homeToolLoadDone = false;
   if (modal) {
     modal.classList.add('hidden');
   }
   if (frame) {
     frame.src = 'about:blank';
+    frame.onload = null;
+    frame.onerror = null;
   }
 }
 
