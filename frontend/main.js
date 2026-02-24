@@ -1978,6 +1978,69 @@ function appendLawAgentRecommendLinks(node) {
 }
 
 
+
+function extractTextFromStreamPayload(raw) {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return '';
+  }
+  // 过滤形如 16:37:32 的时间戳片段。
+  if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return '';
+  }
+
+  const pickFromObj = obj => {
+    if (!obj || typeof obj !== 'object') {
+      return '';
+    }
+    if (typeof obj.content === 'string') {
+      return obj.content;
+    }
+    if (typeof obj.delta === 'string') {
+      return obj.delta;
+    }
+    if (obj.delta && typeof obj.delta === 'object' && typeof obj.delta.content === 'string') {
+      return obj.delta.content;
+    }
+    if (Array.isArray(obj.choices) && obj.choices.length > 0) {
+      const first = obj.choices[0] || {};
+      if (first.delta && typeof first.delta === 'object' && typeof first.delta.content === 'string') {
+        return first.delta.content;
+      }
+      if (first.message && typeof first.message === 'object' && typeof first.message.content === 'string') {
+        return first.message.content;
+      }
+      if (typeof first.text === 'string') {
+        return first.text;
+      }
+    }
+    if (obj.data && typeof obj.data === 'object') {
+      const nested = pickFromObj(obj.data);
+      if (nested) {
+        return nested;
+      }
+    }
+    return '';
+  };
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const extracted = pickFromObj(parsed);
+      if (typeof extracted === 'string' && extracted.length > 0) {
+        return extracted;
+      }
+      return '';
+    } catch (error) {
+    }
+  }
+
+  return raw;
+}
+
 function normalizeStreamChunk(raw) {
   if (typeof raw !== 'string') {
     return '';
@@ -1989,6 +2052,12 @@ function normalizeStreamChunk(raw) {
     } catch (error) {
     }
   }
+
+  text = extractTextFromStreamPayload(text);
+  if (!text) {
+    return '';
+  }
+
   return text
     .replace(/\r\n/g, '\n')
     .replace(/\n/g, '\n')
