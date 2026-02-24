@@ -339,17 +339,52 @@ public class DifyController {
         if (resultMap == null) {
             return "";
         }
-        Object direct = firstNonNull(firstNonNull(resultMap.get("answer"), resultMap.get("text")), firstNonNull(resultMap.get("output"), resultMap.get("content")));
-        if (direct != null) {
+        Object direct = firstNonNull(
+                firstNonNull(resultMap.get("answer"), resultMap.get("text")),
+                firstNonNull(
+                        firstNonNull(resultMap.get("output"), resultMap.get("content")),
+                        firstNonNull(resultMap.get("delta"), resultMap.get("message"))
+                )
+        );
+        if (direct != null && StringUtils.hasText(String.valueOf(direct))) {
             return String.valueOf(direct);
         }
+
         Object dataObj = resultMap.get("data");
         if (dataObj instanceof Map) {
-            Object nested = firstNonNull(firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text")), firstNonNull(((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content")));
-            if (nested != null) {
+            Object nested = firstNonNull(
+                    firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text")),
+                    firstNonNull(
+                            firstNonNull(((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content")),
+                            firstNonNull(((Map<?, ?>) dataObj).get("delta"), ((Map<?, ?>) dataObj).get("message"))
+                    )
+            );
+            if (nested != null && StringUtils.hasText(String.valueOf(nested))) {
                 return String.valueOf(nested);
             }
         }
+
+        Object choicesObj = resultMap.get("choices");
+        if (choicesObj instanceof List && !((List<?>) choicesObj).isEmpty()) {
+            Object first = ((List<?>) choicesObj).get(0);
+            if (first instanceof Map) {
+                Object deltaObj = ((Map<?, ?>) first).get("delta");
+                if (deltaObj instanceof Map) {
+                    Object content = ((Map<?, ?>) deltaObj).get("content");
+                    if (content != null && StringUtils.hasText(String.valueOf(content))) {
+                        return String.valueOf(content);
+                    }
+                }
+                Object messageObj = ((Map<?, ?>) first).get("message");
+                if (messageObj instanceof Map) {
+                    Object content = ((Map<?, ?>) messageObj).get("content");
+                    if (content != null && StringUtils.hasText(String.valueOf(content))) {
+                        return String.valueOf(content);
+                    }
+                }
+            }
+        }
+
         return "";
     }
 
@@ -404,6 +439,11 @@ public class DifyController {
                                 break;
                             }
                         } catch (Exception ex) {
+                            // 非JSON片段按纯文本增量透传。
+                            if (StringUtils.hasText(dataLine)) {
+                                answerBuilder.append(dataLine);
+                                emitter.send(SseEmitter.event().name("delta").data(dataLine));
+                            }
                             log.warn("xbg answer stream parse failed: {}", ex.getMessage());
                         }
                     }

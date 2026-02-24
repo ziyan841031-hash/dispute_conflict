@@ -2026,6 +2026,15 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       closeWithResult();
     });
 
+    eventSource.onmessage = event => {
+      const msg = event && typeof event.data === 'string' ? event.data : '';
+      if (msg && msg !== '[DONE]') {
+        finalText += msg;
+        node.textContent = finalText;
+        scrollToBottom();
+      }
+    };
+
     eventSource.addEventListener('error', () => {
       if (!finalText) {
         node.textContent = '请求处理中，请稍后再试。';
