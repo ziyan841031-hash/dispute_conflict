@@ -2089,7 +2089,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     }
     let finalText = '';
     let finalRawText = '';
-    renderLawAgentAssistantContent(node, "");
+    let streamStarted = false;
     const streamUrl = `${API_BASE}/dify/answer-stream/${encodeURIComponent(chatId)}?useOriginal=true`;
     const eventSource = new EventSource(streamUrl);
     lawAgentAnswerEventSource = eventSource;
@@ -2099,6 +2099,14 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       if (list) {
         list.scrollTop = list.scrollHeight;
       }
+    };
+
+    const ensureStreamStarted = () => {
+      if (streamStarted) {
+        return;
+      }
+      streamStarted = true;
+      clearLawAgentWaitingState(node);
     };
 
     const closeWithResult = () => {
@@ -2118,6 +2126,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       if (!deltaRaw) {
         return;
       }
+      ensureStreamStarted();
       finalRawText += deltaRaw;
       finalText = formatStreamDisplayText(finalRawText);
       renderLawAgentAssistantContent(node, finalText);
@@ -2128,7 +2137,8 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       if (event && typeof event.data === 'string' && event.data.trim()) {
         const doneRaw = extractDoneTextFromStreamPayload(event.data);
         const doneText = formatStreamDisplayText(doneRaw);
-        if (doneText && doneText.length > finalText.length && doneText.startsWith(finalText)) {
+        if (doneText && doneText.length >= finalText.length && doneText.startsWith(finalText)) {
+          ensureStreamStarted();
           finalRawText = doneRaw;
           finalText = doneText;
           renderLawAgentAssistantContent(node, finalText);
@@ -2140,6 +2150,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     eventSource.onmessage = event => {
       const msgRaw = extractTextFromStreamPayload(event && typeof event.data === 'string' ? event.data : '');
       if (msgRaw && msgRaw !== '[DONE]') {
+        ensureStreamStarted();
         finalRawText += msgRaw;
         finalText = formatStreamDisplayText(finalRawText);
         renderLawAgentAssistantContent(node, finalText);
@@ -2149,6 +2160,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
 
     eventSource.addEventListener('error', () => {
       if (!finalText) {
+        clearLawAgentWaitingState(node);
         renderLawAgentAssistantContent(node, '请求处理中，请稍后再试。');
       }
       closeWithResult();
@@ -2174,7 +2186,7 @@ async function sendLawAgentMessage() {
   appendLawAgentMessage('user', question);
   input.value = '';
 
-  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  const waitingNode = appendLawAgentWaitingMessage();
   try {
     const dataObj = await requestLawAgentChatMessage({
       question,
@@ -2204,7 +2216,7 @@ async function askLawAgentRecommendation(tag) {
     return;
   }
   lawAgentRecommendPending = true;
-  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  const waitingNode = appendLawAgentWaitingMessage();
   try {
     const dataObj = await requestLawAgentChatMessage({
       question: tag,
@@ -2225,6 +2237,24 @@ async function askLawAgentRecommendation(tag) {
     lawAgentRecommendPending = false;
   }
   updateLawAgentMessage(waitingNode, '请求处理中，请稍后再试。', false);
+}
+
+function appendLawAgentWaitingMessage() {
+  const node = appendLawAgentMessage('assistant', '');
+  if (!node) {
+    return null;
+  }
+  node.classList.add('law-agent-waiting');
+  node.innerHTML = '<span class="law-agent-waiting-ios"><span class="law-agent-waiting-dot"></span><span class="law-agent-waiting-dot"></span><span class="law-agent-waiting-dot"></span></span>';
+  return node;
+}
+
+function clearLawAgentWaitingState(node) {
+  if (!node || !node.classList || !node.classList.contains('law-agent-waiting')) {
+    return;
+  }
+  node.classList.remove('law-agent-waiting');
+  node.innerHTML = '';
 }
 
 function appendLawAgentMessage(role, text) {
@@ -2248,6 +2278,7 @@ function updateLawAgentMessage(node, text, withRecommendLinks) {
   if (!node) {
     return;
   }
+  clearLawAgentWaitingState(node);
   animateLawAgentTyping(node, text || '', () => {
     if (withRecommendLinks) {
       appendLawAgentRecommendLinks(node);
