@@ -1984,11 +1984,12 @@ function extractTextFromStreamPayload(raw) {
     return '';
   }
   const trimmed = raw.trim();
-  if (!trimmed) {
+  // 原始片段为空字符串才丢弃，避免把仅换行的chunk过滤掉。
+  if (raw.length === 0) {
     return '';
   }
   // 过滤形如 16:37:32 的时间戳片段。
-  if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+  if (trimmed && /^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
     return '';
   }
 
@@ -2026,7 +2027,7 @@ function extractTextFromStreamPayload(raw) {
     return '';
   };
 
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+  if (trimmed && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
     try {
       const parsed = JSON.parse(trimmed);
       const extracted = pickFromObj(parsed);
