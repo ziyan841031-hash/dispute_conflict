@@ -2051,9 +2051,25 @@ function normalizeDisplayText(rawText) {
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\n')
     .replace(/\\t/g, '\t')
+    .replace(/\\u000a/gi, '\n')
+    .replace(/\\u000d/gi, '')
     // 再统一真实回车换行。
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
+}
+
+
+function sanitizeDisplayText(text) {
+  if (typeof text !== 'string') {
+    return '';
+  }
+  return text
+    .replace(/[\*#]/g, '')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+function formatStreamDisplayText(rawText) {
+  return sanitizeDisplayText(normalizeDisplayText(rawText));
 }
 
 function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
@@ -2098,7 +2114,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
         return;
       }
       finalRawText += deltaRaw;
-      finalText = normalizeDisplayText(finalRawText);
+      finalText = formatStreamDisplayText(finalRawText);
       node.textContent = finalText;
       scrollToBottom();
     });
@@ -2106,7 +2122,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     eventSource.addEventListener('done', event => {
       if (event && typeof event.data === 'string' && event.data.trim()) {
         const doneRaw = extractTextFromStreamPayload(event.data);
-        const doneText = normalizeDisplayText(doneRaw);
+        const doneText = formatStreamDisplayText(doneRaw);
         if (doneText.length > finalText.length) {
           finalRawText = doneRaw;
           finalText = doneText;
@@ -2120,7 +2136,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       const msgRaw = extractTextFromStreamPayload(event && typeof event.data === 'string' ? event.data : '');
       if (msgRaw && msgRaw !== '[DONE]') {
         finalRawText += msgRaw;
-        finalText = normalizeDisplayText(finalRawText);
+        finalText = formatStreamDisplayText(finalRawText);
         node.textContent = finalText;
         scrollToBottom();
       }

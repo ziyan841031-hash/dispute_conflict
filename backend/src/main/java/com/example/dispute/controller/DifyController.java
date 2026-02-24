@@ -473,6 +473,10 @@ public class DifyController {
                 .replace("\\n", "\n")
                 .replace("\\r", "\n")
                 .replace("\\t", "\t")
+                .replace("\\u000A", "\n")
+                .replace("\\u000a", "\n")
+                .replace("\\u000D", "")
+                .replace("\\u000d", "")
                 .replace("\r\n", "\n")
                 .replace("\r", "\n");
     }
