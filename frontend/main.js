@@ -1750,7 +1750,11 @@ let homeToolLoadTimer = null;
 let homeToolLoadDone = false;
 
 function openRealtimeTranscription() {
-  openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
+  const url = 'http://218.78.134.191:17989';
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!win) {
+    window.location.href = url;
+  }
 }
 
 function openAddToolTip() {
