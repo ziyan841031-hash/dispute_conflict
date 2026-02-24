@@ -1751,10 +1751,7 @@ let homeToolLoadDone = false;
 
 function openRealtimeTranscription() {
   const url = 'http://218.78.134.191:17989';
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!win) {
-    window.location.href = url;
-  }
+  window.location.assign(url);
 }
 
 function openAddToolTip() {
