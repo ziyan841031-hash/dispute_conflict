@@ -1977,6 +1977,25 @@ function appendLawAgentRecommendLinks(node) {
   node.appendChild(actions);
 }
 
+
+function normalizeStreamChunk(raw) {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  let text = raw;
+  if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+    try {
+      text = JSON.parse(text);
+    } catch (error) {
+    }
+  }
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, '\t');
+}
+
 function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
   return new Promise(resolve => {
     if (!chatId || !node) {
@@ -2013,14 +2032,15 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     };
 
     eventSource.addEventListener('delta', event => {
-      finalText += event.data || '';
+      const deltaText = normalizeStreamChunk(event.data || '');
+      finalText += deltaText;
       node.textContent = finalText;
       scrollToBottom();
     });
 
     eventSource.addEventListener('done', event => {
       if (event && typeof event.data === 'string' && event.data.trim()) {
-        const doneText = event.data;
+        const doneText = normalizeStreamChunk(event.data);
         if (doneText.length > finalText.length) {
           finalText = doneText;
           node.textContent = finalText;
@@ -2030,7 +2050,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     });
 
     eventSource.onmessage = event => {
-      const msg = event && typeof event.data === 'string' ? event.data : '';
+      const msg = normalizeStreamChunk(event && typeof event.data === 'string' ? event.data : '');
       if (msg && msg !== '[DONE]') {
         finalText += msg;
         node.textContent = finalText;
