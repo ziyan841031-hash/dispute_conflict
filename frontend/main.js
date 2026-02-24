@@ -787,12 +787,37 @@ function normalizeRiskLevel(level) {
   return map[normalized] || '';
 }
 
+function resolveAssistantSummary(data, allowCaseTextFallback = false) {
+  const safeData = data || {};
+  const candidates = [
+    safeData.judgementBasisText,
+    safeData.factsSummary,
+    safeData.summaryText,
+    safeData.aiSummary,
+    safeData.caseSummary,
+    safeData.caseSmartSummary
+  ];
+  for (const item of candidates) {
+    const text = String(item || '').trim();
+    if (text) {
+      return text;
+    }
+  }
+  if (allowCaseTextFallback) {
+    const caseText = String(safeData.caseText || '').trim();
+    if (caseText) {
+      return caseText;
+    }
+  }
+  return '-';
+}
+
 // 渲染顶部案件信息。
 function renderAssistantTop(data) {
   const top = document.getElementById('assistantTopInfo');
   const party = data.partyName || '-';
   const counterparty = data.counterpartyName || '-';
-  const summary = data.judgementBasisText || data.factsSummary || data.caseText || '-';
+  const summary = resolveAssistantSummary(data, false);
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
   const riskLevel = normalizeRiskLevel(data.riskLevel);
   const riskDesc = riskLevel ? `${riskLevel}(${RISK_LEVEL_DESC[riskLevel]})` : (data.riskLevel || '-');
@@ -881,7 +906,7 @@ function showCaseMaterial(data) {
     {label: '接待人', value: safeData.receiver}
   ];
 
-  const smartSummary = safeData.judgementBasisText || safeData.factsSummary || safeData.summaryText || '-';
+  const smartSummary = resolveAssistantSummary(safeData, false);
 
   const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
 
