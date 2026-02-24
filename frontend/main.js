@@ -1980,97 +1980,19 @@ function appendLawAgentRecommendLinks(node) {
 
 
 function extractTextFromStreamPayload(raw) {
-  if (typeof raw !== 'string') {
-    return '';
-  }
-  const trimmed = raw.trim();
-  // 原始片段为空字符串才丢弃，避免把仅换行的chunk过滤掉。
-  if (raw.length === 0) {
-    return '';
-  }
-  // 过滤形如 16:37:32 的时间戳片段。
-  if (trimmed && /^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
-    return '';
-  }
-
-  const pickFromObj = obj => {
-    if (!obj || typeof obj !== 'object') {
-      return '';
-    }
-    if (typeof obj.content === 'string') {
-      return obj.content;
-    }
-    if (typeof obj.delta === 'string') {
-      return obj.delta;
-    }
-    if (obj.delta && typeof obj.delta === 'object' && typeof obj.delta.content === 'string') {
-      return obj.delta.content;
-    }
-    if (Array.isArray(obj.choices) && obj.choices.length > 0) {
-      const first = obj.choices[0] || {};
-      if (first.delta && typeof first.delta === 'object' && typeof first.delta.content === 'string') {
-        return first.delta.content;
-      }
-      if (first.message && typeof first.message === 'object' && typeof first.message.content === 'string') {
-        return first.message.content;
-      }
-      if (typeof first.text === 'string') {
-        return first.text;
-      }
-    }
-    if (obj.data && typeof obj.data === 'object') {
-      const nested = pickFromObj(obj.data);
-      if (nested) {
-        return nested;
-      }
-    }
-    return '';
-  };
-
-  if (trimmed && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      const extracted = pickFromObj(parsed);
-      if (typeof extracted === 'string' && extracted.length > 0) {
-        return extracted;
-      }
-      return '';
-    } catch (error) {
-    }
-  }
-
-  return raw;
+  return typeof raw === 'string' ? raw : '';
 }
 
 function normalizeDisplayText(rawText) {
-  if (typeof rawText !== 'string') {
-    return '';
-  }
-  return rawText
-    // 先处理字面量转义序列（\n / \r\n / \t）。
-    .replace(/\\r\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\n')
-    .replace(/\\t/g, '\t')
-    .replace(/\\u000a/gi, '\n')
-    .replace(/\\u000d/gi, '')
-    // 再统一真实回车换行。
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n');
+  return typeof rawText === 'string' ? rawText : '';
 }
 
-
 function sanitizeDisplayText(text) {
-  if (typeof text !== 'string') {
-    return '';
-  }
-  return text
-    .replace(/[\*#]/g, '')
-    .replace(/\n{3,}/g, '\n\n');
+  return typeof text === 'string' ? text : '';
 }
 
 function formatStreamDisplayText(rawText) {
-  return sanitizeDisplayText(normalizeDisplayText(rawText));
+  return typeof rawText === 'string' ? rawText : '';
 }
 
 function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
