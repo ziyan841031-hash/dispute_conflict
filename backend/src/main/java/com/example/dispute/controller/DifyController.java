@@ -434,10 +434,8 @@ public class DifyController {
                                 answerBuilder.append(chunk);
                                 emitter.send(SseEmitter.event().name("delta").data(chunk));
                             }
-                            Object doneObj = firstNonNull(eventMap.get("done"), eventMap.get("isEnd"));
-                            if (doneObj instanceof Boolean && (Boolean) doneObj) {
-                                break;
-                            }
+                            // 部分上游流会提前携带done标记，但仍有后续文本片段，
+                            // 这里不立即break，继续读取直到流自然结束。
                         } catch (Exception ex) {
                             // 非JSON片段按纯文本增量透传。
                             if (StringUtils.hasText(dataLine)) {

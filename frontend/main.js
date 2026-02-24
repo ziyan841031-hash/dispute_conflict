@@ -2020,8 +2020,11 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
 
     eventSource.addEventListener('done', event => {
       if (event && typeof event.data === 'string' && event.data.trim()) {
-        finalText = event.data;
-        node.textContent = finalText;
+        const doneText = event.data;
+        if (doneText.length > finalText.length) {
+          finalText = doneText;
+          node.textContent = finalText;
+        }
       }
       closeWithResult();
     });
