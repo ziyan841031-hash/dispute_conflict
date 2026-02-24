@@ -1735,9 +1735,15 @@ let lawAgentRole = '普通市民';
 let lawAgentLoginToken = '';
 let lawAgentRequestType = 0;
 let lawAgentLastRawResponse = '0';
+let lawAgentChatPending = false;
+let lawAgentRecommendPending = false;
 
 function openRealtimeTranscription() {
-  openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
+  const url = 'http://218.78.134.191:17989';
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!win) {
+    window.location.href = url;
+  }
 }
 
 function openAddToolTip() {
@@ -1852,6 +1858,9 @@ function closeLawServiceDialog() {
   }
   lawAgentRequestType = 0;
   lawAgentLastRawResponse = '0';
+  lawAgentChatPending = false;
+  lawAgentRecommendPending = false;
+  setLawAgentSendingState(false);
 }
 
 function onLawAgentInputKeydown(event) {
@@ -1861,7 +1870,23 @@ function onLawAgentInputKeydown(event) {
   }
 }
 
+function setLawAgentSendingState(pending) {
+  const input = document.getElementById('lawAgentInput');
+  const sendBtn = input && input.parentElement ? input.parentElement.querySelector('button') : null;
+  if (input) {
+    input.disabled = pending;
+  }
+  if (sendBtn) {
+    sendBtn.disabled = pending;
+    sendBtn.textContent = pending ? '发送中...' : '发送';
+  }
+}
+
+
 async function sendLawAgentMessage() {
+  if (lawAgentChatPending) {
+    return;
+  }
   const input = document.getElementById('lawAgentInput');
   if (!input) {
     return;
@@ -1870,6 +1895,8 @@ async function sendLawAgentMessage() {
   if (!question) {
     return;
   }
+  lawAgentChatPending = true;
+  setLawAgentSendingState(true);
   appendLawAgentMessage('user', question);
   input.value = '';
 
@@ -1898,14 +1925,18 @@ async function sendLawAgentMessage() {
       return;
     }
   } catch (error) {
+  } finally {
+    lawAgentChatPending = false;
+    setLawAgentSendingState(false);
   }
-  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+  updateLawAgentMessage(waitingNode, '请求处理中，请稍后再试。', false);
 }
 
 async function askLawAgentRecommendation(tag) {
-  if (!lawAgentLoginToken || !lawAgentLastRawResponse || lawAgentLastRawResponse === '0') {
+  if (lawAgentRecommendPending || !lawAgentLoginToken || !lawAgentLastRawResponse || lawAgentLastRawResponse === '0') {
     return;
   }
+  lawAgentRecommendPending = true;
   const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
   try {
     const res = await fetch(`${API_BASE}/dify/chat-message`, {
@@ -1928,8 +1959,10 @@ async function askLawAgentRecommendation(tag) {
       return;
     }
   } catch (error) {
+  } finally {
+    lawAgentRecommendPending = false;
   }
-  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+  updateLawAgentMessage(waitingNode, '请求处理中，请稍后再试。', false);
 }
 
 function appendLawAgentMessage(role, text) {
