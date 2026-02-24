@@ -2041,24 +2041,11 @@ function extractTextFromStreamPayload(raw) {
   return raw;
 }
 
-function normalizeStreamChunk(raw) {
-  if (typeof raw !== 'string') {
+function normalizeDisplayText(rawText) {
+  if (typeof rawText !== 'string') {
     return '';
   }
-  let text = raw;
-  if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
-    try {
-      text = JSON.parse(text);
-    } catch (error) {
-    }
-  }
-
-  text = extractTextFromStreamPayload(text);
-  if (!text) {
-    return '';
-  }
-
-  return text
+  return rawText
     .replace(/\r\n/g, '\n')
     .replace(/\n/g, '\n')
     .replace(/\r/g, '\n')
@@ -2076,6 +2063,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       lawAgentAnswerEventSource = null;
     }
     let finalText = '';
+    let finalRawText = '';
     node.textContent = '';
     const streamUrl = `${API_BASE}/dify/answer-stream/${encodeURIComponent(chatId)}?useOriginal=true`;
     const eventSource = new EventSource(streamUrl);
@@ -2101,16 +2089,22 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     };
 
     eventSource.addEventListener('delta', event => {
-      const deltaText = normalizeStreamChunk(event.data || '');
-      finalText += deltaText;
+      const deltaRaw = extractTextFromStreamPayload(event.data || '');
+      if (!deltaRaw) {
+        return;
+      }
+      finalRawText += deltaRaw;
+      finalText = normalizeDisplayText(finalRawText);
       node.textContent = finalText;
       scrollToBottom();
     });
 
     eventSource.addEventListener('done', event => {
       if (event && typeof event.data === 'string' && event.data.trim()) {
-        const doneText = normalizeStreamChunk(event.data);
+        const doneRaw = extractTextFromStreamPayload(event.data);
+        const doneText = normalizeDisplayText(doneRaw);
         if (doneText.length > finalText.length) {
+          finalRawText = doneRaw;
           finalText = doneText;
           node.textContent = finalText;
         }
@@ -2119,9 +2113,10 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     });
 
     eventSource.onmessage = event => {
-      const msg = normalizeStreamChunk(event && typeof event.data === 'string' ? event.data : '');
-      if (msg && msg !== '[DONE]') {
-        finalText += msg;
+      const msgRaw = extractTextFromStreamPayload(event && typeof event.data === 'string' ? event.data : '');
+      if (msgRaw && msgRaw !== '[DONE]') {
+        finalRawText += msgRaw;
+        finalText = normalizeDisplayText(finalRawText);
         node.textContent = finalText;
         scrollToBottom();
       }
