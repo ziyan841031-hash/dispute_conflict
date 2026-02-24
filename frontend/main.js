@@ -2036,6 +2036,22 @@ function extractTextFromStreamPayload(raw) {
   }
 }
 
+function extractDoneTextFromStreamPayload(raw) {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '[DONE]') {
+    return '';
+  }
+  try {
+    const payload = JSON.parse(trimmed);
+    return extractStreamTextFromObject(payload);
+  } catch (e) {
+    return '';
+  }
+}
+
 function normalizeDisplayText(rawText) {
   return typeof rawText === 'string' ? rawText : '';
 }
@@ -2110,9 +2126,9 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
 
     eventSource.addEventListener('done', event => {
       if (event && typeof event.data === 'string' && event.data.trim()) {
-        const doneRaw = extractTextFromStreamPayload(event.data);
+        const doneRaw = extractDoneTextFromStreamPayload(event.data);
         const doneText = formatStreamDisplayText(doneRaw);
-        if (doneText.length > finalText.length) {
+        if (doneText && doneText.length > finalText.length && doneText.startsWith(finalText)) {
           finalRawText = doneRaw;
           finalText = doneText;
           renderLawAgentAssistantContent(node, finalText);
