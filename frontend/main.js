@@ -1979,8 +1979,61 @@ function appendLawAgentRecommendLinks(node) {
 
 
 
+function readFirstTextValue(obj, keys) {
+  if (!obj || typeof obj !== 'object') {
+    return '';
+  }
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'string' && value) {
+      return value;
+    }
+  }
+  return '';
+}
+
+function extractStreamTextFromObject(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return '';
+  }
+  const direct = readFirstTextValue(payload, ['answer', 'text', 'output', 'content', 'delta', 'message']);
+  if (direct) {
+    return direct;
+  }
+  if (payload.data && typeof payload.data === 'object') {
+    const nested = readFirstTextValue(payload.data, ['answer', 'text', 'output', 'content', 'delta', 'message']);
+    if (nested) {
+      return nested;
+    }
+  }
+  if (Array.isArray(payload.choices) && payload.choices.length > 0) {
+    const first = payload.choices[0];
+    if (first && typeof first === 'object') {
+      if (first.delta && typeof first.delta === 'object' && typeof first.delta.content === 'string') {
+        return first.delta.content;
+      }
+      if (first.message && typeof first.message === 'object' && typeof first.message.content === 'string') {
+        return first.message.content;
+      }
+    }
+  }
+  return '';
+}
+
 function extractTextFromStreamPayload(raw) {
-  return typeof raw === 'string' ? raw : '';
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '[DONE]') {
+    return '';
+  }
+  try {
+    const payload = JSON.parse(trimmed);
+    return extractStreamTextFromObject(payload);
+  } catch (e) {
+    return raw;
+  }
 }
 
 function normalizeDisplayText(rawText) {
@@ -1992,7 +2045,7 @@ function sanitizeDisplayText(text) {
 }
 
 function formatStreamDisplayText(rawText) {
-  return typeof rawText === 'string' ? rawText : '';
+  return sanitizeDisplayText(normalizeDisplayText(rawText));
 }
 
 

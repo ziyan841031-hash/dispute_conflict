@@ -320,6 +320,7 @@ public class DifyController {
         payload.put("question", question);
         payload.put("type", "case");
         payload.put("search", false);
+        payload.put("sign", "交通大学");
         log.info("xbg chat req: {}", objectMapper.writeValueAsString(payload));
 
         HttpHeaders headers = new HttpHeaders();
@@ -427,12 +428,8 @@ public class DifyController {
                         if (!StringUtils.hasText(dataLine) || "[DONE]".equalsIgnoreCase(dataLine)) {
                             continue;
                         }
-                        String deltaText = parseStreamDeltaText(dataLine);
-                        if (!StringUtils.hasText(deltaText)) {
-                            continue;
-                        }
-                        answerBuilder.append(deltaText);
-                        emitter.send(SseEmitter.event().name("delta").data(deltaText));
+                        answerBuilder.append(dataLine);
+                        emitter.send(SseEmitter.event().name("delta").data(dataLine));
                     }
                 }
                 return null;
@@ -448,20 +445,6 @@ public class DifyController {
             emitter.complete();
         } finally {
             xbgChatTokenCache.remove(chatId);
-        }
-    }
-
-    private String parseStreamDeltaText(String dataLine) {
-        if (!StringUtils.hasText(dataLine)) {
-            return "";
-        }
-        try {
-            Map<String, Object> payload = objectMapper.readValue(dataLine, new TypeReference<Map<String, Object>>() {});
-            String text = extractAnswerText(payload);
-            return StringUtils.hasText(text) ? text : "";
-        } catch (Exception ex) {
-            // 非JSON片段：保持兜底透传，避免中断流式输出。
-            return dataLine;
         }
     }
 
