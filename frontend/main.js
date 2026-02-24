@@ -1995,6 +1995,19 @@ function formatStreamDisplayText(rawText) {
   return typeof rawText === 'string' ? rawText : '';
 }
 
+
+function renderLawAgentAssistantContent(node, text) {
+  if (!node) {
+    return;
+  }
+  const content = typeof text === 'string' ? text : '';
+  if (window.marked && typeof window.marked.parse === 'function') {
+    node.innerHTML = window.marked.parse(content, {breaks: true, gfm: true});
+  } else {
+    node.textContent = content;
+  }
+}
+
 function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
   return new Promise(resolve => {
     if (!chatId || !node) {
@@ -2007,7 +2020,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
     }
     let finalText = '';
     let finalRawText = '';
-    node.textContent = '';
+    renderLawAgentAssistantContent(node, "");
     const streamUrl = `${API_BASE}/dify/answer-stream/${encodeURIComponent(chatId)}?useOriginal=true`;
     const eventSource = new EventSource(streamUrl);
     lawAgentAnswerEventSource = eventSource;
@@ -2038,7 +2051,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       }
       finalRawText += deltaRaw;
       finalText = formatStreamDisplayText(finalRawText);
-      node.textContent = finalText;
+      renderLawAgentAssistantContent(node, finalText);
       scrollToBottom();
     });
 
@@ -2049,7 +2062,7 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
         if (doneText.length > finalText.length) {
           finalRawText = doneRaw;
           finalText = doneText;
-          node.textContent = finalText;
+          renderLawAgentAssistantContent(node, finalText);
         }
       }
       closeWithResult();
@@ -2060,14 +2073,14 @@ function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
       if (msgRaw && msgRaw !== '[DONE]') {
         finalRawText += msgRaw;
         finalText = formatStreamDisplayText(finalRawText);
-        node.textContent = finalText;
+        renderLawAgentAssistantContent(node, finalText);
         scrollToBottom();
       }
     };
 
     eventSource.addEventListener('error', () => {
       if (!finalText) {
-        node.textContent = '请求处理中，请稍后再试。';
+        renderLawAgentAssistantContent(node, '请求处理中，请稍后再试。');
       }
       closeWithResult();
     });
@@ -2152,7 +2165,11 @@ function appendLawAgentMessage(role, text) {
   }
   const item = document.createElement('div');
   item.className = `law-agent-msg ${role === 'user' ? 'user' : 'assistant'}`;
-  item.textContent = text || '';
+  if (role === 'assistant') {
+    renderLawAgentAssistantContent(item, text || '');
+  } else {
+    item.textContent = text || '';
+  }
   list.appendChild(item);
   list.scrollTop = list.scrollHeight;
   return item;
