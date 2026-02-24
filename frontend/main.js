@@ -13,6 +13,12 @@ const CASES_PAGE_SIZE = 20;
 
 // 提交文字案件。
 async function submitText() {
+  const caseTextValue = String((document.getElementById('caseText') || {}).value || '').trim();
+  if (!caseTextValue) {
+    alert('请输入案件描述后再提交');
+    return;
+  }
+
   // 打开解析弹窗。
   openParseModal('text');
   // 设置要素提取处理中。
@@ -21,7 +27,7 @@ async function submitText() {
   // 组装请求载荷。
   const payload = {
     // 读取案件描述。
-    caseText: document.getElementById('caseText').value,
+    caseText: caseTextValue,
     // 读取事件来源。
     eventSource: document.getElementById('eventSource').value
   };
@@ -1737,13 +1743,10 @@ let lawAgentRequestType = 0;
 let lawAgentLastRawResponse = '0';
 let lawAgentChatPending = false;
 let lawAgentRecommendPending = false;
+let lawAgentApiPending = false;
 
 function openRealtimeTranscription() {
-  const url = 'http://218.78.134.191:17989';
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!win) {
-    window.location.href = url;
-  }
+  openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
 }
 
 function openAddToolTip() {
@@ -1860,6 +1863,7 @@ function closeLawServiceDialog() {
   lawAgentLastRawResponse = '0';
   lawAgentChatPending = false;
   lawAgentRecommendPending = false;
+  lawAgentApiPending = false;
   setLawAgentSendingState(false);
 }
 
@@ -1883,6 +1887,32 @@ function setLawAgentSendingState(pending) {
 }
 
 
+async function requestLawAgentChatMessage(payload) {
+  if (lawAgentApiPending) {
+    return null;
+  }
+  lawAgentApiPending = true;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    const json = await res.json();
+    const payloadData = json && json.data ? json.data : {};
+    return payloadData && payloadData.data ? payloadData.data : payloadData;
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+    lawAgentApiPending = false;
+  }
+}
+
+
 async function sendLawAgentMessage() {
   if (lawAgentChatPending) {
     return;
@@ -1902,29 +1932,21 @@ async function sendLawAgentMessage() {
 
   const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
   try {
-    const res = await fetch(`${API_BASE}/dify/chat-message`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        question,
-        role: lawAgentRole,
-        token: lawAgentLoginToken,
-        type: lawAgentRequestType,
-        rawResponse: lawAgentLastRawResponse
-      })
+    const dataObj = await requestLawAgentChatMessage({
+      question,
+      role: lawAgentRole,
+      token: lawAgentLoginToken,
+      type: lawAgentRequestType,
+      rawResponse: lawAgentLastRawResponse
     });
-    const json = await res.json();
-    const payload = json && json.data ? json.data : {};
-    const dataObj = payload && payload.data ? payload.data : payload;
-    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
-    const rawResponse = dataObj.rawResponse || answer || '';
+    const answer = dataObj && (dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '');
+    const rawResponse = dataObj && (dataObj.rawResponse || answer || '');
     if (answer) {
       updateLawAgentMessage(waitingNode, answer, lawAgentRequestType !== 2);
       lawAgentLastRawResponse = rawResponse || lawAgentLastRawResponse;
       lawAgentRequestType = 1;
       return;
     }
-  } catch (error) {
   } finally {
     lawAgentChatPending = false;
     setLawAgentSendingState(false);
@@ -1939,26 +1961,18 @@ async function askLawAgentRecommendation(tag) {
   lawAgentRecommendPending = true;
   const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
   try {
-    const res = await fetch(`${API_BASE}/dify/chat-message`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        question: tag,
-        role: lawAgentRole,
-        token: lawAgentLoginToken,
-        type: 2,
-        rawResponse: lawAgentLastRawResponse
-      })
+    const dataObj = await requestLawAgentChatMessage({
+      question: tag,
+      role: lawAgentRole,
+      token: lawAgentLoginToken,
+      type: 2,
+      rawResponse: lawAgentLastRawResponse
     });
-    const json = await res.json();
-    const payload = json && json.data ? json.data : {};
-    const dataObj = payload && payload.data ? payload.data : payload;
-    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
+    const answer = dataObj && (dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '');
     if (answer) {
       updateLawAgentMessage(waitingNode, answer, false);
       return;
     }
-  } catch (error) {
   } finally {
     lawAgentRecommendPending = false;
   }
