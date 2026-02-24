@@ -431,16 +431,18 @@ public class DifyController {
                             Map<String, Object> eventMap = objectMapper.readValue(dataLine, new TypeReference<Map<String, Object>>() {});
                             String chunk = extractAnswerText(eventMap);
                             if (StringUtils.hasText(chunk)) {
-                                answerBuilder.append(chunk);
-                                emitter.send(SseEmitter.event().name("delta").data(chunk));
+                                String normalizedChunk = normalizeStreamText(chunk);
+                                answerBuilder.append(normalizedChunk);
+                                emitter.send(SseEmitter.event().name("delta").data(normalizedChunk));
                             }
                             // 部分上游流会提前携带done标记，但仍有后续文本片段，
                             // 这里不立即break，继续读取直到流自然结束。
                         } catch (Exception ex) {
                             // 非JSON片段按纯文本增量透传。
                             if (StringUtils.hasText(dataLine)) {
-                                answerBuilder.append(dataLine);
-                                emitter.send(SseEmitter.event().name("delta").data(dataLine));
+                                String normalizedLine = normalizeStreamText(dataLine);
+                                answerBuilder.append(normalizedLine);
+                                emitter.send(SseEmitter.event().name("delta").data(normalizedLine));
                             }
                             log.warn("xbg answer stream parse failed: {}", ex.getMessage());
                         }
@@ -460,6 +462,19 @@ public class DifyController {
         } finally {
             xbgChatTokenCache.remove(chatId);
         }
+    }
+
+    private String normalizeStreamText(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        return text
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\\r", "\n")
+                .replace("\\t", "\t")
+                .replace("\r\n", "\n")
+                .replace("\r", "\n");
     }
 
     private String extractChatId(Map<String, Object> resultMap) {

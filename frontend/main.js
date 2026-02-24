@@ -2046,10 +2046,14 @@ function normalizeDisplayText(rawText) {
     return '';
   }
   return rawText
+    // 先处理字面量转义序列（\n / \r\n / \t）。
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\t/g, '\t')
+    // 再统一真实回车换行。
     .replace(/\r\n/g, '\n')
-    .replace(/\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/\t/g, '\t');
+    .replace(/\r/g, '\n');
 }
 
 function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
