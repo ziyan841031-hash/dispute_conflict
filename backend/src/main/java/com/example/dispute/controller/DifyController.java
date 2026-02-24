@@ -13,14 +13,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -29,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Dify预留控制器。
@@ -65,6 +74,9 @@ public class DifyController {
 
     @Value("${xiaobaogong.base-url:https://api.xiaobaogong.com}")
     private String xbgBaseUrl;
+
+    // 聊天会话ID与token映射。
+    private final Map<String, String> xbgChatTokenCache = new ConcurrentHashMap<>();
 
     /**
      * 构造函数。
@@ -240,9 +252,15 @@ public class DifyController {
                 finalQuestion = rawResponse + "。" + question;
             }
 
-            Map<String, Object> resultMap = callXbgChat(token, finalQuestion);
-            resultMap.put("rawResponse", extractAnswerText(resultMap));
-            return ApiResponse.success(resultMap);
+            Map<String, Object> resultMap = callXbgChatSession(token, finalQuestion);
+            String chatId = extractChatId(resultMap);
+            if (!StringUtils.hasText(chatId)) {
+                throw new IllegalArgumentException("xbg chat session missing id");
+            }
+            xbgChatTokenCache.put(chatId, token);
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", chatId);
+            return ApiResponse.success(data);
         } catch (Exception ex) {
             log.warn("xbg chat failed: {}", ex.getMessage());
             return ApiResponse.fail("获取失败请稍后再试");
@@ -297,7 +315,7 @@ public class DifyController {
         return "";
     }
 
-    private Map<String, Object> callXbgChat(String token, String question) throws Exception {
+    private Map<String, Object> callXbgChatSession(String token, String question) throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("question", question);
         payload.put("type", "case");
@@ -309,7 +327,7 @@ public class DifyController {
         headers.set("Authorization", token);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
         RestTemplate restTemplate = new RestTemplate();
-        String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/completions", entity, String.class);
+        String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/session", entity, String.class);
         log.info("xbg chat result: {}", result);
         if (!StringUtils.hasText(result)) {
             throw new IllegalArgumentException("xbg chat empty result");
@@ -329,6 +347,95 @@ public class DifyController {
         if (dataObj instanceof Map) {
             Object nested = firstNonNull(firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text")), firstNonNull(((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content")));
             if (nested != null) {
+                return String.valueOf(nested);
+            }
+        }
+        return "";
+    }
+
+
+    @GetMapping(value = "/answer-stream/{chatId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter answerStream(@PathVariable("chatId") String chatId,
+                                   @RequestParam(value = "useOriginal", required = false, defaultValue = "true") boolean useOriginal) {
+        SseEmitter emitter = new SseEmitter(0L);
+        String token = xbgChatTokenCache.get(chatId);
+        if (!StringUtils.hasText(token)) {
+            try {
+                emitter.send(SseEmitter.event().name("error").data("会话已过期，请重试"));
+            } catch (Exception ignore) {
+            }
+            emitter.complete();
+            return emitter;
+        }
+
+        CompletableFuture.runAsync(() -> streamXbgAnswer(chatId, useOriginal, token, emitter));
+        return emitter;
+    }
+
+    private void streamXbgAnswer(String chatId, boolean useOriginal, String token, SseEmitter emitter) {
+        String url = xbgBaseUrl + "/v6/chat/answer-stream/" + chatId + "?useOriginal=" + useOriginal;
+        StringBuilder answerBuilder = new StringBuilder();
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            restTemplate.execute(url, HttpMethod.GET, request -> {
+                HttpHeaders headers = request.getHeaders();
+                headers.set("Authorization", token);
+                headers.setAccept(Collections.singletonList(MediaType.TEXT_EVENT_STREAM));
+            }, response -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (!StringUtils.hasText(line) || !line.startsWith("data:")) {
+                            continue;
+                        }
+                        String dataLine = line.substring(5).trim();
+                        if (!StringUtils.hasText(dataLine) || "[DONE]".equalsIgnoreCase(dataLine)) {
+                            continue;
+                        }
+                        try {
+                            Map<String, Object> eventMap = objectMapper.readValue(dataLine, new TypeReference<Map<String, Object>>() {});
+                            String chunk = extractAnswerText(eventMap);
+                            if (StringUtils.hasText(chunk)) {
+                                answerBuilder.append(chunk);
+                                emitter.send(SseEmitter.event().name("delta").data(chunk));
+                            }
+                            Object doneObj = firstNonNull(eventMap.get("done"), eventMap.get("isEnd"));
+                            if (doneObj instanceof Boolean && (Boolean) doneObj) {
+                                break;
+                            }
+                        } catch (Exception ex) {
+                            log.warn("xbg answer stream parse failed: {}", ex.getMessage());
+                        }
+                    }
+                }
+                return null;
+            });
+            emitter.send(SseEmitter.event().name("done").data(answerBuilder.toString()));
+            emitter.complete();
+        } catch (Exception ex) {
+            log.warn("xbg answer stream failed: {}", ex.getMessage());
+            try {
+                emitter.send(SseEmitter.event().name("error").data("获取失败请稍后再试"));
+            } catch (Exception ignore) {
+            }
+            emitter.complete();
+        } finally {
+            xbgChatTokenCache.remove(chatId);
+        }
+    }
+
+    private String extractChatId(Map<String, Object> resultMap) {
+        if (resultMap == null) {
+            return "";
+        }
+        Object id = firstNonNull(resultMap.get("id"), resultMap.get("chatId"));
+        if (id != null && StringUtils.hasText(String.valueOf(id))) {
+            return String.valueOf(id);
+        }
+        Object dataObj = resultMap.get("data");
+        if (dataObj instanceof Map) {
+            Object nested = firstNonNull(((Map<?, ?>) dataObj).get("id"), ((Map<?, ?>) dataObj).get("chatId"));
+            if (nested != null && StringUtils.hasText(String.valueOf(nested))) {
                 return String.valueOf(nested);
             }
         }

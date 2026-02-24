@@ -1744,6 +1744,7 @@ let lawAgentLastRawResponse = '0';
 let lawAgentChatPending = false;
 let lawAgentRecommendPending = false;
 let lawAgentApiPending = false;
+let lawAgentAnswerEventSource = null;
 
 
 let homeToolLoadTimer = null;
@@ -1906,6 +1907,10 @@ function closeLawServiceDialog() {
   lawAgentChatPending = false;
   lawAgentRecommendPending = false;
   lawAgentApiPending = false;
+  if (lawAgentAnswerEventSource) {
+    lawAgentAnswerEventSource.close();
+    lawAgentAnswerEventSource = null;
+  }
   setLawAgentSendingState(false);
 }
 
@@ -1934,14 +1939,11 @@ async function requestLawAgentChatMessage(payload) {
     return null;
   }
   lawAgentApiPending = true;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
   try {
     const res = await fetch(`${API_BASE}/dify/chat-message`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-      signal: controller.signal
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     const payloadData = json && json.data ? json.data : {};
@@ -1949,9 +1951,88 @@ async function requestLawAgentChatMessage(payload) {
   } catch (error) {
     return null;
   } finally {
-    clearTimeout(timeoutId);
     lawAgentApiPending = false;
   }
+}
+
+
+function appendLawAgentRecommendLinks(node) {
+  if (!node) {
+    return;
+  }
+  const actions = document.createElement('div');
+  actions.className = 'law-agent-recommend-links';
+  const lawLink = document.createElement('button');
+  lawLink.type = 'button';
+  lawLink.className = 'law-agent-link-btn';
+  lawLink.textContent = '相关法条推荐';
+  lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
+  const caseLink = document.createElement('button');
+  caseLink.type = 'button';
+  caseLink.className = 'law-agent-link-btn';
+  caseLink.textContent = '相关类案推荐';
+  caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
+  actions.appendChild(lawLink);
+  actions.appendChild(caseLink);
+  node.appendChild(actions);
+}
+
+function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
+  return new Promise(resolve => {
+    if (!chatId || !node) {
+      resolve('');
+      return;
+    }
+    if (lawAgentAnswerEventSource) {
+      lawAgentAnswerEventSource.close();
+      lawAgentAnswerEventSource = null;
+    }
+    let finalText = '';
+    node.textContent = '';
+    const streamUrl = `${API_BASE}/dify/answer-stream/${encodeURIComponent(chatId)}?useOriginal=true`;
+    const eventSource = new EventSource(streamUrl);
+    lawAgentAnswerEventSource = eventSource;
+
+    const scrollToBottom = () => {
+      const list = document.getElementById('lawAgentChatList');
+      if (list) {
+        list.scrollTop = list.scrollHeight;
+      }
+    };
+
+    const closeWithResult = () => {
+      if (withRecommendLinks && finalText) {
+        appendLawAgentRecommendLinks(node);
+      }
+      scrollToBottom();
+      if (lawAgentAnswerEventSource === eventSource) {
+        lawAgentAnswerEventSource = null;
+      }
+      eventSource.close();
+      resolve(finalText);
+    };
+
+    eventSource.addEventListener('delta', event => {
+      finalText += event.data || '';
+      node.textContent = finalText;
+      scrollToBottom();
+    });
+
+    eventSource.addEventListener('done', event => {
+      if (event && typeof event.data === 'string' && event.data.trim()) {
+        finalText = event.data;
+        node.textContent = finalText;
+      }
+      closeWithResult();
+    });
+
+    eventSource.addEventListener('error', () => {
+      if (!finalText) {
+        node.textContent = '请求处理中，请稍后再试。';
+      }
+      closeWithResult();
+    });
+  });
 }
 
 
@@ -1981,13 +2062,14 @@ async function sendLawAgentMessage() {
       type: lawAgentRequestType,
       rawResponse: lawAgentLastRawResponse
     });
-    const answer = dataObj && (dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '');
-    const rawResponse = dataObj && (dataObj.rawResponse || answer || '');
-    if (answer) {
-      updateLawAgentMessage(waitingNode, answer, lawAgentRequestType !== 2);
-      lawAgentLastRawResponse = rawResponse || lawAgentLastRawResponse;
-      lawAgentRequestType = 1;
-      return;
+    const chatId = dataObj && (dataObj.id || dataObj.chatId || '');
+    if (chatId) {
+      const answerText = await streamLawAgentAnswer(chatId, waitingNode, lawAgentRequestType !== 2);
+      if (answerText) {
+        lawAgentLastRawResponse = answerText;
+        lawAgentRequestType = 1;
+        return;
+      }
     }
   } finally {
     lawAgentChatPending = false;
@@ -2010,10 +2092,13 @@ async function askLawAgentRecommendation(tag) {
       type: 2,
       rawResponse: lawAgentLastRawResponse
     });
-    const answer = dataObj && (dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '');
-    if (answer) {
-      updateLawAgentMessage(waitingNode, answer, false);
-      return;
+    const chatId = dataObj && (dataObj.id || dataObj.chatId || '');
+    if (chatId) {
+      const answerText = await streamLawAgentAnswer(chatId, waitingNode, false);
+      if (answerText) {
+        lawAgentLastRawResponse = answerText;
+        return;
+      }
     }
   } finally {
     lawAgentRecommendPending = false;
@@ -2040,21 +2125,7 @@ function updateLawAgentMessage(node, text, withRecommendLinks) {
   }
   animateLawAgentTyping(node, text || '', () => {
     if (withRecommendLinks) {
-      const actions = document.createElement('div');
-      actions.className = 'law-agent-recommend-links';
-      const lawLink = document.createElement('button');
-      lawLink.type = 'button';
-      lawLink.className = 'law-agent-link-btn';
-      lawLink.textContent = '相关法条推荐';
-      lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
-      const caseLink = document.createElement('button');
-      caseLink.type = 'button';
-      caseLink.className = 'law-agent-link-btn';
-      caseLink.textContent = '相关类案推荐';
-      caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
-      actions.appendChild(lawLink);
-      actions.appendChild(caseLink);
-      node.appendChild(actions);
+      appendLawAgentRecommendLinks(node);
     }
     const list = document.getElementById('lawAgentChatList');
     if (list) {
