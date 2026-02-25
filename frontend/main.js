@@ -12,6 +12,28 @@ let casesPageNo = 1;
 let casesTotal = 0;
 let casesPages = 1;
 const CASES_PAGE_SIZE = 20;
+const EXCEL_BATCH_WAIT_MS = 5 * 60 * 1000;
+let excelSubmitting = false;
+
+
+function setExcelSubmitState(submitting) {
+  const btn = document.getElementById('excelSubmitBtn');
+  if (!btn) {
+    return;
+  }
+  btn.disabled = submitting;
+  btn.textContent = submitting ? '批量受理中（最长5分钟）' : '提交批量导入';
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = EXCEL_BATCH_WAIT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {...options, signal: controller.signal});
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // 提交文字案件。
 async function submitText() {
@@ -73,21 +95,26 @@ function finishParseAndGoCases() {
 
 // 提交Excel案件。
 async function submitExcel() {
+  if (excelSubmitting) {
+    return;
+  }
   const file = document.getElementById('excelFile').files[0];
   if (!file) {
     alert('请先选择Excel文件');
     return;
   }
 
+  excelSubmitting = true;
+  setExcelSubmitState(true);
   openParseModal('excel');
-  setParseModalMessage('Excel案件批量受理', '表格解析中...');
+  setParseModalMessage('Excel案件批量受理', '表格解析中（最长等待5分钟）...');
   updateExcelProgress(0, 0);
   setLoading('text');
 
   try {
     const form = new FormData();
     form.append('file', file);
-    const excelRes = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
+    const excelRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
     const excelJson = await excelRes.json();
     const parsedRows = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
     if (!parsedRows.length) {
@@ -95,12 +122,12 @@ async function submitExcel() {
     }
 
     markDone('text');
-    setParseModalMessage('Excel案件批量受理', '案件受理中...');
+    setParseModalMessage('Excel案件批量受理', '案件受理中（最长等待5分钟）...');
     const total = parsedRows.length;
     updateExcelProgress(total, 0);
 
     setLoading('classify');
-    const batchRes = await fetch(`${API_BASE}/cases/ingest/excel-batch`, {
+    const batchRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel-batch`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(parsedRows)
@@ -114,8 +141,15 @@ async function submitExcel() {
     finishParseAndGoCases();
   } catch (error) {
     console.error(error);
-    alert('Excel案件处理失败，请稍后重试');
+    if (error && error.name === 'AbortError') {
+      alert('批量导入处理超时（5分钟），请稍后重试');
+    } else {
+      alert('Excel案件处理失败，请稍后重试');
+    }
     closeParseModal();
+  } finally {
+    excelSubmitting = false;
+    setExcelSubmitState(false);
   }
 }
 
