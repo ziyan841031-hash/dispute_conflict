@@ -1486,3 +1486,17 @@ table { width: 100%; border-collapse: collapse; }
   font-size: 13px;
   padding: 0 6px;
 }
+
+
+.guide-download-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.guide-download-link.disabled {
+  color: #94a3b8;
+}

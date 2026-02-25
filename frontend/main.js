@@ -1414,6 +1414,37 @@ function buildMediationAdviceBlock(adviceHtml) {
   `;
 }
 
+function resolveArchiveDocumentPath(rawPath) {
+  const value = String(rawPath || '').trim();
+  if (!value) {
+    return '';
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  if (value.startsWith('/')) {
+    return value;
+  }
+  return `/${value}`;
+}
+
+function downloadArchiveDocument() {
+  const rawPath = (workflowAdviceRecord && workflowAdviceRecord.archiveDocumentPath) || assistantDataCache.archiveDocumentPath || '';
+  const downloadUrl = resolveArchiveDocumentPath(rawPath);
+  if (!downloadUrl) {
+    alert('暂无可下载的案件调解协议');
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.download = '';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // 渲染智能指引。
 function renderGuide(data) {
   const box = document.getElementById('guideList');
@@ -1435,10 +1466,12 @@ function renderGuide(data) {
   if (currentNode === 'archive' && (getMediationStatusText() === '调解成功' || getMediationStatusText() === '调解失败')) {
     box.classList.add('guide-advice-only');
     const archiveSummary = (workflowAdviceRecord && workflowAdviceRecord.archiveSummary) || data.archiveSummary || '<p>暂无案件归档总结</p>';
+    const archiveDocumentPath = (workflowAdviceRecord && workflowAdviceRecord.archiveDocumentPath) || data.archiveDocumentPath || '';
+    const downloadClass = archiveDocumentPath ? 'guide-download-link' : 'guide-download-link disabled';
     box.innerHTML = `
       <div class="guide-advice-block">
-        <div class="guide-advice-title">案件归档总结</div>
         <div class="guide-advice-html">${archiveSummary}</div>
+        <a class="${downloadClass}" href="javascript:void(0)" onclick="downloadArchiveDocument()">案件调解协议下载</a>
       </div>
     `;
     return;
