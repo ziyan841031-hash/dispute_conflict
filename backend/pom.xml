@@ -6,7 +6,7 @@
     <artifactId>dispute-conflict-backend</artifactId>
     <version>1.0.0</version>
     <name>dispute-conflict-backend</name>
-    <description>矛盾纠纷系统管理后端</description>
+    <description>智能化矛盾纠纷综合治理系统后端</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
