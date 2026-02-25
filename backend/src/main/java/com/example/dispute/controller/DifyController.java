@@ -5,7 +5,9 @@ import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.DifyInvokeRequest;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
+import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
+import com.example.dispute.mapper.CaseRecordMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +54,8 @@ public class DifyController {
     private final DifyClient difyClient;
     // 定义流水记录Mapper。
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
+    // 定义案件Mapper。
+    private final CaseRecordMapper caseRecordMapper;
     // 定义JSON工具。
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -65,6 +69,12 @@ public class DifyController {
 
     @Value("${dify.summary-api-key:replace-with-summary-key}")
     private String summaryApiKey;
+
+    @Value("${dify.archive-api-key:replace-with-archive-key}")
+    private String archiveApiKey;
+
+    @Value("${dify.archive-workflow-url:http://172.21.70.142/v1/workflows/run}")
+    private String archiveWorkflowUrl;
 
     @Value("${xiaobaogong.app-id:}")
     private String xbgAppId;
@@ -81,11 +91,13 @@ public class DifyController {
     /**
      * 构造函数。
      */
-    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper) {
+    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper, CaseRecordMapper caseRecordMapper) {
         // 注入Dify客户端。
         this.difyClient = difyClient;
         // 注入流水Mapper。
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
+        // 注入案件Mapper。
+        this.caseRecordMapper = caseRecordMapper;
     }
 
     /**
@@ -159,12 +171,46 @@ public class DifyController {
         }
         LocalDateTime now = LocalDateTime.now();
         record.setMediationStatus("调解成功");
-        if (record.getDiversionCompletedAt() == null) {
-            record.setDiversionCompletedAt(now);
-        }
         record.setMediationCompletedAt(now);
         caseDisposalWorkflowRecordMapper.updateById(record);
+
+        try {
+            CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
+            String archiveSummary = runArchiveSummaryWorkflow(caseRecord, record);
+            record.setArchiveSummary(archiveSummary);
+            record.setArchiveCompletedAt(LocalDateTime.now());
+            caseDisposalWorkflowRecordMapper.updateById(record);
+        } catch (Exception ex) {
+            log.warn("workflow complete archive summary failed: {}", ex.getMessage());
+        }
         return ApiResponse.success(record);
+    }
+
+    private String runArchiveSummaryWorkflow(CaseRecord caseRecord, CaseDisposalWorkflowRecord workflowRecord) {
+        if (caseRecord == null) {
+            return "";
+        }
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("case_info", defaultText(caseRecord.getCaseText()));
+        inputs.put("case_category", defaultText(caseRecord.getDisputeSubType()));
+        inputs.put("mediation_dept", workflowRecord == null ? "" : defaultText(workflowRecord.getRecommendedDepartment()));
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("inputs", inputs);
+        payload.put("response_mode", "streaming");
+        payload.put("user", "abc-123");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + archiveApiKey);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+        RestTemplate restTemplate = new RestTemplate();
+        String raw = restTemplate.postForObject(archiveWorkflowUrl, entity, String.class);
+        return StringUtils.hasText(raw) ? raw : "";
+    }
+
+    private String defaultText(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private String extractHtmlAdvice(Object mediatorAdvice) {

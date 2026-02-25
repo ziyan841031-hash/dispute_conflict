@@ -434,6 +434,9 @@ public class CaseController {
             result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
             result.put("recommendedMediationType", workflowRecord.getRecommendedMediationType());
             result.put("mediationAdvice", workflowRecord.getMediationAdvice());
+            result.put("archiveCompletedAt", workflowRecord.getArchiveCompletedAt());
+            result.put("archiveSummary", workflowRecord.getArchiveSummary());
+            result.put("archiveDocumentPath", workflowRecord.getArchiveDocumentPath());
         }
 
         if (classifyRecord != null) {

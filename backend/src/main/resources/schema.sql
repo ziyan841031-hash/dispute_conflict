@@ -184,6 +184,9 @@ CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
     diversion_completed_at TIMESTAMP,
     mediation_completed_at TIMESTAMP,
     mediation_advice TEXT,
+    archive_completed_at TIMESTAMP,
+    archive_summary TEXT,
+    archive_document_path VARCHAR(512),
     raw_response TEXT,
     created_at TIMESTAMP NOT NULL
 );
@@ -205,6 +208,9 @@ COMMENT ON COLUMN case_disposal_workflow_record.mediation_status IS '调解状�
 COMMENT ON COLUMN case_disposal_workflow_record.diversion_completed_at IS '分流完成时间';
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_completed_at IS '调解完成时间';
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_advice IS '调解建议';
+COMMENT ON COLUMN case_disposal_workflow_record.archive_completed_at IS '案件归档时间';
+COMMENT ON COLUMN case_disposal_workflow_record.archive_summary IS '案件归档总结';
+COMMENT ON COLUMN case_disposal_workflow_record.archive_document_path IS '案件文档路径';
 COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '原始响应报文(JSON字符串)';
 COMMENT ON COLUMN case_disposal_workflow_record.created_at IS '创建时间';
 
@@ -218,6 +224,12 @@ ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS diversion_com
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_completed_at TIMESTAMP;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_advice TEXT;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_completed_at TIMESTAMP;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_summary TEXT;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_document_path VARCHAR(512);
 
 CREATE TABLE IF NOT EXISTS case_stats_batch (
     id BIGSERIAL PRIMARY KEY,

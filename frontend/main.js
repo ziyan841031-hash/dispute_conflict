@@ -580,7 +580,9 @@ function getMediationStatusText() {
 function syncWorkflowLockMeta() {
   const locked = hasMediationStatusLocked();
   const selectedThirdNodeId = mapMediationCategoryToNodeId((workflowAdviceRecord && workflowAdviceRecord.flowLevel3) || assistantDataCache.flowLevel3 || '');
-  window.workflowLockMeta = {locked, selectedThirdNodeId};
+  const statusText = getMediationStatusText();
+  const terminalArchive = statusText === '调解成功' || statusText === '调解失败';
+  window.workflowLockMeta = {locked, selectedThirdNodeId, statusText, terminalArchive};
   if (window.updateWorkflowMediationStatus) {
     window.updateWorkflowMediationStatus(getMediationStatusText() || '');
   }
@@ -770,7 +772,7 @@ function mapFlowLevelToNodeId(level1, level2, level3, mediationStatus) {
     return 'accept';
   }
   const statusText = (mediationStatus || '').trim();
-  if (statusText === '调解成功') {
+  if (statusText === '调解成功' || statusText === '调解失败') {
     return 'archive';
   }
   if (statusText) {
@@ -807,8 +809,9 @@ function syncWorkflowSelectionFromAdvice(record) {
   if (window.setWorkflowPreferredStatusParent && thirdNodeId) {
     window.setWorkflowPreferredStatusParent(thirdNodeId);
   }
-  if (window.setWorkflowPreferredArchiveParent && String(record.mediationStatus || '').trim() === '调解成功') {
-    window.setWorkflowPreferredArchiveParent('success');
+  const mediationStatusText = String(record.mediationStatus || '').trim();
+  if (window.setWorkflowPreferredArchiveParent && (mediationStatusText === '调解成功' || mediationStatusText === '调解失败')) {
+    window.setWorkflowPreferredArchiveParent(mediationStatusText === '调解失败' ? 'failed' : 'success');
   }
   if (window.setWorkflowActiveNode) {
     window.setWorkflowActiveNode(nodeId);
@@ -1417,6 +1420,18 @@ function renderGuide(data) {
     box.innerHTML = buildMediationAdviceBlock(mediationAdviceHtml || '<p>暂无调解建议</p>');
     return;
   }
+
+  if (currentNode === 'archive' && (getMediationStatusText() === '调解成功' || getMediationStatusText() === '调解失败')) {
+    box.classList.add('guide-advice-only');
+    const archiveSummary = (workflowAdviceRecord && workflowAdviceRecord.archiveSummary) || data.archiveSummary || '<p>暂无案件归档总结</p>';
+    box.innerHTML = `
+      <div class="guide-advice-block">
+        <div class="guide-advice-title">案件归档总结</div>
+        <div class="guide-advice-html">${archiveSummary}</div>
+      </div>
+    `;
+    return;
+  }
   box.classList.remove('guide-advice-only');
 
   if (!mediationCategory) {
@@ -1569,6 +1584,8 @@ async function onGuideNodeConfirm() {
       assistantDataCache.mediationAdvice = record.mediationAdvice || assistantDataCache.mediationAdvice || '';
       assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
       assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+    assistantDataCache.archiveCompletedAt = record.archiveCompletedAt || assistantDataCache.archiveCompletedAt || '';
+    assistantDataCache.archiveSummary = record.archiveSummary || assistantDataCache.archiveSummary || '';
       assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
       workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
       currentWorkflowNodeId = 'status';
@@ -1801,6 +1818,8 @@ async function onTimelineMediationSuccess() {
     };
     assistantDataCache.mediationStatus = record.mediationStatus || '调解成功';
     assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+    assistantDataCache.archiveCompletedAt = record.archiveCompletedAt || assistantDataCache.archiveCompletedAt || '';
+    assistantDataCache.archiveSummary = record.archiveSummary || assistantDataCache.archiveSummary || '';
     assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
     assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
     if (window.setWorkflowPreferredArchiveParent) {

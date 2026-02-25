@@ -327,8 +327,14 @@
           const lockMeta = window.workflowLockMeta || {};
           const isThirdNode = nextId === 'people' || nextId === 'admin' || nextId === 'professional';
           const keepStatusActive = Boolean(lockMeta.locked) && isThirdNode;
+          const keepArchiveActive = Boolean(lockMeta.terminalArchive) && nextId === 'status';
+          let finalNodeId = nextId;
 
-          if (keepStatusActive) {
+          if (keepArchiveActive) {
+            finalNodeId = 'archive';
+            setActiveNodeId('archive');
+          } else if (keepStatusActive) {
+            finalNodeId = 'status';
             setPreferredParents((prev) => ({ ...prev, status: nextId }));
             setActiveNodeId('status');
           } else {
@@ -342,7 +348,7 @@
           }
 
           if (window.onWorkflowNodeChange) {
-            window.onWorkflowNodeChange(nextId);
+            window.onWorkflowNodeChange(finalNodeId);
           }
         }
       },
