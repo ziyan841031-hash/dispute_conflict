@@ -770,6 +770,9 @@ function mapFlowLevelToNodeId(level1, level2, level3, mediationStatus) {
     return 'accept';
   }
   const statusText = (mediationStatus || '').trim();
+  if (statusText === '调解成功') {
+    return 'archive';
+  }
   if (statusText) {
     return 'status';
   }
@@ -803,6 +806,9 @@ function syncWorkflowSelectionFromAdvice(record) {
   syncWorkflowLockMeta();
   if (window.setWorkflowPreferredStatusParent && thirdNodeId) {
     window.setWorkflowPreferredStatusParent(thirdNodeId);
+  }
+  if (window.setWorkflowPreferredArchiveParent && String(record.mediationStatus || '').trim() === '调解成功') {
+    window.setWorkflowPreferredArchiveParent('success');
   }
   if (window.setWorkflowActiveNode) {
     window.setWorkflowActiveNode(nodeId);
@@ -1619,6 +1625,7 @@ function renderTimeline(data) {
       <div class="timeline-action-row timeline-action-row-top">
         <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">⚡ 催办</button>
         <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">🛡 督办</button>
+        <button type="button" class="timeline-action-btn timeline-action-btn-success" onclick="onTimelineMediationSuccess()">✅ 调解成功</button>
       </div>
     `
     : '';
@@ -1643,6 +1650,27 @@ function renderTimeline(data) {
       extra: ''
     }
   ];
+
+  if (mediationStatus === '调解成功') {
+    timeline.unshift(
+      {
+        name: '案件归档',
+        enter: mediationDone,
+        done: mediationDone,
+        enterLabel: '进入时间',
+        doneLabel: '处理完成时间',
+        extra: ''
+      },
+      {
+        name: '调解成功',
+        enter: mediationDone,
+        done: mediationDone,
+        enterLabel: '进入时间',
+        doneLabel: '处理完成时间',
+        extra: ''
+      }
+    );
+  }
 
   const statusPill = mediationStatus
     ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
@@ -1747,6 +1775,51 @@ function onTimelineUrge() {
 
 function onTimelineSupervise() {
   alert('已发起督办');
+}
+
+async function onTimelineMediationSuccess() {
+  const caseId = (assistantDataCache && assistantDataCache.caseId) || (workflowAdviceRecord && workflowAdviceRecord.caseId);
+  if (!caseId) {
+    return;
+  }
+  try {
+    showWorkflowWaitingModal('状态更新中', '正在更新为调解成功并归档');
+    const res = await fetch(`${API_BASE}/dify/workflow-complete`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({caseId})
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : null;
+    const record = payload && payload.record ? payload.record : payload;
+    if (!record) {
+      return;
+    }
+    workflowAdviceRecord = {
+      ...(workflowAdviceRecord || {}),
+      ...record
+    };
+    assistantDataCache.mediationStatus = record.mediationStatus || '调解成功';
+    assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+    assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
+    assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
+    if (window.setWorkflowPreferredArchiveParent) {
+      window.setWorkflowPreferredArchiveParent('success');
+    }
+    currentWorkflowNodeId = 'archive';
+    if (window.setWorkflowActiveNode) {
+      window.setWorkflowActiveNode('archive');
+    }
+    syncWorkflowLockMeta();
+    renderGuide(assistantDataCache);
+    renderTimeline(assistantDataCache);
+    renderAssistantTop(assistantDataCache);
+  } catch (error) {
+    console.warn('调解成功更新失败', error);
+    alert('更新失败，请稍后再试');
+  } finally {
+    hideWorkflowWaitingModal();
+  }
 }
 
 // 绑定流程图点击交互（从主节点到当前节点高亮）。

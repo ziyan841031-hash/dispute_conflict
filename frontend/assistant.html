@@ -229,6 +229,14 @@
         setPreferredParents((prev) => ({ ...prev, status: target }));
       };
 
+      window.setWorkflowPreferredArchiveParent = function (nodeId) {
+        const target = nodeId || '';
+        if (!target) {
+          return;
+        }
+        setPreferredParents((prev) => ({ ...prev, archive: target }));
+      };
+
       window.setWorkflowActiveNode = function (nodeId) {
         const nextId = nodeId || 'accept';
         setActiveNodeId(nextId);

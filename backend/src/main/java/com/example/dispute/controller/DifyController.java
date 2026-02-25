@@ -143,6 +143,30 @@ public class DifyController {
         return ApiResponse.success(record);
     }
 
+
+    /**
+     * 确认调解状态为调解成功并归档。
+     */
+    @PostMapping("/workflow-complete")
+    public ApiResponse<Object> completeWorkflow(@RequestBody DifyInvokeRequest request) {
+        Long caseId = request.getCaseId();
+        if (caseId == null) {
+            throw new IllegalArgumentException("caseId不能为空");
+        }
+        CaseDisposalWorkflowRecord record = findLatestRecordByCaseId(caseId);
+        if (record == null) {
+            throw new IllegalArgumentException("未找到workflow记录: " + caseId);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        record.setMediationStatus("调解成功");
+        if (record.getDiversionCompletedAt() == null) {
+            record.setDiversionCompletedAt(now);
+        }
+        record.setMediationCompletedAt(now);
+        caseDisposalWorkflowRecordMapper.updateById(record);
+        return ApiResponse.success(record);
+    }
+
     private String extractHtmlAdvice(Object mediatorAdvice) {
         if (mediatorAdvice == null) {
             return null;
