@@ -75,6 +75,12 @@ public class CaseDisposalWorkflowRecord {
     @TableField("archive_document_path")
     private String archiveDocumentPath;
 
+    @TableField("facts_process")
+    private String factsProcess;
+
+    @TableField("responsibility_split")
+    private String responsibilitySplit;
+
     @TableField("raw_response")
     private String rawResponse;
 

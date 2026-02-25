@@ -437,6 +437,8 @@ public class CaseController {
             result.put("archiveCompletedAt", workflowRecord.getArchiveCompletedAt());
             result.put("archiveSummary", workflowRecord.getArchiveSummary());
             result.put("archiveDocumentPath", workflowRecord.getArchiveDocumentPath());
+            result.put("factsProcess", workflowRecord.getFactsProcess());
+            result.put("responsibilitySplit", workflowRecord.getResponsibilitySplit());
         }
 
         if (classifyRecord != null) {

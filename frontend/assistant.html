@@ -265,9 +265,22 @@
         const nodeSet = new Set();
         walkUpstream(activeNodeId, parentMap, preferredParents, edgeSet, nodeSet);
         const terminalArchive = mediationStatusText === '调解成功';
+        const thirdToStatusEdge = {
+          people: 'e-people-status',
+          admin: 'e-admin-status',
+          professional: 'e-professional-status'
+        };
         if (terminalArchive && activeNodeId === 'status') {
           nodeSet.add('success');
           nodeSet.add('archive');
+          edgeSet.add('e-status-success');
+          edgeSet.add('e-success-archive');
+        }
+        if (terminalArchive && (activeNodeId === 'people' || activeNodeId === 'admin' || activeNodeId === 'professional')) {
+          nodeSet.add('status');
+          nodeSet.add('success');
+          nodeSet.add('archive');
+          edgeSet.add(thirdToStatusEdge[activeNodeId]);
           edgeSet.add('e-status-success');
           edgeSet.add('e-success-archive');
         }

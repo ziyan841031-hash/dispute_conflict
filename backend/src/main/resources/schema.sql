@@ -187,6 +187,8 @@ CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
     archive_completed_at TIMESTAMP,
     archive_summary TEXT,
     archive_document_path VARCHAR(512),
+    facts_process TEXT,
+    responsibility_split TEXT,
     raw_response TEXT,
     created_at TIMESTAMP NOT NULL
 );
@@ -211,6 +213,8 @@ COMMENT ON COLUMN case_disposal_workflow_record.mediation_advice IS '调解建�
 COMMENT ON COLUMN case_disposal_workflow_record.archive_completed_at IS '案件归档时间';
 COMMENT ON COLUMN case_disposal_workflow_record.archive_summary IS '案件归档总结';
 COMMENT ON COLUMN case_disposal_workflow_record.archive_document_path IS '案件文档路径';
+COMMENT ON COLUMN case_disposal_workflow_record.facts_process IS '事实经过';
+COMMENT ON COLUMN case_disposal_workflow_record.responsibility_split IS '责任分担';
 COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '原始响应报文(JSON字符串)';
 COMMENT ON COLUMN case_disposal_workflow_record.created_at IS '创建时间';
 
@@ -230,6 +234,10 @@ ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_compl
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_summary TEXT;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_document_path VARCHAR(512);
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS facts_process TEXT;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS responsibility_split TEXT;
 
 CREATE TABLE IF NOT EXISTS case_stats_batch (
     id BIGSERIAL PRIMARY KEY,

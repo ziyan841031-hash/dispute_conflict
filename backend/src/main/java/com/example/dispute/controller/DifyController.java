@@ -177,8 +177,13 @@ public class DifyController {
         try {
             CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
             String archiveSummaryRaw = runArchiveSummaryWorkflow(caseRecord, record);
-            String archiveSummary = extractArchiveSummary(archiveSummaryRaw);
-            record.setArchiveSummary(archiveSummary);
+            Map<String, Object> parsed = parseArchiveSummaryPayload(archiveSummaryRaw);
+            String archiveSummary = valueAsText(parsed.get("archive_summary"));
+            String factsProcess = valueAsText(parsed.get("facts_process"));
+            String responsibilitySplit = valueAsText(parsed.get("responsibility_split"));
+            record.setArchiveSummary(archiveSummary + factsProcess + responsibilitySplit);
+            record.setFactsProcess(factsProcess);
+            record.setResponsibilitySplit(responsibilitySplit);
             record.setArchiveCompletedAt(LocalDateTime.now());
             caseDisposalWorkflowRecordMapper.updateById(record);
         } catch (Exception ex) {
