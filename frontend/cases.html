@@ -35,7 +35,7 @@
           <option value="中">中</option>
           <option value="高">高</option>
         </select>
-        <button onclick="loadCases()">查询</button>
+        <button onclick="searchCases()">查询</button>
         <button type="button" onclick="exportCasesCurrentPage()">导出</button>
       </div>
       <div class="table-wrap">
@@ -48,6 +48,7 @@
           <tbody id="caseTableBody"></tbody>
         </table>
       </div>
+      <div id="casesPagination" class="cases-pagination"></div>
     </section>
   </main>
 </div>

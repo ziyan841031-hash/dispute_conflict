@@ -9,6 +9,8 @@ const parseStatus = {
 };
 
 let casesPageNo = 1;
+let casesTotal = 0;
+let casesPages = 1;
 const CASES_PAGE_SIZE = 20;
 
 // 提交文字案件。
@@ -275,16 +277,73 @@ async function loadCases() {
   const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
   const res = await fetch(`${API_BASE}/cases?${params}`);
   const json = await res.json();
+  const pageData = (json && json.data) ? json.data : {};
+  const records = Array.isArray(pageData.records) ? pageData.records : [];
+  casesTotal = Number(pageData.total || 0);
+  casesPages = Math.max(1, Number(pageData.pages || Math.ceil(casesTotal / CASES_PAGE_SIZE) || 1));
+  const current = Number(pageData.current || casesPageNo || 1);
+  casesPageNo = Math.min(Math.max(1, current), casesPages);
+
   const tbody = document.getElementById('caseTableBody');
   tbody.innerHTML = '';
 
-  (json.data.records || []).forEach(item => {
+  records.forEach(item => {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
     const actionBtn = `<button onclick="openAssistant(${item.id})">案件管理</button>`;
     tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
+
+  if (!records.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="11" class="cases-empty">暂无数据</td>';
+    tbody.appendChild(tr);
+  }
+
+  renderCasesPagination();
+}
+
+
+function searchCases() {
+  casesPageNo = 1;
+  loadCases();
+}
+
+function goCasesPage(pageNo) {
+  const nextPage = Number(pageNo || 1);
+  if (!Number.isFinite(nextPage)) {
+    return;
+  }
+  const target = Math.min(Math.max(1, nextPage), Math.max(1, casesPages));
+  if (target === casesPageNo) {
+    return;
+  }
+  casesPageNo = target;
+  loadCases();
+}
+
+function renderCasesPagination() {
+  const pager = document.getElementById('casesPagination');
+  if (!pager) {
+    return;
+  }
+  const total = Number(casesTotal || 0);
+  const pages = Math.max(1, Number(casesPages || 1));
+  const current = Math.min(Math.max(1, Number(casesPageNo || 1)), pages);
+  const start = total === 0 ? 0 : (current - 1) * CASES_PAGE_SIZE + 1;
+  const end = total === 0 ? 0 : Math.min(current * CASES_PAGE_SIZE, total);
+
+  pager.innerHTML = `
+    <div class="cases-pagination-info">共 ${total} 条，当前 ${start}-${end}</div>
+    <div class="cases-pagination-actions">
+      <button type="button" onclick="goCasesPage(1)" ${current <= 1 ? 'disabled' : ''}>首页</button>
+      <button type="button" onclick="goCasesPage(${current - 1})" ${current <= 1 ? 'disabled' : ''}>上一页</button>
+      <span class="cases-pagination-current">第 ${current} / ${pages} 页</span>
+      <button type="button" onclick="goCasesPage(${current + 1})" ${current >= pages ? 'disabled' : ''}>下一页</button>
+      <button type="button" onclick="goCasesPage(${pages})" ${current >= pages ? 'disabled' : ''}>末页</button>
+    </div>
+  `;
 }
 
 async function exportCasesCurrentPage() {

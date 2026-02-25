@@ -1427,3 +1427,51 @@ table { width: 100%; border-collapse: collapse; }
 }
 }
 
+
+
+.cases-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 14px 8px;
+}
+
+.cases-pagination {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cases-pagination-info {
+  color: #475569;
+  font-size: 13px;
+}
+
+.cases-pagination-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cases-pagination-actions button {
+  padding: 5px 10px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.cases-pagination-actions button:disabled {
+  color: #94a3b8;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.cases-pagination-current {
+  color: #334155;
+  font-size: 13px;
+  padding: 0 6px;
+}
