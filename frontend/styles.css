@@ -1065,9 +1065,10 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 .ios-home-hero {
-  border-radius: 20px;
-  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
-  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
 }
 
 .ios-home-hero h2 {
