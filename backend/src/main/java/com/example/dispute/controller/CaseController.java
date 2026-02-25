@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,6 +50,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,6 +85,8 @@ public class CaseController {
     private String correctionApiKey;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final long EXCEL_BATCH_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000L;
+    private final ConcurrentMap<String, ExcelBatchIdempotentRecord> excelBatchIdempotentCache = new ConcurrentHashMap<>();
 
     /**
      * 构造函数。
@@ -164,7 +169,8 @@ public class CaseController {
      * 批量受理Excel解析结果（文本入库+智能分类，部门流转触发workflow）。
      */
     @PostMapping("/ingest/excel-batch")
-    public ApiResponse<Map<String, Object>> ingestExcelBatch(@RequestBody List<ExcelCaseIngestItem> rows) {
+    public ApiResponse<Map<String, Object>> ingestExcelBatch(@RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+                                                             @RequestBody List<ExcelCaseIngestItem> rows) {
         List<ExcelCaseIngestItem> safeRows = rows == null ? Collections.emptyList() : rows;
         if (safeRows.isEmpty()) {
             Map<String, Object> empty = new HashMap<>();
@@ -173,6 +179,16 @@ public class CaseController {
             empty.put("failed", 0);
             empty.put("details", Collections.emptyList());
             return ApiResponse.success(empty);
+        }
+
+        String idemKey = defaultString(idempotencyKey).trim();
+        if (!idemKey.isEmpty()) {
+            cleanExpiredExcelBatchIdempotentCache();
+            ExcelBatchIdempotentRecord cached = excelBatchIdempotentCache.get(idemKey);
+            if (cached != null && cached.getResult() != null) {
+                log.info("Excel批量受理命中幂等缓存: key={}", idemKey);
+                return ApiResponse.success(cached.getResult());
+            }
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(5);
@@ -203,7 +219,34 @@ public class CaseController {
         result.put("success", successCount.get());
         result.put("failed", failedCount.get());
         result.put("details", details);
+
+        if (!idemKey.isEmpty()) {
+            excelBatchIdempotentCache.put(idemKey, new ExcelBatchIdempotentRecord(System.currentTimeMillis(), result));
+        }
         return ApiResponse.success(result);
+    }
+
+    private void cleanExpiredExcelBatchIdempotentCache() {
+        long now = System.currentTimeMillis();
+        excelBatchIdempotentCache.entrySet().removeIf(entry -> now - entry.getValue().getCreatedAt() > EXCEL_BATCH_IDEMPOTENCY_TTL_MS);
+    }
+
+    private static class ExcelBatchIdempotentRecord {
+        private final long createdAt;
+        private final Map<String, Object> result;
+
+        private ExcelBatchIdempotentRecord(long createdAt, Map<String, Object> result) {
+            this.createdAt = createdAt;
+            this.result = result;
+        }
+
+        private long getCreatedAt() {
+            return createdAt;
+        }
+
+        private Map<String, Object> getResult() {
+            return result;
+        }
     }
 
     private Map<String, Object> processExcelBatchRow(ExcelCaseIngestItem row) {

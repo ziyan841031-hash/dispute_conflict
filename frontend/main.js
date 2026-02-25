@@ -93,6 +93,19 @@ function finishParseAndGoCases() {
   }, 600);
 }
 
+function buildExcelBatchIdempotencyKey(rows, file) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const filePart = file ? `${file.name || ''}|${file.size || 0}|${file.lastModified || 0}` : '';
+  const rowPart = safeRows.map((item) => `${(item && item.caseText) || ''}#${(item && item.eventSource) || ''}`).join('||');
+  const raw = `${filePart}::${rowPart}`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return `excel-batch-${safeRows.length}-${Math.abs(hash)}`;
+}
+
 // 提交Excel案件。
 async function submitExcel() {
   if (excelSubmitting) {
@@ -127,9 +140,13 @@ async function submitExcel() {
     updateExcelProgress(total, 0);
 
     setLoading('classify');
+    const idempotencyKey = buildExcelBatchIdempotencyKey(parsedRows, file);
     const batchRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel-batch`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey
+      },
       body: JSON.stringify(parsedRows)
     });
     const batchJson = await batchRes.json();
