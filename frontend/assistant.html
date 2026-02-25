@@ -266,7 +266,10 @@
         walkUpstream(activeNodeId, parentMap, preferredParents, edgeSet, nodeSet);
         const terminalArchive = mediationStatusText === '调解成功';
         if (terminalArchive && activeNodeId === 'status') {
+          nodeSet.add('success');
           nodeSet.add('archive');
+          edgeSet.add('e-status-success');
+          edgeSet.add('e-success-archive');
         }
         return { edgeSet, nodeSet };
       }, [activeNodeId, mediationStatusText, parentMap, preferredParents]);
@@ -344,9 +347,9 @@
             finalNodeId = 'archive';
             setActiveNodeId('archive');
           } else if (terminalArchive && isThirdNode) {
-            finalNodeId = 'status';
+            finalNodeId = nextId;
             setPreferredParents((prev) => ({ ...prev, status: nextId }));
-            setActiveNodeId('status');
+            setActiveNodeId(nextId);
           } else if (keepStatusActive) {
             finalNodeId = 'status';
             setPreferredParents((prev) => ({ ...prev, status: nextId }));
