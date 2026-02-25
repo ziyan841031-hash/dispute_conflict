@@ -597,6 +597,9 @@ window.canWorkflowNodeClick = function (nodeId) {
     return true;
   }
   const allowed = new Set(['status']);
+  if (meta.terminalArchive) {
+    allowed.add('archive');
+  }
   if (meta.selectedThirdNodeId) {
     allowed.add(meta.selectedThirdNodeId);
   }

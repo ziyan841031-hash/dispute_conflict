@@ -332,11 +332,14 @@
 
           if (terminalArchive && nextId === 'status') {
             finalNodeId = 'status';
+            setActiveNodeId('status');
+          } else if (terminalArchive && nextId === 'archive') {
+            finalNodeId = 'archive';
             setActiveNodeId('archive');
           } else if (terminalArchive && isThirdNode) {
-            finalNodeId = nextId;
+            finalNodeId = 'status';
             setPreferredParents((prev) => ({ ...prev, status: nextId }));
-            setActiveNodeId('archive');
+            setActiveNodeId('status');
           } else if (keepStatusActive) {
             finalNodeId = 'status';
             setPreferredParents((prev) => ({ ...prev, status: nextId }));

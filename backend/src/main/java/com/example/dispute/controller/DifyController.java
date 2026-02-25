@@ -222,11 +222,7 @@ public class DifyController {
         String archiveSummary = valueAsText(parsed.get("archive_summary"));
         String factsProcess = valueAsText(parsed.get("facts_process"));
         String responsibilitySplit = valueAsText(parsed.get("responsibility_split"));
-        StringBuilder sb = new StringBuilder();
-        appendSummaryPart(sb, "archive_summary", archiveSummary);
-        appendSummaryPart(sb, "facts_process", factsProcess);
-        appendSummaryPart(sb, "responsibility_split", responsibilitySplit);
-        return sb.toString();
+        return archiveSummary + factsProcess + responsibilitySplit;
     }
 
     private Map<String, Object> parseArchiveSummaryPayload(String raw) {
@@ -293,16 +289,6 @@ public class DifyController {
         }
         String text = String.valueOf(value).trim();
         return StringUtils.hasText(text) ? text : "";
-    }
-
-    private void appendSummaryPart(StringBuilder sb, String title, String value) {
-        if (!StringUtils.hasText(value)) {
-            return;
-        }
-        if (sb.length() > 0) {
-            sb.append("\n");
-        }
-        sb.append(title).append(": ").append(value);
     }
 
     private String extractHtmlAdvice(Object mediatorAdvice) {
