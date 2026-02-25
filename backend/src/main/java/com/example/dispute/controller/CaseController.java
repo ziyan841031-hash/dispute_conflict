@@ -282,7 +282,7 @@ public class CaseController {
             String[] headers = {
                     "案件编号", "纠纷类型", "当事人", "当事人身份证号", "当事人电话",
                     "当事人地址", "对方当事人", "对方当事人身份证号",
-                    "对方当事人电话", "对方当事人地址", "事件来源", "摘要"
+                    "对方当事人电话", "对方当事人地址", "事件来源", "推荐部门", "摘要"
             };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
@@ -293,6 +293,10 @@ public class CaseController {
                 CaseClassifyRecord classifyRecord = caseClassifyRecordMapper.selectOne(new LambdaQueryWrapper<CaseClassifyRecord>()
                         .eq(CaseClassifyRecord::getCaseId, r.getId())
                         .orderByDesc(CaseClassifyRecord::getCreatedAt)
+                        .last("limit 1"));
+                CaseDisposalWorkflowRecord workflowRecord = caseDisposalWorkflowRecordMapper.selectOne(new LambdaQueryWrapper<CaseDisposalWorkflowRecord>()
+                        .eq(CaseDisposalWorkflowRecord::getCaseId, r.getId())
+                        .orderByDesc(CaseDisposalWorkflowRecord::getCreatedAt)
                         .last("limit 1"));
                 Row row = sheet.createRow(i + 1);
                 row.createCell(0).setCellValue(nullSafe(r.getCaseNo()));
@@ -306,7 +310,8 @@ public class CaseController {
                 row.createCell(8).setCellValue(nullSafe(r.getCounterpartyPhone()));
                 row.createCell(9).setCellValue(nullSafe(r.getCounterpartyAddress()));
                 row.createCell(10).setCellValue(nullSafe(r.getEventSource()));
-                row.createCell(11).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
+                row.createCell(11).setCellValue(workflowRecord == null ? "" : nullSafe(workflowRecord.getRecommendedDepartment()));
+                row.createCell(12).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
             }
             workbook.write(out);
             return ResponseEntity.ok()
