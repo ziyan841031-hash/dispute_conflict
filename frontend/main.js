@@ -1415,7 +1415,7 @@ function renderGuide(data) {
   const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
   const isThirdNodeSelected = ['people', 'admin', 'professional'].includes(currentNode);
 
-  if (currentNode === 'status' && getMediationStatusText() === '调解中') {
+  if (currentNode === 'status') {
     box.classList.add('guide-advice-only');
     box.innerHTML = buildMediationAdviceBlock(mediationAdviceHtml || '<p>暂无调解建议</p>');
     return;
@@ -1628,6 +1628,7 @@ function renderTimeline(data) {
 
   const diversionCompletedAt = data.diversionCompletedAt;
   const mediationCompletedAt = data.mediationCompletedAt;
+  const archiveCompletedAt = data.archiveCompletedAt;
   const mediationStatus = String(data.mediationStatus || '').trim();
 
   const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
@@ -1635,6 +1636,7 @@ function renderTimeline(data) {
   const statusEnterTime = parseTimelineDate(diversionCompletedAt);
   const statusEnter = formatTimelineTime(statusEnterTime);
   const mediationDone = formatTimelineTime(mediationCompletedAt);
+  const archiveDone = formatTimelineTime(archiveCompletedAt);
   const showCurrentProcessingTime = mediationStatus === '调解中';
 
   const actionButtons = mediationStatus === '调解中'
@@ -1672,8 +1674,8 @@ function renderTimeline(data) {
     timeline.unshift(
       {
         name: '案件归档',
-        enter: mediationDone,
-        done: mediationDone,
+        enter: archiveDone,
+        done: archiveDone,
         enterLabel: '进入时间',
         doneLabel: '处理完成时间',
         extra: ''

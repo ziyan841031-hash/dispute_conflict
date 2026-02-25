@@ -176,7 +176,8 @@ public class DifyController {
 
         try {
             CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
-            String archiveSummary = runArchiveSummaryWorkflow(caseRecord, record);
+            String archiveSummaryRaw = runArchiveSummaryWorkflow(caseRecord, record);
+            String archiveSummary = extractArchiveSummary(archiveSummaryRaw);
             record.setArchiveSummary(archiveSummary);
             record.setArchiveCompletedAt(LocalDateTime.now());
             caseDisposalWorkflowRecordMapper.updateById(record);
@@ -211,6 +212,90 @@ public class DifyController {
 
     private String defaultText(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String extractArchiveSummary(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        try {
+            Map<String, Object> parsed = parseArchiveSummaryPayload(raw);
+            Map<String, Object> picked = new HashMap<>();
+            putIfPresent(picked, "archive_summary", parsed.get("archive_summary"));
+            putIfPresent(picked, "facts_process", parsed.get("facts_process"));
+            putIfPresent(picked, "responsibility_split", parsed.get("responsibility_split"));
+            if (picked.isEmpty()) {
+                return "";
+            }
+            return objectMapper.writeValueAsString(picked);
+        } catch (Exception ex) {
+            log.warn("extract archive summary failed: {}", ex.getMessage());
+            return "";
+        }
+    }
+
+    private Map<String, Object> parseArchiveSummaryPayload(String raw) {
+        String text = raw.trim();
+        if (text.startsWith("{")) {
+            Map<String, Object> map = objectMapper.readValue(text, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> candidate = findArchiveSummaryMap(map);
+            return candidate == null ? Collections.emptyMap() : candidate;
+        }
+        Map<String, Object> last = Collections.emptyMap();
+        String[] lines = raw.split("\r?\n");
+        for (String line : lines) {
+            if (!StringUtils.hasText(line) || !line.startsWith("data:")) {
+                continue;
+            }
+            String dataLine = line.substring(5).trim();
+            if (!StringUtils.hasText(dataLine) || "[DONE]".equalsIgnoreCase(dataLine)) {
+                continue;
+            }
+            try {
+                Map<String, Object> one = objectMapper.readValue(dataLine, new TypeReference<Map<String, Object>>() {});
+                Map<String, Object> candidate = findArchiveSummaryMap(one);
+                if (candidate != null && !candidate.isEmpty()) {
+                    last = candidate;
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        return last;
+    }
+
+    private Map<String, Object> findArchiveSummaryMap(Map<String, Object> root) {
+        if (root == null || root.isEmpty()) {
+            return null;
+        }
+        if (root.containsKey("archive_summary") || root.containsKey("facts_process") || root.containsKey("responsibility_split")) {
+            return root;
+        }
+        Object dataObj = root.get("data");
+        if (dataObj instanceof Map) {
+            Map<String, Object> nested = findArchiveSummaryMap((Map<String, Object>) dataObj);
+            if (nested != null && !nested.isEmpty()) {
+                return nested;
+            }
+        }
+        Object outputsObj = root.get("outputs");
+        if (outputsObj instanceof Map) {
+            Map<String, Object> nested = findArchiveSummaryMap((Map<String, Object>) outputsObj);
+            if (nested != null && !nested.isEmpty()) {
+                return nested;
+            }
+        }
+        return null;
+    }
+
+    private void putIfPresent(Map<String, Object> target, String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        String str = String.valueOf(value).trim();
+        if (!StringUtils.hasText(str)) {
+            return;
+        }
+        target.put(key, str);
     }
 
     private String extractHtmlAdvice(Object mediatorAdvice) {
