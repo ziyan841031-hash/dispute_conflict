@@ -87,20 +87,22 @@ async function submitExcel() {
     form.append('file', file);
     const excelRes = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
     const excelJson = await excelRes.json();
-    const caseTextList = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
+    const parsedRows = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
 
     markDone('text');
     setParseModalMessage('Excel案件批量受理', '案件受理中...');
-    const total = caseTextList.length;
+    const total = parsedRows.length;
     updateExcelProgress(total, 0);
 
     let finished = 0;
-    for (const caseText of caseTextList) {
+    for (const row of parsedRows) {
+      const caseText = typeof row === 'string' ? row : String((row && row.caseText) || '');
+      const eventSource = String((row && row.eventSource) || '').trim() || '部门流转';
       setLoading('classify');
       const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({caseText: String(caseText || ''), eventSource: '部门流转'})
+        body: JSON.stringify({caseText: String(caseText || ''), eventSource})
       });
       const textJson = await textRes.json();
       const caseId = textJson && textJson.data ? textJson.data.id : null;

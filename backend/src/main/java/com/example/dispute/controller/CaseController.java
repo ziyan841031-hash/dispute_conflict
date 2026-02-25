@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.CaseQueryRequest;
+import com.example.dispute.dto.ExcelCaseIngestItem;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
@@ -135,11 +136,11 @@ public class CaseController {
      * 处理Excel案件入库。
      */
     @PostMapping("/ingest/excel") // 定义Excel入库接口。
-    public ApiResponse<List<String>> ingestExcel(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<List<ExcelCaseIngestItem>> ingestExcel(@RequestParam("file") MultipartFile file) {
         // 打印请求文件日志。
         log.info("Excel入库请求: fileName={}", file.getOriginalFilename());
         // 调用服务执行入库。
-        List<String> result = caseRecordService.ingestExcel(file);
+        List<ExcelCaseIngestItem> result = caseRecordService.ingestExcel(file);
         // 打印响应结果日志。
         log.info("Excel入库响应: size={}", result.size());
         // 返回统一成功响应。

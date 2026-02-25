@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
+import com.example.dispute.dto.ExcelCaseIngestItem;
 import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -173,11 +175,11 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      * Excel案件入库。
      */
     @Override // 重写接口方法。
-    public List<String> ingestExcel(MultipartFile file) {
+    public List<ExcelCaseIngestItem> ingestExcel(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-Excel入库开始: fileName={}", file.getOriginalFilename());
         // 解析Excel第二列内容为列表。
-        List<String> contents = parseExcelToContentList(file);
+        List<ExcelCaseIngestItem> contents = parseExcelToContentList(file);
         log.info("服务层-Excel解析完成: size={}", contents.size());
         return contents;
     }
@@ -674,12 +676,13 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 解析Excel为文本。
      */
-    private List<String> parseExcelToContentList(MultipartFile file) {
+    private List<ExcelCaseIngestItem> parseExcelToContentList(MultipartFile file) {
         // 使用try-with-resource打开工作簿。
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             // 获取第一个sheet。
             Sheet sheet = workbook.getSheetAt(0);
-            List<String> result = new ArrayList<>();
+            List<ExcelCaseIngestItem> result = new ArrayList<>();
+            DataFormatter dataFormatter = new DataFormatter();
             boolean firstRowChecked = false;
             for (int i = 0; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
@@ -690,15 +693,22 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 if (contentCell == null) {
                     continue;
                 }
-                String content = contentCell.toString() == null ? "" : contentCell.toString().trim();
+                String content = dataFormatter.formatCellValue(contentCell).trim();
+                Cell eventSourceCell = row.getCell(2, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                String eventSource = eventSourceCell == null ? "" : dataFormatter.formatCellValue(eventSourceCell).trim();
                 if (!firstRowChecked) {
                     firstRowChecked = true;
-                    if ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content)) {
+                    boolean isHeader = ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content) || "案件原文".equals(content))
+                            || ("事件来源".equals(eventSource) || "来源".equals(eventSource));
+                    if (isHeader) {
                         continue;
                     }
                 }
                 if (!content.isEmpty()) {
-                    result.add(content);
+                    ExcelCaseIngestItem item = new ExcelCaseIngestItem();
+                    item.setCaseText(content);
+                    item.setEventSource(eventSource);
+                    result.add(item);
                 }
             }
             return result;
