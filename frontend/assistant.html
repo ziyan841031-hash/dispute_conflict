@@ -11,14 +11,13 @@
 <div class="layout">
   <aside class="sidebar">
     <h1>矛盾纠纷系统管理</h1>
-    <a href="index.html">控台首页</a>
+    <a href="index.html">智能工具</a>
     <a href="cases.html">案件管理</a>
     <a href="stats.html">案件统计</a>
-    <a class="active" href="assistant.html">智能助手</a>
   </aside>
   <main class="content">
     <section class="card assistant-header-card">
-      <h2>智能助手</h2>
+      <h2>案件管理智能助手</h2>
       <div id="assistantTopInfo" class="assistant-top-grid"></div>
     </section>
 
@@ -41,7 +40,6 @@
         </div>
 
         <div class="timeline-panel hidden" data-panel="timeline">
-          <h3>办理时间轴</h3>
           <div id="timelineList" class="timeline-vertical"></div>
         </div>
       </div>
@@ -53,12 +51,29 @@
   <div class="modal-content case-material-modal-content">
     <div class="case-material-header">
       <h3 id="caseMaterialTitle">案件详情</h3>
-      <button id="closeCaseMaterialBtn" type="button">关闭</button>
+      <div class="case-material-actions">
+        <button id="playCaseAudioBtn" type="button" class="case-material-action-btn case-material-action-btn-audio" title="播放音频">▶ 音频</button>
+        <button id="openCaseOptimizeBtn" type="button" class="case-material-action-btn case-material-action-btn-primary">✨ 优化建议</button>
+        <button id="closeCaseMaterialBtn" type="button" class="case-material-action-btn case-material-action-btn-secondary">关闭</button>
+      </div>
     </div>
     <div id="caseMaterialContent" class="case-material-content"></div>
   </div>
 </div>
 
+<div id="caseOptimizeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="caseOptimizeTitle">
+  <div class="modal-content case-optimize-modal-content">
+    <div class="case-material-header">
+      <h3 id="caseOptimizeTitle">优化建议对话</h3>
+      <button type="button" onclick="closeCaseOptimizeDialog()">关闭</button>
+    </div>
+    <div id="caseOptimizeContent" class="case-optimize-content"></div>
+    <div class="case-optimize-input-row">
+      <textarea id="caseOptimizeInput" placeholder="请输入您的评价建议（可多行）..." rows="4" onkeydown="onCaseOptimizeInputKeydown(event)"></textarea>
+      <button id="caseOptimizeSubmitBtn" type="button" onclick="submitCaseOptimizeFeedback()">提交</button>
+    </div>
+  </div>
+</div>
 
 <div id="workflowWaitingModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflowWaitingTitle">
   <div class="modal-content workflow-waiting-content">

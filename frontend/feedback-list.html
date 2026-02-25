@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 评价列表</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a href="index.html">智能工具</a>
+    <a href="cases.html">案件管理</a>
+    <a href="stats.html">案件统计</a>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h2>客户评价建议列表</h2>
+      <div class="table-wrap">
+        <table class="cases-table">
+          <thead>
+          <tr>
+            <th>ID</th><th>案件ID</th><th>案件编号</th><th>评价建议内容</th><th>提交时间</th><th class="action-col">操作</th>
+          </tr>
+          </thead>
+          <tbody id="feedbackTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+
+<div id="feedbackDetailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="feedbackDetailTitle">
+  <div class="modal-content feedback-detail-modal-content">
+    <div class="case-material-header">
+      <h3 id="feedbackDetailTitle">详情</h3>
+      <button type="button" onclick="closeFeedbackDetailModal()">关闭</button>
+    </div>
+    <pre id="feedbackDetailContent" class="feedback-detail-pre">-</pre>
+  </div>
+</div>
+
+
+<script>
+  function applyFeedbackPopupMode() {
+    const isPopup = window !== window.top || new URLSearchParams(window.location.search).get('popup') === '1';
+    if (!isPopup) {
+      return;
+    }
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.remove();
+    }
+    const layout = document.querySelector('.layout');
+    if (layout) {
+      layout.classList.add('feedback-popup-layout');
+    }
+    const content = document.querySelector('.content');
+    if (content) {
+      content.classList.add('feedback-popup-content');
+    }
+  }
+  applyFeedbackPopupMode();
+</script>
+<script src="main.js"></script>
+<script>loadOptimizationFeedbacks();</script>
+</body>
+</html>

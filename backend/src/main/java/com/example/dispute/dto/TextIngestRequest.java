@@ -18,4 +18,5 @@ public class TextIngestRequest {
     private String receiver;
     private String eventSource;
     private Long caseId;
+    private String audioFileUrl;
 }

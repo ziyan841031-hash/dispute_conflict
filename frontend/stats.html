@@ -10,7 +10,7 @@
 <div class="layout">
   <aside class="sidebar">
     <h1>矛盾纠纷系统管理</h1>
-    <a href="index.html">控台首页</a>
+    <a href="index.html">智能工具</a>
     <a href="cases.html">案件管理</a>
     <a class="active" href="stats.html">案件统计</a>
   </aside>
@@ -34,6 +34,13 @@
       </div>
     </section>
   </main>
+</div>
+
+<div id="statsGeneratingModal" class="modal hidden" role="status" aria-live="polite" aria-label="数据洞察报告生成中">
+  <div class="modal-content workflow-waiting-content stats-generating-modal-content">
+    <div class="workflow-waiting-spinner" aria-hidden="true"></div>
+    <h3>数据洞察报告生成中...</h3>
+  </div>
 </div>
 
 <div id="statsDetailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="statsDetailTitle">

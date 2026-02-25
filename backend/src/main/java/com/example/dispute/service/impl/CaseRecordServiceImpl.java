@@ -43,10 +43,10 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
 import java.util.UUID;
 
 /**
@@ -162,7 +162,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 request.getDisputeType(), null, request.getRiskLevel(), request.getHandlingProgress(), request.getReceiver(),
                 parsedPartyId, parsedPartyPhone, parsedPartyAddress,
                 parsedCounterpartyId, parsedCounterpartyPhone, parsedCounterpartyAddress,
-                parsedDisputeLocation);
+                parsedDisputeLocation, request.getAudioFileUrl());
         // 打印服务日志。
         log.info("服务层-文本入库完成: caseNo={}", record.getCaseNo());
         // 返回结果对象。
@@ -173,33 +173,31 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      * Excel案件入库。
      */
     @Override // 重写接口方法。
-    public CaseRecord ingestExcel(MultipartFile file) {
+    public List<String> ingestExcel(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-Excel入库开始: fileName={}", file.getOriginalFilename());
-        // 解析Excel文本。
-        String parsedText = parseExcelToText(file);
-        // 保存案件数据。
-        CaseRecord record = saveCase("EXCEL", parsedText, file.getOriginalFilename(), null,
-                null, null, "未分类", null, "中", "已受理", "系统导入",
-                null, null, null, null, null, null, null);
-        // 打印服务日志。
-        log.info("服务层-Excel入库完成: caseNo={}", record.getCaseNo());
-        // 返回结果对象。
-        return record;
+        // 解析Excel第二列内容为列表。
+        List<String> contents = parseExcelToContentList(file);
+        log.info("服务层-Excel解析完成: size={}", contents.size());
+        return contents;
     }
 
     /**
      * 音频案件入库。
      */
     @Override // 重写接口方法。
-    public String ingestAudio(MultipartFile file) {
+    public Map<String, String> ingestAudio(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-音频入库开始: fileName={}", file.getOriginalFilename());
         // 上传音频到OSS并获取URL。
         String audioUrl = uploadAudioToOss(file);
         log.info("语音文件已上传，路径：{}", audioUrl);
 
-        return soundIdentify(audioUrl);
+        String text = soundIdentify(audioUrl);
+        Map<String, String> result = new HashMap<>();
+        result.put("audioFileUrl", audioUrl);
+        result.put("text", defaultVal(text, ""));
+        return result;
     }
 
     /**
@@ -392,7 +390,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                                 String riskLevel, String handlingProgress, String receiver,
                                 String partyId, String partyPhone, String partyAddress,
                                 String counterpartyId, String counterpartyPhone, String counterpartyAddress,
-                                String disputeLocation) {
+                                String disputeLocation, String audioFileUrl) {
         // 获取当前时间。
         LocalDateTime now = LocalDateTime.now();
         // 创建实体对象。
@@ -437,6 +435,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         record.setSourceFileName(fileName);
         // 设置音频时长。
         record.setAudioDurationSec(audioDurationSec);
+        // 设置音频文件地址。
+        record.setAudioFileUrl(defaultVal(audioFileUrl, null));
         // 设置创建时间。
         record.setCreatedAt(now);
         // 设置更新时间。
@@ -674,27 +674,34 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 解析Excel为文本。
      */
-    private String parseExcelToText(MultipartFile file) {
+    private List<String> parseExcelToContentList(MultipartFile file) {
         // 使用try-with-resource打开工作簿。
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             // 获取第一个sheet。
             Sheet sheet = workbook.getSheetAt(0);
-            // 创建文本拼接器。
-            StringJoiner text = new StringJoiner("\n");
-            // 遍历每一行。
-            for (Row row : sheet) {
-                // 创建行拼接器。
-                StringJoiner rowText = new StringJoiner(" | ");
-                // 遍历每一列。
-                for (Cell cell : row) {
-                    // 添加单元格内容。
-                    rowText.add(cell.toString());
+            List<String> result = new ArrayList<>();
+            boolean firstRowChecked = false;
+            for (int i = 0; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) {
+                    continue;
                 }
-                // 添加行内容。
-                text.add(rowText.toString());
+                Cell contentCell = row.getCell(1, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                if (contentCell == null) {
+                    continue;
+                }
+                String content = contentCell.toString() == null ? "" : contentCell.toString().trim();
+                if (!firstRowChecked) {
+                    firstRowChecked = true;
+                    if ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content)) {
+                        continue;
+                    }
+                }
+                if (!content.isEmpty()) {
+                    result.add(content);
+                }
             }
-            // 返回解析文本。
-            return text.toString();
+            return result;
         } catch (IOException ex) {
             // 打印异常日志。
             log.error("Excel解析失败", ex);

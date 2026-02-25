@@ -57,6 +57,12 @@ public class CaseDisposalWorkflowRecord {
     @TableField("mediation_status")
     private String mediationStatus;
 
+    @TableField("diversion_completed_at")
+    private LocalDateTime diversionCompletedAt;
+
+    @TableField("mediation_completed_at")
+    private LocalDateTime mediationCompletedAt;
+
     @TableField("mediation_advice")
     private String mediationAdvice;
 
