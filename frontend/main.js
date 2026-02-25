@@ -88,35 +88,25 @@ async function submitExcel() {
     const excelRes = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
     const excelJson = await excelRes.json();
     const parsedRows = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
+    if (!parsedRows.length) {
+      throw new Error('Excel未解析到有效内容');
+    }
 
     markDone('text');
     setParseModalMessage('Excel案件批量受理', '案件受理中...');
     const total = parsedRows.length;
     updateExcelProgress(total, 0);
 
-    let finished = 0;
-    for (const row of parsedRows) {
-      const caseText = typeof row === 'string' ? row : String((row && row.caseText) || '');
-      const eventSource = String((row && row.eventSource) || '').trim() || '部门流转';
-      setLoading('classify');
-      const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({caseText: String(caseText || ''), eventSource})
-      });
-      const textJson = await textRes.json();
-      const caseId = textJson && textJson.data ? textJson.data.id : null;
-
-      const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({caseId, caseText: String(caseText || '')})
-      });
-      await classifyRes.json();
-
-      finished += 1;
-      updateExcelProgress(total, finished);
-    }
+    setLoading('classify');
+    const batchRes = await fetch(`${API_BASE}/cases/ingest/excel-batch`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(parsedRows)
+    });
+    const batchJson = await batchRes.json();
+    const batchData = (batchJson && batchJson.data) ? batchJson.data : {};
+    const finished = Number(batchData.success || 0) + Number(batchData.failed || 0);
+    updateExcelProgress(total, finished);
 
     markDone('classify');
     finishParseAndGoCases();

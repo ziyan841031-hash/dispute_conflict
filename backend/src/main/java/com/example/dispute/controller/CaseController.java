@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.CaseQueryRequest;
+import com.example.dispute.dto.DifyInvokeRequest;
 import com.example.dispute.dto.ExcelCaseIngestItem;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseClassifyRecord;
@@ -45,6 +46,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 案件控制器。
@@ -68,6 +75,8 @@ public class CaseController {
     private final CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper;
     // 定义Dify客户端。
     private final DifyClient difyClient;
+    // 定义Dify控制器。
+    private final DifyController difyController;
 
     @Value("${dify.correction-api-key:replace-with-correction-key}")
     private String correctionApiKey;
@@ -81,7 +90,8 @@ public class CaseController {
                           CaseClassifyRecordMapper caseClassifyRecordMapper,
                           CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper,
                           CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper,
-                          DifyClient difyClient) {
+                          DifyClient difyClient,
+                          DifyController difyController) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
         // 注入案件Mapper。
@@ -94,6 +104,8 @@ public class CaseController {
         this.caseOptimizationFeedbackMapper = caseOptimizationFeedbackMapper;
         // 注入Dify客户端。
         this.difyClient = difyClient;
+        // 注入Dify控制器。
+        this.difyController = difyController;
     }
 
     /**
@@ -145,6 +157,117 @@ public class CaseController {
         log.info("Excel入库响应: size={}", result.size());
         // 返回统一成功响应。
         return ApiResponse.success(result);
+    }
+
+
+    /**
+     * 批量受理Excel解析结果（文本入库+智能分类，部门流转触发workflow）。
+     */
+    @PostMapping("/ingest/excel-batch")
+    public ApiResponse<Map<String, Object>> ingestExcelBatch(@RequestBody List<ExcelCaseIngestItem> rows) {
+        List<ExcelCaseIngestItem> safeRows = rows == null ? Collections.emptyList() : rows;
+        if (safeRows.isEmpty()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("total", 0);
+            empty.put("success", 0);
+            empty.put("failed", 0);
+            empty.put("details", Collections.emptyList());
+            return ApiResponse.success(empty);
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failedCount = new AtomicInteger(0);
+        List<Map<String, Object>> details = Collections.synchronizedList(new ArrayList<>());
+        try {
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            for (ExcelCaseIngestItem item : safeRows) {
+                futures.add(CompletableFuture.runAsync(() -> {
+                    Map<String, Object> one = processExcelBatchRow(item);
+                    boolean success = Boolean.TRUE.equals(one.get("success"));
+                    if (success) {
+                        successCount.incrementAndGet();
+                    } else {
+                        failedCount.incrementAndGet();
+                    }
+                    details.add(one);
+                }, executor));
+            }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        } finally {
+            executor.shutdown();
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", safeRows.size());
+        result.put("success", successCount.get());
+        result.put("failed", failedCount.get());
+        result.put("details", details);
+        return ApiResponse.success(result);
+    }
+
+    private Map<String, Object> processExcelBatchRow(ExcelCaseIngestItem row) {
+        Map<String, Object> result = new HashMap<>();
+        String caseText = row == null ? "" : defaultString(row.getCaseText());
+        String eventSource = row == null ? "" : defaultString(row.getEventSource());
+        result.put("caseText", buildCaseTextPreview(caseText));
+        result.put("eventSource", eventSource);
+        try {
+            TextIngestRequest ingestRequest = new TextIngestRequest();
+            ingestRequest.setCaseText(caseText);
+            ingestRequest.setEventSource(eventSource);
+            CaseRecord record = caseRecordService.ingestText(ingestRequest);
+
+            TextIngestRequest classifyRequest = new TextIngestRequest();
+            classifyRequest.setCaseId(record.getId());
+            classifyRequest.setCaseText(caseText);
+            Object classifyResult = caseRecordService.intelligentClassify(classifyRequest);
+
+            boolean workflowTriggered = false;
+            if ("部门流转".equals(eventSource)) {
+                triggerWorkflowAfterBatch(record.getId(), caseText, classifyResult);
+                workflowTriggered = true;
+            }
+
+            result.put("success", true);
+            result.put("caseId", record.getId());
+            result.put("caseNo", record.getCaseNo());
+            result.put("workflowTriggered", workflowTriggered);
+        } catch (Exception ex) {
+            result.put("success", false);
+            result.put("error", ex.getMessage());
+            log.warn("Excel批量受理单条失败: {}", ex.getMessage());
+        }
+        return result;
+    }
+
+    private void triggerWorkflowAfterBatch(Long caseId, String caseText, Object classifyResult) {
+        try {
+            Map<String, Object> classifyMap = OBJECT_MAPPER.convertValue(classifyResult, new TypeReference<Map<String, Object>>() {});
+            String disputeType = defaultStringValue(classifyMap.get("disputeType"));
+            String disputeSubType = defaultStringValue(classifyMap.get("disputeSubType"));
+            String factsSummary = defaultStringValue(classifyMap.get("factsSummary"));
+
+            DifyInvokeRequest request = new DifyInvokeRequest();
+            request.setCaseId(caseId);
+            request.setQuery("1");
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("dispute_text", defaultString(factsSummary).isEmpty() ? caseText : factsSummary);
+            variables.put("category_level_1", disputeType);
+            variables.put("category_level_2", disputeSubType);
+            request.setVariables(variables);
+            difyController.runWorkflow(request);
+        } catch (Exception ex) {
+            log.warn("Excel批量受理触发workflow失败: caseId={}, error={}", caseId, ex.getMessage());
+        }
+    }
+
+    private String defaultString(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String defaultStringValue(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
     /**
