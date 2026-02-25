@@ -12,6 +12,8 @@ import com.example.dispute.util.MediationDocUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -32,6 +34,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -160,6 +164,40 @@ public class DifyController {
     /**
      * 确认调解状态为调解成功并归档。
      */
+    @GetMapping("/archive-document/download")
+    public ResponseEntity<Resource> downloadArchiveDocument(@RequestParam("path") String rawPath) {
+        String value = rawPath == null ? "" : rawPath.trim();
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException("path不能为空");
+        }
+        try {
+            Path base = Paths.get("generated-docs", "mediation-agreements").toAbsolutePath().normalize();
+            Path target = Paths.get(value);
+            if (!target.isAbsolute()) {
+                target = Paths.get(System.getProperty("user.dir")).resolve(target);
+            }
+            target = target.toAbsolutePath().normalize();
+            if (!target.startsWith(base)) {
+                throw new IllegalArgumentException("非法下载路径");
+            }
+            if (!java.nio.file.Files.exists(target) || !java.nio.file.Files.isRegularFile(target)) {
+                throw new IllegalArgumentException("文件不存在");
+            }
+            Resource resource = new FileSystemResource(target);
+            String fileName = target.getFileName().toString();
+            String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(resource.contentLength())
+                    .body(resource);
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new RuntimeException("下载文件失败: " + ex.getMessage(), ex);
+        }
+    }
+
     @PostMapping("/workflow-complete")
     public ApiResponse<Object> completeWorkflow(@RequestBody DifyInvokeRequest request) {
         Long caseId = request.getCaseId();

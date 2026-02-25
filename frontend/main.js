@@ -1414,27 +1414,14 @@ function buildMediationAdviceBlock(adviceHtml) {
   `;
 }
 
-function resolveArchiveDocumentPath(rawPath) {
-  const value = String(rawPath || '').trim();
-  if (!value) {
-    return '';
-  }
-  if (/^https?:\/\//i.test(value)) {
-    return value;
-  }
-  if (value.startsWith('/')) {
-    return value;
-  }
-  return `/${value}`;
-}
-
 function downloadArchiveDocument() {
   const rawPath = (workflowAdviceRecord && workflowAdviceRecord.archiveDocumentPath) || assistantDataCache.archiveDocumentPath || '';
-  const downloadUrl = resolveArchiveDocumentPath(rawPath);
-  if (!downloadUrl) {
+  const normalizedPath = String(rawPath || '').trim();
+  if (!normalizedPath) {
     alert('暂无可下载的案件调解协议');
     return;
   }
+  const downloadUrl = `${API_BASE}/dify/archive-document/download?path=${encodeURIComponent(normalizedPath)}`;
   const link = document.createElement('a');
   link.href = downloadUrl;
   link.target = '_blank';
