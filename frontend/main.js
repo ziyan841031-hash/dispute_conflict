@@ -581,7 +581,7 @@ function syncWorkflowLockMeta() {
   const locked = hasMediationStatusLocked();
   const selectedThirdNodeId = mapMediationCategoryToNodeId((workflowAdviceRecord && workflowAdviceRecord.flowLevel3) || assistantDataCache.flowLevel3 || '');
   const statusText = getMediationStatusText();
-  const terminalArchive = statusText === '调解成功' || statusText === '调解失败';
+  const terminalArchive = statusText === '调解成功';
   window.workflowLockMeta = {locked, selectedThirdNodeId, statusText, terminalArchive};
   if (window.updateWorkflowMediationStatus) {
     window.updateWorkflowMediationStatus(getMediationStatusText() || '');
@@ -599,6 +599,11 @@ window.canWorkflowNodeClick = function (nodeId) {
   const allowed = new Set(['status']);
   if (meta.terminalArchive) {
     allowed.add('archive');
+  }
+  if (meta.statusText === '调解失败') {
+    allowed.add('failed');
+    allowed.add('arbitration');
+    allowed.add('litigation');
   }
   if (meta.selectedThirdNodeId) {
     allowed.add(meta.selectedThirdNodeId);
@@ -775,8 +780,11 @@ function mapFlowLevelToNodeId(level1, level2, level3, mediationStatus) {
     return 'accept';
   }
   const statusText = (mediationStatus || '').trim();
-  if (statusText === '调解成功' || statusText === '调解失败') {
+  if (statusText === '调解成功') {
     return 'archive';
+  }
+  if (statusText === '调解失败') {
+    return 'failed';
   }
   if (statusText) {
     return 'status';
@@ -813,8 +821,8 @@ function syncWorkflowSelectionFromAdvice(record) {
     window.setWorkflowPreferredStatusParent(thirdNodeId);
   }
   const mediationStatusText = String(record.mediationStatus || '').trim();
-  if (window.setWorkflowPreferredArchiveParent && (mediationStatusText === '调解成功' || mediationStatusText === '调解失败')) {
-    window.setWorkflowPreferredArchiveParent(mediationStatusText === '调解失败' ? 'failed' : 'success');
+  if (window.setWorkflowPreferredArchiveParent && mediationStatusText === '调解成功') {
+    window.setWorkflowPreferredArchiveParent('success');
   }
   if (window.setWorkflowActiveNode) {
     window.setWorkflowActiveNode(nodeId);
@@ -1805,7 +1813,7 @@ async function onTimelineMediationSuccess() {
     return;
   }
   try {
-    showWorkflowWaitingModal('状态更新中', '正在更新为调解成功并归档');
+    showWorkflowWaitingModal('智能归档中', '正在更新为调解成功并归档');
     const res = await fetch(`${API_BASE}/dify/workflow-complete`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -1862,7 +1870,8 @@ function bindFlowInteraction() {
     {from: 'mediationStatus', to: 'success', lineId: 'l-status-success'},
     {from: 'mediationStatus', to: 'failed', lineId: 'l-status-failed'},
     {from: 'success', to: 'archive', lineId: 'l-success-archive'},
-    {from: 'failed', to: 'archive', lineId: 'l-failed-archive'}
+    {from: 'failed', to: 'arbitration', lineId: 'l-failed-arbitration'},
+    {from: 'failed', to: 'litigation', lineId: 'l-failed-litigation'}
   ];
 
   const parentMap = {};
