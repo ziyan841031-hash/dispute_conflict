@@ -326,12 +326,16 @@
 
           const lockMeta = window.workflowLockMeta || {};
           const isThirdNode = nextId === 'people' || nextId === 'admin' || nextId === 'professional';
+          const terminalArchive = Boolean(lockMeta.terminalArchive);
           const keepStatusActive = Boolean(lockMeta.locked) && isThirdNode;
-          const keepArchiveActive = Boolean(lockMeta.terminalArchive) && nextId === 'status';
           let finalNodeId = nextId;
 
-          if (keepArchiveActive) {
-            finalNodeId = 'archive';
+          if (terminalArchive && nextId === 'status') {
+            finalNodeId = 'status';
+            setActiveNodeId('archive');
+          } else if (terminalArchive && isThirdNode) {
+            finalNodeId = nextId;
+            setPreferredParents((prev) => ({ ...prev, status: nextId }));
             setActiveNodeId('archive');
           } else if (keepStatusActive) {
             finalNodeId = 'status';

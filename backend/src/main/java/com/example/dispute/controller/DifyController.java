@@ -218,28 +218,28 @@ public class DifyController {
         if (!StringUtils.hasText(raw)) {
             return "";
         }
-        try {
-            Map<String, Object> parsed = parseArchiveSummaryPayload(raw);
-            Map<String, Object> picked = new HashMap<>();
-            putIfPresent(picked, "archive_summary", parsed.get("archive_summary"));
-            putIfPresent(picked, "facts_process", parsed.get("facts_process"));
-            putIfPresent(picked, "responsibility_split", parsed.get("responsibility_split"));
-            if (picked.isEmpty()) {
-                return "";
-            }
-            return objectMapper.writeValueAsString(picked);
-        } catch (Exception ex) {
-            log.warn("extract archive summary failed: {}", ex.getMessage());
-            return "";
-        }
+        Map<String, Object> parsed = parseArchiveSummaryPayload(raw);
+        String archiveSummary = valueAsText(parsed.get("archive_summary"));
+        String factsProcess = valueAsText(parsed.get("facts_process"));
+        String responsibilitySplit = valueAsText(parsed.get("responsibility_split"));
+        StringBuilder sb = new StringBuilder();
+        appendSummaryPart(sb, "archive_summary", archiveSummary);
+        appendSummaryPart(sb, "facts_process", factsProcess);
+        appendSummaryPart(sb, "responsibility_split", responsibilitySplit);
+        return sb.toString();
     }
 
     private Map<String, Object> parseArchiveSummaryPayload(String raw) {
-        String text = raw.trim();
-        if (text.startsWith("{")) {
-            Map<String, Object> map = objectMapper.readValue(text, new TypeReference<Map<String, Object>>() {});
-            Map<String, Object> candidate = findArchiveSummaryMap(map);
-            return candidate == null ? Collections.emptyMap() : candidate;
+        try {
+            String text = raw.trim();
+            if (text.startsWith("{")) {
+                Map<String, Object> map = objectMapper.readValue(text, new TypeReference<Map<String, Object>>() {});
+                Map<String, Object> candidate = findArchiveSummaryMap(map);
+                return candidate == null ? Collections.emptyMap() : candidate;
+            }
+        } catch (Exception ex) {
+            log.warn("parse archive summary json failed: {}", ex.getMessage());
+            return Collections.emptyMap();
         }
         Map<String, Object> last = Collections.emptyMap();
         String[] lines = raw.split("\r?\n");
@@ -287,15 +287,22 @@ public class DifyController {
         return null;
     }
 
-    private void putIfPresent(Map<String, Object> target, String key, Object value) {
+    private String valueAsText(Object value) {
         if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value).trim();
+        return StringUtils.hasText(text) ? text : "";
+    }
+
+    private void appendSummaryPart(StringBuilder sb, String title, String value) {
+        if (!StringUtils.hasText(value)) {
             return;
         }
-        String str = String.valueOf(value).trim();
-        if (!StringUtils.hasText(str)) {
-            return;
+        if (sb.length() > 0) {
+            sb.append("\n");
         }
-        target.put(key, str);
+        sb.append(title).append(": ").append(value);
     }
 
     private String extractHtmlAdvice(Object mediatorAdvice) {
