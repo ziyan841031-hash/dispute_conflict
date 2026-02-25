@@ -1061,7 +1061,7 @@ table { width: 100%; border-collapse: collapse; }
 
 /* iOS style home */
 .ios-home-content {
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  background: #f3f4f6;
 }
 
 .ios-home-hero {
