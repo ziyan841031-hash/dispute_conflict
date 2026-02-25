@@ -8,6 +8,7 @@ import com.example.dispute.entity.CaseDisposalWorkflowRecord;
 import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
+import com.example.dispute.util.MediationDocUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -181,15 +182,48 @@ public class DifyController {
             String archiveSummary = valueAsText(parsed.get("archive_summary"));
             String factsProcess = valueAsText(parsed.get("facts_process"));
             String responsibilitySplit = valueAsText(parsed.get("responsibility_split"));
-            record.setArchiveSummary(archiveSummary + factsProcess + responsibilitySplit);
+            record.setArchiveSummary(archiveSummary);
             record.setFactsProcess(factsProcess);
             record.setResponsibilitySplit(responsibilitySplit);
+            record.setArchiveDocumentPath(buildMediationAgreementDoc(caseRecord, factsProcess, responsibilitySplit));
             record.setArchiveCompletedAt(LocalDateTime.now());
             caseDisposalWorkflowRecordMapper.updateById(record);
         } catch (Exception ex) {
             log.warn("workflow complete archive summary failed: {}", ex.getMessage());
         }
         return ApiResponse.success(record);
+    }
+
+    private String buildMediationAgreementDoc(CaseRecord caseRecord, String factsProcess, String responsibilitySplit) {
+        if (caseRecord == null) {
+            return "";
+        }
+        MediationDocUtil.PartyInfo partyA = new MediationDocUtil.PartyInfo(
+                caseRecord.getPartyName(),
+                "",
+                caseRecord.getPartyId(),
+                caseRecord.getPartyPhone(),
+                caseRecord.getPartyAddress()
+        );
+        MediationDocUtil.PartyInfo partyB = new MediationDocUtil.PartyInfo(
+                caseRecord.getCounterpartyName(),
+                "",
+                caseRecord.getCounterpartyId(),
+                caseRecord.getCounterpartyPhone(),
+                caseRecord.getCounterpartyAddress()
+        );
+        try {
+            return MediationDocUtil.generateMediationAgreementDocPath(
+                    caseRecord.getCaseNo(),
+                    partyA,
+                    partyB,
+                    factsProcess,
+                    responsibilitySplit
+            );
+        } catch (Exception ex) {
+            log.warn("build mediation agreement failed: {}", ex.getMessage());
+            return "";
+        }
     }
 
     private String runArchiveSummaryWorkflow(CaseRecord caseRecord, CaseDisposalWorkflowRecord workflowRecord) {
