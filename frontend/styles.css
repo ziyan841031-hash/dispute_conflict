@@ -1519,27 +1519,11 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 
-.ios-batch-inline-row {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 10px;
-  align-items: end;
-}
-
-.ios-batch-inline-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .ios-batch-source-wrap {
   margin-top: 84px;
 }
 
 @media (max-width: 760px) {
-  .ios-batch-inline-row {
-    grid-template-columns: 1fr;
-  }
   .ios-batch-source-wrap {
     margin-top: 0;
   }

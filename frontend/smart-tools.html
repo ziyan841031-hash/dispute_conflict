@@ -57,18 +57,14 @@
           <section class="ios-submodule-card ios-submodule-batch">
             <h4>批量导入（Excel）</h4>
             <div class="ios-input-group">
-              <div class="ios-batch-inline-row">
-                <div class="ios-batch-inline-item">
-                  <label for="excelFile">上传 Excel 表格</label>
-                  <input type="file" id="excelFile" accept=".xlsx,.xls">
-                </div>
-                <div class="ios-source-wrap ios-batch-source-wrap">
-                  <label for="excelEventSource">事件来源</label>
-                  <select id="excelEventSource">
-                    <option value="线下接待">线下接待</option>
-                    <option value="部门流转">部门流转</option>
-                  </select>
-                </div>
+              <label for="excelFile">上传 Excel 表格</label>
+              <input type="file" id="excelFile" accept=".xlsx,.xls">
+              <div class="ios-source-wrap ios-batch-source-wrap">
+                <label for="excelEventSource">事件来源</label>
+                <select id="excelEventSource">
+                  <option value="线下接待">线下接待</option>
+                  <option value="部门流转">部门流转</option>
+                </select>
               </div>
               <button id="excelSubmitBtn" type="button" onclick="submitExcel()">提交批量导入</button>
             </div>
