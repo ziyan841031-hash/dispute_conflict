@@ -1314,7 +1314,7 @@ table { width: 100%; border-collapse: collapse; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 0;
   width: 100%;
   height: 100%;
   border: 2px dashed #8fb3ff;
@@ -1328,10 +1328,6 @@ table { width: 100%; border-collapse: collapse; }
   box-sizing: border-box;
 }
 
-.ios-file-dropzone-icon {
-  font-size: 40px;
-  line-height: 1;
-}
 
 .ios-file-dropzone-tip {
   font-size: 14px;
