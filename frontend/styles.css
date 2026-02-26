@@ -1169,6 +1169,15 @@ table { width: 100%; border-collapse: collapse; }
   margin: 0;
 }
 
+
+.ios-source-wrap-placeholder {
+  min-height: 74px;
+  border-color: transparent;
+  background: transparent;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .ios-input-group button {
   align-self: flex-start;
   border-radius: 999px;
