@@ -1156,7 +1156,7 @@ table { width: 100%; border-collapse: collapse; }
   padding: 8px 10px;
   border: 1px solid #dbeafe;
   border-radius: 12px;
-  background: #f8fbff;
+  background: transparent;
 }
 
 .ios-source-wrap label {

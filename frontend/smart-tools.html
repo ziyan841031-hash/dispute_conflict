@@ -59,11 +59,13 @@
             <div class="ios-input-group">
               <label for="excelFile">上传 Excel 表格</label>
               <input type="file" id="excelFile" accept=".xlsx,.xls">
-              <label for="excelEventSource">事件来源</label>
-              <select id="excelEventSource">
-                <option value="线下接待">线下接待</option>
-                <option value="部门流转">部门流转</option>
-              </select>
+              <div class="ios-source-wrap">
+                <label for="excelEventSource">事件来源</label>
+                <select id="excelEventSource">
+                  <option value="线下接待">线下接待</option>
+                  <option value="部门流转">部门流转</option>
+                </select>
+              </div>
               <button id="excelSubmitBtn" type="button" onclick="submitExcel()">提交批量导入</button>
             </div>
           </section>
