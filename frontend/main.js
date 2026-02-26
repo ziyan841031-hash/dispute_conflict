@@ -188,14 +188,19 @@ async function submitExcel() {
     if (!parsedRows.length) {
       throw new Error('Excel未解析到有效内容');
     }
+    const excelEventSource = String((document.getElementById('excelEventSource') || {}).value || '线下接待').trim() || '线下接待';
+    const rowsForBatch = parsedRows.map((item) => ({
+      ...(item || {}),
+      eventSource: excelEventSource
+    }));
 
     markDone('text');
     setParseModalMessage('Excel案件批量受理', '案件受理中...');
-    const total = parsedRows.length;
+    const total = rowsForBatch.length;
     updateExcelProgress(total, 0);
 
     setLoading('classify');
-    const batchData = await runExcelBatchWithConcurrency(parsedRows, file, 5);
+    const batchData = await runExcelBatchWithConcurrency(rowsForBatch, file, 5);
     const finished = Number(batchData.success || 0) + Number(batchData.failed || 0);
     updateExcelProgress(total, finished);
 
