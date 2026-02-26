@@ -32,6 +32,67 @@ function onCasesPageSizeChange(value) {
 }
 
 
+
+function initFileDropzone(inputId, dropzoneId, fileNameId) {
+  const input = document.getElementById(inputId);
+  const dropzone = document.getElementById(dropzoneId);
+  const fileName = document.getElementById(fileNameId);
+  if (!input || !dropzone || !fileName) {
+    return;
+  }
+
+  const updateName = () => {
+    const selected = input.files && input.files[0] ? input.files[0].name : '未选择文件';
+    fileName.textContent = selected;
+  };
+
+  input.addEventListener('change', updateName);
+
+  const setDragState = (isActive) => {
+    dropzone.classList.toggle('dragover', Boolean(isActive));
+  };
+
+  ['dragenter', 'dragover'].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragState(true);
+    });
+  });
+
+  ['dragleave', 'dragend', 'drop'].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragState(false);
+    });
+  });
+
+  dropzone.addEventListener('drop', (event) => {
+    const files = event.dataTransfer && event.dataTransfer.files;
+    if (!files || !files.length) {
+      return;
+    }
+    const transfer = new DataTransfer();
+    transfer.items.add(files[0]);
+    input.files = transfer.files;
+    updateName();
+  });
+
+  updateName();
+}
+
+function initUploadDropzones() {
+  initFileDropzone('audioFile', 'audioFileDropzone', 'audioFileName');
+  initFileDropzone('excelFile', 'excelFileDropzone', 'excelFileName');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUploadDropzones);
+} else {
+  initUploadDropzones();
+}
+
 function setExcelSubmitState(submitting) {
   const btn = document.getElementById('excelSubmitBtn');
   if (!btn) {
@@ -485,7 +546,7 @@ async function exportCasesCurrentPage() {
     const objectUrl = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = `cases-export-page-${casesPageNo}.xlsx`;
+    anchor.download = 'cases-export.xlsx';
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);

@@ -1275,11 +1275,56 @@ table { width: 100%; border-collapse: collapse; }
   align-items: stretch;
 }
 
-.ios-submodule-single textarea,
-.ios-submodule-single input[type="file"],
-.ios-submodule-batch input[type="file"] {
+.ios-submodule-single textarea {
   width: 100%;
   box-sizing: border-box;
+}
+
+.ios-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.ios-file-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 102px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 10px;
+  text-align: center;
+}
+
+.ios-file-dropzone-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ios-file-dropzone-name {
+  font-size: 12px;
+  color: #64748b;
+  max-width: 100%;
+  word-break: break-all;
+}
+
+.ios-file-dropzone:hover,
+.ios-file-dropzone.dragover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e3a8a;
 }
 
 .ios-submodule-single textarea {
