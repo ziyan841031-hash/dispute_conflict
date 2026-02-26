@@ -1533,11 +1533,14 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 .ios-batch-source-wrap {
-  margin-top: 0;
+  margin-top: 84px;
 }
 
 @media (max-width: 760px) {
   .ios-batch-inline-row {
     grid-template-columns: 1fr;
+  }
+  .ios-batch-source-wrap {
+    margin-top: 0;
   }
 }
