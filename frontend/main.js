@@ -455,6 +455,12 @@ function renderCasesPagination() {
   pager.innerHTML = `
     <div class="cases-pagination-info">共 ${total} 条，当前 ${start}-${end}</div>
     <div class="cases-pagination-actions">
+      <select id="casesPageSize" onchange="onCasesPageSizeChange(this.value)">
+        <option value="20" ${getCasesPageSize() === 20 ? 'selected' : ''}>20条/页</option>
+        <option value="40" ${getCasesPageSize() === 40 ? 'selected' : ''}>40条/页</option>
+        <option value="60" ${getCasesPageSize() === 60 ? 'selected' : ''}>60条/页</option>
+        <option value="80" ${getCasesPageSize() === 80 ? 'selected' : ''}>80条/页</option>
+      </select>
       <button type="button" onclick="goCasesPage(1)" ${current <= 1 ? 'disabled' : ''}>首页</button>
       <button type="button" onclick="goCasesPage(${current - 1})" ${current <= 1 ? 'disabled' : ''}>上一页</button>
       <span class="cases-pagination-current">第 ${current} / ${pages} 页</span>
@@ -469,7 +475,7 @@ async function exportCasesCurrentPage() {
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: getCasesPageSize()});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel});
   try {
     const res = await fetch(`${API_BASE}/cases/export?${params.toString()}`);
     if (!res.ok) {

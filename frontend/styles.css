@@ -1477,6 +1477,14 @@ table { width: 100%; border-collapse: collapse; }
   gap: 6px;
 }
 
+.cases-pagination-actions select {
+  padding: 5px 8px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+}
+
 .cases-pagination-actions button {
   padding: 5px 10px;
   border: 1px solid #dbe3ef;

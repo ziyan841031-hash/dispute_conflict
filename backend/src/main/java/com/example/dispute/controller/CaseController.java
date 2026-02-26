@@ -284,8 +284,7 @@ public class CaseController {
      */
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportCases(CaseQueryRequest request) {
-        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
-        List<CaseRecord> records = pageData.getRecords();
+        List<CaseRecord> records = queryExportRecords(request);
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("案件导出");
             String[] headers = {
@@ -335,6 +334,20 @@ public class CaseController {
 
     private String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    private List<CaseRecord> queryExportRecords(CaseQueryRequest request) {
+        if (isBlank(request.getKeyword()) && isBlank(request.getDisputeType())
+                && isBlank(request.getEventSource()) && isBlank(request.getRiskLevel())) {
+            return caseRecordMapper.selectList(new LambdaQueryWrapper<CaseRecord>()
+                    .orderByDesc(CaseRecord::getCreatedAt));
+        }
+        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
+        return pageData.getRecords();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     /**
