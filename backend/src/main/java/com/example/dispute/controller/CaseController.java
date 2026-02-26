@@ -289,7 +289,7 @@ public class CaseController {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("案件导出");
             String[] headers = {
-                    "案件编号", "纠纷类型", "当事人", "当事人身份证号", "当事人电话",
+                    "案件编号", "纠纷类型", "纠纷子类型", "当事人", "当事人身份证号", "当事人电话",
                     "当事人地址", "对方当事人", "对方当事人身份证号",
                     "对方当事人电话", "对方当事人地址", "事件来源", "推荐部门", "摘要"
             };
@@ -310,17 +310,18 @@ public class CaseController {
                 Row row = sheet.createRow(i + 1);
                 row.createCell(0).setCellValue(nullSafe(r.getCaseNo()));
                 row.createCell(1).setCellValue(nullSafe(r.getDisputeType()));
-                row.createCell(2).setCellValue(nullSafe(r.getPartyName()));
-                row.createCell(3).setCellValue(nullSafe(r.getPartyId()));
-                row.createCell(4).setCellValue(nullSafe(r.getPartyPhone()));
-                row.createCell(5).setCellValue(nullSafe(r.getPartyAddress()));
-                row.createCell(6).setCellValue(nullSafe(r.getCounterpartyName()));
-                row.createCell(7).setCellValue(nullSafe(r.getCounterpartyId()));
-                row.createCell(8).setCellValue(nullSafe(r.getCounterpartyPhone()));
-                row.createCell(9).setCellValue(nullSafe(r.getCounterpartyAddress()));
-                row.createCell(10).setCellValue(nullSafe(r.getEventSource()));
-                row.createCell(11).setCellValue(workflowRecord == null ? "" : nullSafe(workflowRecord.getRecommendedDepartment()));
-                row.createCell(12).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
+                row.createCell(2).setCellValue(nullSafe(r.getDisputeSubType()));
+                row.createCell(3).setCellValue(nullSafe(r.getPartyName()));
+                row.createCell(4).setCellValue(nullSafe(r.getPartyId()));
+                row.createCell(5).setCellValue(nullSafe(r.getPartyPhone()));
+                row.createCell(6).setCellValue(nullSafe(r.getPartyAddress()));
+                row.createCell(7).setCellValue(nullSafe(r.getCounterpartyName()));
+                row.createCell(8).setCellValue(nullSafe(r.getCounterpartyId()));
+                row.createCell(9).setCellValue(nullSafe(r.getCounterpartyPhone()));
+                row.createCell(10).setCellValue(nullSafe(r.getCounterpartyAddress()));
+                row.createCell(11).setCellValue(nullSafe(r.getEventSource()));
+                row.createCell(12).setCellValue(workflowRecord == null ? "" : nullSafe(workflowRecord.getRecommendedDepartment()));
+                row.createCell(13).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
             }
             workbook.write(out);
             return ResponseEntity.ok()

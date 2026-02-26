@@ -11,9 +11,25 @@ const parseStatus = {
 let casesPageNo = 1;
 let casesTotal = 0;
 let casesPages = 1;
-const CASES_PAGE_SIZE = 20;
+let casesPageSize = 20;
 const EXCEL_BATCH_WAIT_MS = 5 * 60 * 1000;
 let excelSubmitting = false;
+
+function getCasesPageSize() {
+  const el = document.getElementById('casesPageSize');
+  const value = Number((el && el.value) || casesPageSize || 20);
+  if (!Number.isFinite(value) || value <= 0) {
+    return 20;
+  }
+  return value;
+}
+
+function onCasesPageSizeChange(value) {
+  const parsed = Number(value);
+  casesPageSize = Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+  casesPageNo = 1;
+  loadCases();
+}
 
 
 function setExcelSubmitState(submitting) {
@@ -371,17 +387,18 @@ function refreshOneIcon(type) {
 
 // 查询案件列表。
 async function loadCases() {
+  casesPageSize = getCasesPageSize();
   const keyword = document.getElementById('keyword').value;
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: getCasesPageSize()});
   const res = await fetch(`${API_BASE}/cases?${params}`);
   const json = await res.json();
   const pageData = (json && json.data) ? json.data : {};
   const records = Array.isArray(pageData.records) ? pageData.records : [];
   casesTotal = Number(pageData.total || 0);
-  casesPages = Math.max(1, Number(pageData.pages || Math.ceil(casesTotal / CASES_PAGE_SIZE) || 1));
+  casesPages = Math.max(1, Number(pageData.pages || Math.ceil(casesTotal / getCasesPageSize()) || 1));
   const current = Number(pageData.current || casesPageNo || 1);
   casesPageNo = Math.min(Math.max(1, current), casesPages);
 
@@ -432,8 +449,8 @@ function renderCasesPagination() {
   const total = Number(casesTotal || 0);
   const pages = Math.max(1, Number(casesPages || 1));
   const current = Math.min(Math.max(1, Number(casesPageNo || 1)), pages);
-  const start = total === 0 ? 0 : (current - 1) * CASES_PAGE_SIZE + 1;
-  const end = total === 0 ? 0 : Math.min(current * CASES_PAGE_SIZE, total);
+  const start = total === 0 ? 0 : (current - 1) * getCasesPageSize() + 1;
+  const end = total === 0 ? 0 : Math.min(current * getCasesPageSize(), total);
 
   pager.innerHTML = `
     <div class="cases-pagination-info">共 ${total} 条，当前 ${start}-${end}</div>
@@ -452,7 +469,7 @@ async function exportCasesCurrentPage() {
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: getCasesPageSize()});
   try {
     const res = await fetch(`${API_BASE}/cases/export?${params.toString()}`);
     if (!res.ok) {
