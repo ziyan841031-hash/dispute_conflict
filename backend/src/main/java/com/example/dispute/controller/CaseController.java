@@ -49,12 +49,8 @@ import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 案件控制器。
@@ -170,15 +166,9 @@ public class CaseController {
      */
     @PostMapping("/ingest/excel-batch")
     public ApiResponse<Map<String, Object>> ingestExcelBatch(@RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
-                                                             @RequestBody List<ExcelCaseIngestItem> rows) {
-        List<ExcelCaseIngestItem> safeRows = rows == null ? Collections.emptyList() : rows;
-        if (safeRows.isEmpty()) {
-            Map<String, Object> empty = new HashMap<>();
-            empty.put("total", 0);
-            empty.put("success", 0);
-            empty.put("failed", 0);
-            empty.put("details", Collections.emptyList());
-            return ApiResponse.success(empty);
+                                                             @RequestBody ExcelCaseIngestItem row) {
+        if (row == null || !org.springframework.util.StringUtils.hasText(defaultString(row.getCaseText()))) {
+            throw new IllegalArgumentException("案件内容不能为空");
         }
 
         String idemKey = defaultString(idempotencyKey).trim();
@@ -191,34 +181,10 @@ public class CaseController {
             }
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(5);
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failedCount = new AtomicInteger(0);
-        List<Map<String, Object>> details = Collections.synchronizedList(new ArrayList<>());
-        try {
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-            for (ExcelCaseIngestItem item : safeRows) {
-                futures.add(CompletableFuture.runAsync(() -> {
-                    Map<String, Object> one = processExcelBatchRow(item);
-                    boolean success = Boolean.TRUE.equals(one.get("success"));
-                    if (success) {
-                        successCount.incrementAndGet();
-                    } else {
-                        failedCount.incrementAndGet();
-                    }
-                    details.add(one);
-                }, executor));
-            }
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        } finally {
-            executor.shutdown();
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("total", safeRows.size());
-        result.put("success", successCount.get());
-        result.put("failed", failedCount.get());
-        result.put("details", details);
+        Map<String, Object> result = processExcelBatchRow(row);
+        result.put("total", 1);
+        result.put("success", Boolean.TRUE.equals(result.get("success")) ? 1 : 0);
+        result.put("failed", Boolean.TRUE.equals(result.get("success")) ? 0 : 1);
 
         if (!idemKey.isEmpty()) {
             excelBatchIdempotentCache.put(idemKey, new ExcelBatchIdempotentRecord(System.currentTimeMillis(), result));

@@ -22,7 +22,7 @@ function setExcelSubmitState(submitting) {
     return;
   }
   btn.disabled = submitting;
-  btn.textContent = submitting ? '批量受理中（最长5分钟）' : '提交批量导入';
+  btn.textContent = submitting ? '批量受理中...' : '提交批量导入';
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = EXCEL_BATCH_WAIT_MS) {
@@ -106,6 +106,61 @@ function buildExcelBatchIdempotencyKey(rows, file) {
   return `excel-batch-${safeRows.length}-${Math.abs(hash)}`;
 }
 
+async function runExcelBatchWithConcurrency(rows, file, concurrency = 5) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const details = [];
+  let cursor = 0;
+  const total = safeRows.length;
+
+  async function worker() {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= total) {
+        return;
+      }
+      const row = safeRows[index];
+      const idempotencyKey = `${buildExcelBatchIdempotencyKey([row], file)}-${index}`;
+      try {
+        const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel-batch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': idempotencyKey
+          },
+          body: JSON.stringify(row)
+        });
+        const json = await res.json();
+        const data = (json && json.data) ? json.data : {};
+        details.push({
+          success: Boolean(data.success),
+          caseId: data.caseId,
+          caseNo: data.caseNo,
+          error: data.error || ''
+        });
+      } catch (error) {
+        details.push({
+          success: false,
+          error: (error && error.message) || '请求失败'
+        });
+      }
+      const finished = details.length;
+      updateExcelProgress(total, finished);
+    }
+  }
+
+  const workerCount = Math.min(Math.max(1, concurrency), Math.max(1, total));
+  const tasks = [];
+  for (let i = 0; i < workerCount; i++) {
+    tasks.push(worker());
+  }
+  await Promise.all(tasks);
+
+  const success = details.filter((item) => item.success).length;
+  const failed = total - success;
+  return {total, success, failed, details};
+}
+
 // 提交Excel案件。
 async function submitExcel() {
   if (excelSubmitting) {
@@ -120,7 +175,7 @@ async function submitExcel() {
   excelSubmitting = true;
   setExcelSubmitState(true);
   openParseModal('excel');
-  setParseModalMessage('Excel案件批量受理', '表格解析中（最长等待5分钟）...');
+  setParseModalMessage('Excel案件批量受理', '表格解析中...');
   updateExcelProgress(0, 0);
   setLoading('text');
 
@@ -135,22 +190,12 @@ async function submitExcel() {
     }
 
     markDone('text');
-    setParseModalMessage('Excel案件批量受理', '案件受理中（最长等待5分钟）...');
+    setParseModalMessage('Excel案件批量受理', '案件受理中...');
     const total = parsedRows.length;
     updateExcelProgress(total, 0);
 
     setLoading('classify');
-    const idempotencyKey = buildExcelBatchIdempotencyKey(parsedRows, file);
-    const batchRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel-batch`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': idempotencyKey
-      },
-      body: JSON.stringify(parsedRows)
-    });
-    const batchJson = await batchRes.json();
-    const batchData = (batchJson && batchJson.data) ? batchJson.data : {};
+    const batchData = await runExcelBatchWithConcurrency(parsedRows, file, 5);
     const finished = Number(batchData.success || 0) + Number(batchData.failed || 0);
     updateExcelProgress(total, finished);
 
@@ -159,7 +204,7 @@ async function submitExcel() {
   } catch (error) {
     console.error(error);
     if (error && error.name === 'AbortError') {
-      alert('批量导入处理超时（5分钟），请稍后重试');
+      alert('批量导入处理超时，请稍后重试');
     } else {
       alert('Excel案件处理失败，请稍后重试');
     }
