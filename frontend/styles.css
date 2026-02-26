@@ -1418,8 +1418,8 @@ table { width: 100%; border-collapse: collapse; }
   margin-top: auto;
 }
 
-.ios-submodule-single .ios-input-group button,
-.ios-submodule-batch .ios-input-group button {
+.ios-submodule-single .ios-input-group button:not(.ios-file-remove),
+.ios-submodule-batch .ios-input-group button:not(.ios-file-remove) {
   margin-top: 8px;
   border-radius: 999px;
   background: #c8161e;
@@ -1429,8 +1429,8 @@ table { width: 100%; border-collapse: collapse; }
   height: 38px;
   padding: 0 18px;
 }
-.ios-submodule-single .ios-input-group button:hover,
-.ios-submodule-batch .ios-input-group button:hover {
+.ios-submodule-single .ios-input-group button:not(.ios-file-remove):hover,
+.ios-submodule-batch .ios-input-group button:not(.ios-file-remove):hover {
   background: #a01017;
 }
 
