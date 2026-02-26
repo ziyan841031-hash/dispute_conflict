@@ -1302,10 +1302,10 @@ table { width: 100%; border-collapse: collapse; }
   gap: 10px;
   width: 100%;
   min-height: 160px;
-  border: 2px dashed #4d74ff;
+  border: 2px dashed #8fb3ff;
   border-radius: 14px;
-  background: #171936;
-  color: #7ea1ff;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+  color: #4b6fe8;
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 12px;
@@ -1319,21 +1319,22 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-file-dropzone-tip {
   font-size: 16px;
-  color: #a9b7e7;
+  color: #6c85c8;
 }
 
 .ios-file-dropzone:hover,
 .ios-file-dropzone.dragover {
-  border-color: #6f8fff;
-  box-shadow: 0 0 0 3px rgba(77, 116, 255, 0.18) inset;
-  color: #9ab4ff;
+  border-color: #5f8dff;
+  box-shadow: 0 0 0 3px rgba(95, 141, 255, 0.15) inset;
+  background: linear-gradient(180deg, #f3f8ff 0%, #e9f1ff 100%);
+  color: #3f66dc;
 }
 
 .ios-file-preview {
   width: 100%;
-  border: 1px solid #2b3a76;
+  border: 1px solid #cfe0ff;
   border-radius: 12px;
-  background: #171c3d;
+  background: #f5f9ff;
   padding: 12px;
   box-sizing: border-box;
 }
@@ -1346,17 +1347,17 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 .ios-file-selected-name {
-  color: #5e82ff;
-  font-size: 30px;
+  color: #3f66dc;
+  font-size: 20px;
   line-height: 1.2;
-  font-weight: 500;
+  font-weight: 600;
   word-break: break-all;
 }
 
 .ios-file-remove {
   border: none;
   background: transparent;
-  color: #9da9d6;
+  color: #7b8fc8;
   font-size: 22px;
   cursor: pointer;
 }
