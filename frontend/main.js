@@ -315,7 +315,12 @@ async function submitAudio() {
   const audioData = audioJson && audioJson.data ? audioJson.data : {};
   const recognizedText = (audioData && audioData.text) ? audioData.text : '';
   const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
+  const audioAnalysis = (audioData && audioData.audioAnalysis) ? audioData.audioAnalysis : '';
   markDone('audio');
+
+  if (audioAnalysis) {
+    setParseModalMessage('音频案件处理中', `角色分析：${audioAnalysis}`);
+  }
 
   setLoading('text');
   const textPayload = {

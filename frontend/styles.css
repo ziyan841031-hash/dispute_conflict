@@ -1293,11 +1293,10 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-file-dropzone {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 102px;
+  width: 116px;
+  aspect-ratio: 1 / 1;
   border: 1.5px dashed #cbd5e1;
   border-radius: 12px;
   background: #f8fafc;
@@ -1305,15 +1304,16 @@ table { width: 100%; border-collapse: collapse; }
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 10px;
-  text-align: center;
+  align-self: flex-start;
 }
 
-.ios-file-dropzone-title {
-  font-size: 13px;
-  font-weight: 600;
+.ios-file-dropzone-icon {
+  font-size: 34px;
+  line-height: 1;
 }
 
-.ios-file-dropzone-name {
+.ios-file-selected-name {
+  min-height: 20px;
   font-size: 12px;
   color: #64748b;
   max-width: 100%;
@@ -1327,15 +1327,17 @@ table { width: 100%; border-collapse: collapse; }
   color: #1e3a8a;
 }
 
-.ios-submodule-single textarea {
-  min-height: 112px;
-  resize: vertical;
-}
-
 .ios-submodule-single .ios-input-group,
 .ios-submodule-batch .ios-input-group {
   margin-top: 0;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ios-submodule-single textarea {
+  min-height: 112px;
+  resize: vertical;
 }
 
 .ios-submodule-single .ios-input-group button,

@@ -75,6 +75,9 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     @Value("${dashscope.sound-api-key:}")
     private String soundApiKey;
 
+    @Value("${dify.audio-analysis-api-key:replace-with-audio-analysis-key}")
+    private String audioAnalysisApiKey;
+
     // 定义日志对象。
     private static final Logger log = LoggerFactory.getLogger(CaseRecordServiceImpl.class);
     // 定义Mapper对象。
@@ -196,9 +199,11 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         log.info("语音文件已上传，路径：{}", audioUrl);
 
         String text = soundIdentify(audioUrl);
+        String audioAnalysis = runAudioRoleAnalysis(text);
         Map<String, String> result = new HashMap<>();
         result.put("audioFileUrl", audioUrl);
         result.put("text", defaultVal(text, ""));
+        result.put("audioAnalysis", defaultVal(audioAnalysis, ""));
         return result;
     }
 
@@ -452,6 +457,31 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 调用千问录音文件识别并返回识别文本。
      */
+    private String runAudioRoleAnalysis(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        if (!StringUtils.hasText(audioAnalysisApiKey) || audioAnalysisApiKey.startsWith("replace-with")) {
+            log.warn("dify.audio-analysis-api-key未配置，跳过语音角色分析");
+            return "";
+        }
+        try {
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("text", text);
+            Object workflowResult = difyClient.runWorkflowWithInputs(inputs, audioAnalysisApiKey, "语音角色分析");
+            return firstNonEmpty(
+                    pickOutputValue(workflowResult, "result"),
+                    pickOutputValue(workflowResult, "analysis"),
+                    pickOutputValue(workflowResult, "role_analysis"),
+                    pickOutputValue(workflowResult, "answer"),
+                    pickRootValue(workflowResult, "message")
+            );
+        } catch (Exception ex) {
+            log.warn("语音角色分析失败: {}", ex.getMessage());
+            return "";
+        }
+    }
+
     public String soundIdentify(String audioUrl) {
         if (!StringUtils.hasText(soundApiKey)) {
             throw new IllegalStateException("dashscope.sound-api-key未配置，无法调用语音识别");
