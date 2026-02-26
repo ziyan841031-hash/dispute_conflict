@@ -49,16 +49,18 @@
               <div class="ios-input-group">
                 <label for="audioFile">音频上传</label>
                 <input type="file" id="audioFile" accept="audio/*" class="ios-file-input">
-                <label for="audioFile" id="audioFileDropzone" class="ios-file-dropzone" tabindex="0" aria-label="选择音频文件">
-                  <span class="ios-file-dropzone-icon" aria-hidden="true">↥</span>
-                  <span class="ios-file-dropzone-tip">拖拽文件到此处，或点击选择</span>
-                </label>
-                <div id="audioFilePreview" class="ios-file-preview hidden">
-                  <div class="ios-file-preview-head">
-                    <span id="audioFileName" class="ios-file-selected-name">未选择文件</span>
-                    <button type="button" class="ios-file-remove" onclick="clearSelectedFile('audioFile')">×</button>
+                <div class="ios-file-stage">
+                  <label for="audioFile" id="audioFileDropzone" class="ios-file-dropzone" tabindex="0" aria-label="选择音频文件">
+                    <span class="ios-file-dropzone-icon" aria-hidden="true">↥</span>
+                    <span class="ios-file-dropzone-tip">拖拽文件到此处，或点击选择</span>
+                  </label>
+                  <div id="audioFilePreview" class="ios-file-preview hidden">
+                    <div class="ios-file-preview-head">
+                      <span id="audioFileName" class="ios-file-selected-name">未选择文件</span>
+                      <button type="button" class="ios-file-remove" onclick="clearSelectedFile('audioFile')">×</button>
+                    </div>
+                    <audio id="audioFilePlayer" controls class="ios-audio-player"></audio>
                   </div>
-                  <audio id="audioFilePlayer" controls class="ios-audio-player"></audio>
                 </div>
                 <button type="button" onclick="submitAudio()">提交音频转写</button>
               </div>
@@ -70,14 +72,16 @@
             <div class="ios-input-group">
               <label for="excelFile">上传 Excel 表格</label>
               <input type="file" id="excelFile" accept=".xlsx,.xls" class="ios-file-input">
-              <label for="excelFile" id="excelFileDropzone" class="ios-file-dropzone" tabindex="0" aria-label="选择Excel文件">
-                <span class="ios-file-dropzone-icon" aria-hidden="true">↥</span>
-                <span class="ios-file-dropzone-tip">拖拽文件到此处，或点击选择</span>
-              </label>
-              <div id="excelFilePreview" class="ios-file-preview hidden">
-                <div class="ios-file-preview-head">
-                  <span id="excelFileName" class="ios-file-selected-name">未选择文件</span>
-                  <button type="button" class="ios-file-remove" onclick="clearSelectedFile('excelFile')">×</button>
+              <div class="ios-file-stage">
+                <label for="excelFile" id="excelFileDropzone" class="ios-file-dropzone" tabindex="0" aria-label="选择Excel文件">
+                  <span class="ios-file-dropzone-icon" aria-hidden="true">↥</span>
+                  <span class="ios-file-dropzone-tip">拖拽文件到此处，或点击选择</span>
+                </label>
+                <div id="excelFilePreview" class="ios-file-preview hidden">
+                  <div class="ios-file-preview-head">
+                    <span id="excelFileName" class="ios-file-selected-name">未选择文件</span>
+                    <button type="button" class="ios-file-remove" onclick="clearSelectedFile('excelFile')">×</button>
+                  </div>
                 </div>
               </div>
               <div class="ios-source-wrap ios-batch-source-wrap">
