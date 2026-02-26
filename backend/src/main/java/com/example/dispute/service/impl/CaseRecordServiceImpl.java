@@ -467,11 +467,12 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         }
         try {
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("text", text);
+            inputs.put("transcript_text", text);
             Object workflowResult = difyClient.runWorkflowWithInputs(inputs, audioAnalysisApiKey, "语音角色分析");
             return firstNonEmpty(
                     pickOutputValue(workflowResult, "result"),
                     pickOutputValue(workflowResult, "analysis"),
+                    pickOutputValue(workflowResult, "role_ordered_tr"),
                     pickOutputValue(workflowResult, "role_analysis"),
                     pickOutputValue(workflowResult, "answer"),
                     pickRootValue(workflowResult, "message")

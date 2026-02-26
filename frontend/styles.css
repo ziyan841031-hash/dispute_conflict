@@ -1263,6 +1263,8 @@ table { width: 100%; border-collapse: collapse; }
   border-radius: 14px;
   padding: 12px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
 .ios-submodule-card h4 {
@@ -1273,6 +1275,7 @@ table { width: 100%; border-collapse: collapse; }
 
 .ios-upload-row-single {
   align-items: stretch;
+  flex: 1;
 }
 
 .ios-submodule-single textarea {
@@ -1338,6 +1341,11 @@ table { width: 100%; border-collapse: collapse; }
 .ios-submodule-single textarea {
   min-height: 112px;
   resize: vertical;
+}
+
+.ios-submodule-single .ios-source-wrap,
+.ios-submodule-batch .ios-source-wrap {
+  min-height: 74px;
 }
 
 .ios-submodule-single .ios-input-group button,
@@ -1575,11 +1583,5 @@ table { width: 100%; border-collapse: collapse; }
 
 
 .ios-batch-source-wrap {
-  margin-top: 84px;
-}
-
-@media (max-width: 760px) {
-  .ios-batch-source-wrap {
-    margin-top: 0;
-  }
+  margin-top: 0;
 }
