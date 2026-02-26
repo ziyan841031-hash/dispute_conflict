@@ -45,11 +45,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 案件服务实现类。
@@ -202,8 +198,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         String audioAnalysis = runAudioRoleAnalysis(text);
         Map<String, String> result = new HashMap<>();
         result.put("audioFileUrl", audioUrl);
-        result.put("text", defaultVal(text, ""));
-        result.put("audioAnalysis", defaultVal(audioAnalysis, ""));
+        result.put("text", defaultVal(audioAnalysis, ""));
         return result;
     }
 
@@ -472,7 +467,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             return firstNonEmpty(
                     pickOutputValue(workflowResult, "result"),
                     pickOutputValue(workflowResult, "analysis"),
-                    pickOutputValue(workflowResult, "role_ordered_tr"),
+                    pickOutputValue(workflowResult, "role_ordered_transcript"),
                     pickOutputValue(workflowResult, "role_analysis"),
                     pickOutputValue(workflowResult, "answer"),
                     pickRootValue(workflowResult, "message")
