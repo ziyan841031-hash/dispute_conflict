@@ -81,6 +81,31 @@ public class CaseStatsController {
     private static final int PPT_HEIGHT = 768;
     private static final int MARGIN = 36;
     private static final String CHINESE_FONT_FAMILY = resolveChineseFontFamily();
+    private static final DateTimeFormatter OUTPUT_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy/M/d H:mm:ss");
+    private static final List<DateTimeFormatter> DATE_TIME_FORMATTERS = Arrays.asList(
+            DateTimeFormatter.ofPattern("yyyy/M/d H:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-M-d H:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/M/d HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-M-d HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/M/d H:mm"),
+            DateTimeFormatter.ofPattern("yyyy-M-d H:mm"),
+            DateTimeFormatter.ofPattern("yyyy/M/d HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-M-d HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy/M/d'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-M-d'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/M/d'T'HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-M-d'T'HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日 H:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日 H:mm"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日HH:mm")
+    );
+    private static final List<DateTimeFormatter> DATE_FORMATTERS = Arrays.asList(
+            DateTimeFormatter.ofPattern("yyyy/M/d"),
+            DateTimeFormatter.ofPattern("yyyy-M-d"),
+            DateTimeFormatter.ofPattern("yyyy.M.d"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日")
+    );
 
     private final CaseStatsBatchMapper batchMapper;
     private final CaseStatsDetailMapper detailMapper;
@@ -123,12 +148,12 @@ public class CaseStatsController {
                 }
                 CaseStatsDetail detail = new CaseStatsDetail();
                 detail.setSerialNo(cellString(row, 0));
-                detail.setEventTime(cellString(row, 1));
+                detail.setEventTime(cellDateTimeString(row, 1));
                 detail.setDistrict(cellString(row, 2));
                 detail.setStreetTown(cellString(row, 3));
                 detail.setRegisterSource(cellString(row, 4));
                 detail.setCaseType(cellString(row, 5));
-                detail.setRegisterTime(cellString(row, 6));
+                detail.setRegisterTime(cellDateTimeString(row, 6));
                 detail.setCurrentStatus(cellString(row, 7));
                 detail.setCreatedAt(LocalDateTime.now());
                 details.add(detail);
@@ -1068,6 +1093,71 @@ public class CaseStatsController {
             return String.valueOf(cell.getBooleanCellValue());
         }
         return cell.toString().trim();
+    }
+
+    private String cellDateTimeString(Row row, int index) {
+        Cell cell = row.getCell(index, MissingCellPolicy.RETURN_BLANK_AS_NULL);
+        if (cell == null) {
+            return "";
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            Double numericValue = cell.getNumericCellValue();
+            LocalDateTime dateTime = null;
+            if (DateUtil.isCellDateFormatted(cell)) {
+                dateTime = cell.getLocalDateTimeCellValue();
+            } else if (numericValue != null && numericValue > 1d) {
+                try {
+                    dateTime = DateUtil.getLocalDateTime(numericValue);
+                } catch (Exception ignored) {
+                }
+            }
+            if (dateTime != null) {
+                return OUTPUT_DATE_TIME_FORMATTER.format(dateTime);
+            }
+        }
+        String raw = cellString(row, index);
+        if (raw.isEmpty()) {
+            return "";
+        }
+        return parseDateTimeString(raw);
+    }
+
+    private String parseDateTimeString(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) {
+            return "";
+        }
+        value = value.replace('T', ' ').replaceAll("\\s+", " ");
+
+        for (DateTimeFormatter formatter : DATE_TIME_FORMATTERS) {
+            try {
+                LocalDateTime dateTime = LocalDateTime.parse(value, formatter);
+                return OUTPUT_DATE_TIME_FORMATTER.format(dateTime);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+            try {
+                LocalDate date = LocalDate.parse(value, formatter);
+                return OUTPUT_DATE_TIME_FORMATTER.format(date.atStartOfDay());
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        if (value.matches("^\\d{10,13}$")) {
+            try {
+                long epoch = Long.parseLong(value);
+                if (value.length() == 10) {
+                    epoch = epoch * 1000L;
+                }
+                LocalDateTime dateTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(epoch), java.time.ZoneId.systemDefault());
+                return OUTPUT_DATE_TIME_FORMATTER.format(dateTime);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return value;
     }
 
     /**
