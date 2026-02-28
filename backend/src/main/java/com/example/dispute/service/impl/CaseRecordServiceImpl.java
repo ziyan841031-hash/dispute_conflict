@@ -256,8 +256,22 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             // 抛出参数异常。
             throw new IllegalArgumentException("caseId不能为空");
         }
+        // 查询案件记录。
+        CaseRecord record = caseRecordMapper.selectById(request.getCaseId());
+        // 判断记录是否存在。
+        if (record == null) {
+            // 抛出参数异常。
+            throw new IllegalArgumentException("未找到案件记录: " + request.getCaseId());
+        }
+        // 优先使用请求文本；若为空则回退到案件文本。
+        String classifyText = StringUtils.hasText(request.getCaseText()) ? request.getCaseText() : record.getCaseText();
+        // 校验用于分类的文本。
+        if (!StringUtils.hasText(classifyText)) {
+            // 抛出参数异常。
+            throw new IllegalArgumentException("案件文本不能为空");
+        }
         // 调用Dify智能分类工作流。
-        Object classifyResult = difyClient.runClassifyWorkflow(request.getCaseText());
+        Object classifyResult = difyClient.runClassifyWorkflow(classifyText);
         // 提取纠纷类型。
         String disputeType = firstNonEmpty(
                 pickOutputValue(classifyResult, "dispute_category_l1"),
@@ -275,13 +289,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 pickOutputValue(classifyResult, "risk_level"),
                 pickOutputValue(classifyResult, "风险等级")
         );
-        // 查询案件记录。
-        CaseRecord record = caseRecordMapper.selectById(request.getCaseId());
-        // 判断记录是否存在。
-        if (record == null) {
-            // 抛出参数异常。
-            throw new IllegalArgumentException("未找到案件记录: " + request.getCaseId());
-        }
         // 回写纠纷类型。
         record.setDisputeType(defaultVal(disputeType, record.getDisputeType()));
         // 回写纠纷子类型。
