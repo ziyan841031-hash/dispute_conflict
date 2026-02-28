@@ -394,12 +394,7 @@ async function submitAudio() {
 
   const recognizedText = (audioData && audioData.text) ? audioData.text : '';
   const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
-  const audioAnalysis = recognizedText;
   markDone('audio');
-
-  if (audioAnalysis) {
-    setParseModalMessage('音频案件处理中', `角色分析：${audioAnalysis}`);
-  }
 
   setLoading('text');
   const textPayload = {
