@@ -195,10 +195,11 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         log.info("语音文件已上传，路径：{}", audioUrl);
 
         String text = soundIdentify(audioUrl);
+        String audioAnalysis = runAudioRoleAnalysis(text);
         Map<String, String> result = new HashMap<>();
         result.put("audioFileUrl", audioUrl);
-        result.put("text", defaultVal(text, ""));
-        result.put("audioAnalysis", "");
+        result.put("text", defaultVal(audioAnalysis, ""));
+        result.put("transcriptText", defaultVal(text, ""));
         return result;
     }
 
@@ -462,7 +463,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         }
         try {
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("transcript_text", text);
+            inputs.put("transcript_text", compactAudioTranscript(text));
             Object workflowResult = difyClient.runWorkflowWithInputs(inputs, audioAnalysisApiKey, "语音角色分析");
             return firstNonEmpty(
                     pickOutputValue(workflowResult, "result"),
@@ -476,6 +477,14 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             log.warn("语音角色分析失败: {}", ex.getMessage());
             return "";
         }
+    }
+
+    private String compactAudioTranscript(String text) {
+        String compact = defaultVal(text, "").replaceAll("\s+", " ").trim();
+        if (compact.length() <= 1600) {
+            return compact;
+        }
+        return compact.substring(0, 1600);
     }
 
     public String soundIdentify(String audioUrl) {

@@ -173,6 +173,26 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = EXCEL_BATCH_WAIT_
   }
 }
 
+async function requestAudioIngest(formData, maxRetries = 1) {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: formData}, EXCEL_BATCH_WAIT_MS);
+      if (!res.ok) {
+        throw new Error('音频入库失败');
+      }
+      return await res.json();
+    } catch (error) {
+      if (attempt >= maxRetries) {
+        throw error;
+      }
+      attempt += 1;
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+  }
+  throw new Error('音频入库失败');
+}
+
 // 提交文字案件。
 async function submitText() {
   const caseTextValue = String((document.getElementById('caseText') || {}).value || '').trim();
@@ -371,13 +391,10 @@ async function submitAudio() {
 
   const form = new FormData();
   form.append('file', file);
+  setParseModalMessage('音频案件处理中', '正在进行语音转写与角色分析，通常需要30-60秒，请稍候...');
   let audioData = {};
   try {
-    const audioRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
-    if (!audioRes.ok) {
-      throw new Error('音频入库失败');
-    }
-    const audioJson = await audioRes.json();
+    const audioJson = await requestAudioIngest(form, 1);
     audioData = audioJson && audioJson.data ? audioJson.data : {};
   } catch (error) {
     console.error(error);
@@ -386,9 +403,9 @@ async function submitAudio() {
     return;
   }
 
-  const recognizedText = (audioData && audioData.text) ? audioData.text : '';
+  const recognizedText = (audioData && audioData.transcriptText) ? audioData.transcriptText : ((audioData && audioData.text) ? audioData.text : '');
   const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
-  const audioAnalysis = (audioData && audioData.audioAnalysis) ? audioData.audioAnalysis : '';
+  const audioAnalysis = (audioData && audioData.text) ? audioData.text : '';
   markDone('audio');
 
   if (audioAnalysis) {
