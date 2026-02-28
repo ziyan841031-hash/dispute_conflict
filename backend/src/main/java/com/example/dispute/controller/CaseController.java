@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.CaseQueryRequest;
+import com.example.dispute.dto.DifyInvokeRequest;
+import com.example.dispute.dto.ExcelCaseIngestItem;
 import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,6 +47,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * 案件控制器。
@@ -67,11 +74,15 @@ public class CaseController {
     private final CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper;
     // 定义Dify客户端。
     private final DifyClient difyClient;
+    // 定义Dify控制器。
+    private final DifyController difyController;
 
     @Value("${dify.correction-api-key:replace-with-correction-key}")
     private String correctionApiKey;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final long EXCEL_BATCH_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000L;
+    private final ConcurrentMap<String, ExcelBatchIdempotentRecord> excelBatchIdempotentCache = new ConcurrentHashMap<>();
 
     /**
      * 构造函数。
@@ -80,7 +91,8 @@ public class CaseController {
                           CaseClassifyRecordMapper caseClassifyRecordMapper,
                           CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper,
                           CaseOptimizationFeedbackMapper caseOptimizationFeedbackMapper,
-                          DifyClient difyClient) {
+                          DifyClient difyClient,
+                          DifyController difyController) {
         // 注入案件服务。
         this.caseRecordService = caseRecordService;
         // 注入案件Mapper。
@@ -93,6 +105,8 @@ public class CaseController {
         this.caseOptimizationFeedbackMapper = caseOptimizationFeedbackMapper;
         // 注入Dify客户端。
         this.difyClient = difyClient;
+        // 注入Dify控制器。
+        this.difyController = difyController;
     }
 
     /**
@@ -135,15 +149,134 @@ public class CaseController {
      * 处理Excel案件入库。
      */
     @PostMapping("/ingest/excel") // 定义Excel入库接口。
-    public ApiResponse<List<String>> ingestExcel(@RequestParam("file") MultipartFile file) {
+    public ApiResponse<List<ExcelCaseIngestItem>> ingestExcel(@RequestParam("file") MultipartFile file) {
         // 打印请求文件日志。
         log.info("Excel入库请求: fileName={}", file.getOriginalFilename());
         // 调用服务执行入库。
-        List<String> result = caseRecordService.ingestExcel(file);
+        List<ExcelCaseIngestItem> result = caseRecordService.ingestExcel(file);
         // 打印响应结果日志。
         log.info("Excel入库响应: size={}", result.size());
         // 返回统一成功响应。
         return ApiResponse.success(result);
+    }
+
+
+    /**
+     * 批量受理Excel解析结果（文本入库+智能分类，部门流转触发workflow）。
+     */
+    @PostMapping("/ingest/excel-batch")
+    public ApiResponse<Map<String, Object>> ingestExcelBatch(@RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+                                                             @RequestBody ExcelCaseIngestItem row) {
+        if (row == null || !org.springframework.util.StringUtils.hasText(defaultString(row.getCaseText()))) {
+            throw new IllegalArgumentException("案件内容不能为空");
+        }
+
+        String idemKey = defaultString(idempotencyKey).trim();
+        if (!idemKey.isEmpty()) {
+            cleanExpiredExcelBatchIdempotentCache();
+            ExcelBatchIdempotentRecord cached = excelBatchIdempotentCache.get(idemKey);
+            if (cached != null && cached.getResult() != null) {
+                log.info("Excel批量受理命中幂等缓存: key={}", idemKey);
+                return ApiResponse.success(cached.getResult());
+            }
+        }
+
+        Map<String, Object> result = processExcelBatchRow(row);
+        result.put("total", 1);
+        result.put("success", Boolean.TRUE.equals(result.get("success")) ? 1 : 0);
+        result.put("failed", Boolean.TRUE.equals(result.get("success")) ? 0 : 1);
+
+        if (!idemKey.isEmpty()) {
+            excelBatchIdempotentCache.put(idemKey, new ExcelBatchIdempotentRecord(System.currentTimeMillis(), result));
+        }
+        return ApiResponse.success(result);
+    }
+
+    private void cleanExpiredExcelBatchIdempotentCache() {
+        long now = System.currentTimeMillis();
+        excelBatchIdempotentCache.entrySet().removeIf(entry -> now - entry.getValue().getCreatedAt() > EXCEL_BATCH_IDEMPOTENCY_TTL_MS);
+    }
+
+    private static class ExcelBatchIdempotentRecord {
+        private final long createdAt;
+        private final Map<String, Object> result;
+
+        private ExcelBatchIdempotentRecord(long createdAt, Map<String, Object> result) {
+            this.createdAt = createdAt;
+            this.result = result;
+        }
+
+        private long getCreatedAt() {
+            return createdAt;
+        }
+
+        private Map<String, Object> getResult() {
+            return result;
+        }
+    }
+
+    private Map<String, Object> processExcelBatchRow(ExcelCaseIngestItem row) {
+        Map<String, Object> result = new HashMap<>();
+        String caseText = row == null ? "" : defaultString(row.getCaseText());
+        String eventSource = row == null ? "" : defaultString(row.getEventSource());
+        result.put("caseText", buildCaseTextPreview(caseText));
+        result.put("eventSource", eventSource);
+        try {
+            TextIngestRequest ingestRequest = new TextIngestRequest();
+            ingestRequest.setCaseText(caseText);
+            ingestRequest.setEventSource(eventSource);
+            CaseRecord record = caseRecordService.ingestText(ingestRequest);
+
+            TextIngestRequest classifyRequest = new TextIngestRequest();
+            classifyRequest.setCaseId(record.getId());
+            classifyRequest.setCaseText(caseText);
+            Object classifyResult = caseRecordService.intelligentClassify(classifyRequest);
+
+            boolean workflowTriggered = false;
+            if ("部门流转".equals(eventSource)) {
+                triggerWorkflowAfterBatch(record.getId(), caseText, classifyResult);
+                workflowTriggered = true;
+            }
+
+            result.put("success", true);
+            result.put("caseId", record.getId());
+            result.put("caseNo", record.getCaseNo());
+            result.put("workflowTriggered", workflowTriggered);
+        } catch (Exception ex) {
+            result.put("success", false);
+            result.put("error", ex.getMessage());
+            log.warn("Excel批量受理单条失败: {}", ex.getMessage());
+        }
+        return result;
+    }
+
+    private void triggerWorkflowAfterBatch(Long caseId, String caseText, Object classifyResult) {
+        try {
+            Map<String, Object> classifyMap = OBJECT_MAPPER.convertValue(classifyResult, new TypeReference<Map<String, Object>>() {});
+            String disputeType = defaultStringValue(classifyMap.get("disputeType"));
+            String disputeSubType = defaultStringValue(classifyMap.get("disputeSubType"));
+            String factsSummary = defaultStringValue(classifyMap.get("factsSummary"));
+
+            DifyInvokeRequest request = new DifyInvokeRequest();
+            request.setCaseId(caseId);
+            request.setQuery("1");
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("dispute_text", defaultString(factsSummary).isEmpty() ? caseText : factsSummary);
+            variables.put("category_level_1", disputeType);
+            variables.put("category_level_2", disputeSubType);
+            request.setVariables(variables);
+            difyController.runWorkflow(request);
+        } catch (Exception ex) {
+            log.warn("Excel批量受理触发workflow失败: caseId={}, error={}", caseId, ex.getMessage());
+        }
+    }
+
+    private String defaultString(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String defaultStringValue(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
     /**
@@ -151,14 +284,13 @@ public class CaseController {
      */
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportCases(CaseQueryRequest request) {
-        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
-        List<CaseRecord> records = pageData.getRecords();
+        List<CaseRecord> records = queryExportRecords(request);
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("案件导出");
             String[] headers = {
-                    "案件编号", "纠纷类型", "当事人", "当事人身份证号", "当事人电话",
+                    "案件编号", "纠纷类型", "纠纷子类型", "当事人", "当事人身份证号", "当事人电话",
                     "当事人地址", "对方当事人", "对方当事人身份证号",
-                    "对方当事人电话", "对方当事人地址", "事件来源", "摘要"
+                    "对方当事人电话", "对方当事人地址", "事件来源", "推荐部门", "摘要"
             };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
@@ -170,19 +302,25 @@ public class CaseController {
                         .eq(CaseClassifyRecord::getCaseId, r.getId())
                         .orderByDesc(CaseClassifyRecord::getCreatedAt)
                         .last("limit 1"));
+                CaseDisposalWorkflowRecord workflowRecord = caseDisposalWorkflowRecordMapper.selectOne(new LambdaQueryWrapper<CaseDisposalWorkflowRecord>()
+                        .eq(CaseDisposalWorkflowRecord::getCaseId, r.getId())
+                        .orderByDesc(CaseDisposalWorkflowRecord::getCreatedAt)
+                        .last("limit 1"));
                 Row row = sheet.createRow(i + 1);
                 row.createCell(0).setCellValue(nullSafe(r.getCaseNo()));
                 row.createCell(1).setCellValue(nullSafe(r.getDisputeType()));
-                row.createCell(2).setCellValue(nullSafe(r.getPartyName()));
-                row.createCell(3).setCellValue(nullSafe(r.getPartyId()));
-                row.createCell(4).setCellValue(nullSafe(r.getPartyPhone()));
-                row.createCell(5).setCellValue(nullSafe(r.getPartyAddress()));
-                row.createCell(6).setCellValue(nullSafe(r.getCounterpartyName()));
-                row.createCell(7).setCellValue(nullSafe(r.getCounterpartyId()));
-                row.createCell(8).setCellValue(nullSafe(r.getCounterpartyPhone()));
-                row.createCell(9).setCellValue(nullSafe(r.getCounterpartyAddress()));
-                row.createCell(10).setCellValue(nullSafe(r.getEventSource()));
-                row.createCell(11).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
+                row.createCell(2).setCellValue(nullSafe(r.getDisputeSubType()));
+                row.createCell(3).setCellValue(nullSafe(r.getPartyName()));
+                row.createCell(4).setCellValue(nullSafe(r.getPartyId()));
+                row.createCell(5).setCellValue(nullSafe(r.getPartyPhone()));
+                row.createCell(6).setCellValue(nullSafe(r.getPartyAddress()));
+                row.createCell(7).setCellValue(nullSafe(r.getCounterpartyName()));
+                row.createCell(8).setCellValue(nullSafe(r.getCounterpartyId()));
+                row.createCell(9).setCellValue(nullSafe(r.getCounterpartyPhone()));
+                row.createCell(10).setCellValue(nullSafe(r.getCounterpartyAddress()));
+                row.createCell(11).setCellValue(nullSafe(r.getEventSource()));
+                row.createCell(12).setCellValue(workflowRecord == null ? "" : nullSafe(workflowRecord.getRecommendedDepartment()));
+                row.createCell(13).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
             }
             workbook.write(out);
             return ResponseEntity.ok()
@@ -196,6 +334,20 @@ public class CaseController {
 
     private String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    private List<CaseRecord> queryExportRecords(CaseQueryRequest request) {
+        if (isBlank(request.getKeyword()) && isBlank(request.getDisputeType())
+                && isBlank(request.getEventSource()) && isBlank(request.getRiskLevel())) {
+            return caseRecordMapper.selectList(new LambdaQueryWrapper<CaseRecord>()
+                    .orderByDesc(CaseRecord::getCreatedAt));
+        }
+        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
+        return pageData.getRecords();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     /**
@@ -305,6 +457,11 @@ public class CaseController {
             result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
             result.put("recommendedMediationType", workflowRecord.getRecommendedMediationType());
             result.put("mediationAdvice", workflowRecord.getMediationAdvice());
+            result.put("archiveCompletedAt", workflowRecord.getArchiveCompletedAt());
+            result.put("archiveSummary", workflowRecord.getArchiveSummary());
+            result.put("archiveDocumentPath", workflowRecord.getArchiveDocumentPath());
+            result.put("factsProcess", workflowRecord.getFactsProcess());
+            result.put("responsibilitySplit", workflowRecord.getResponsibilitySplit());
         }
 
         if (classifyRecord != null) {
