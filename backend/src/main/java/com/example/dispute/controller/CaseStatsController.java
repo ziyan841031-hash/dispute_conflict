@@ -8,6 +8,7 @@ import com.example.dispute.entity.CaseStatsDetail;
 import com.example.dispute.mapper.CaseStatsBatchMapper;
 import com.example.dispute.mapper.CaseStatsDetailMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.sl.usermodel.PictureData;
 import org.apache.poi.sl.usermodel.ShapeType;
 import org.apache.poi.sl.usermodel.VerticalAlignment;
@@ -70,6 +71,7 @@ import java.util.stream.Collectors;
  * 案件统计控制器。
  * 提供Excel导入、批次查询、明细查询、统计分析与PPT报告下载能力。
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/case-stats")
 public class CaseStatsController {

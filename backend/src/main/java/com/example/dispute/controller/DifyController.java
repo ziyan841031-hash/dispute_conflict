@@ -32,6 +32,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
+import java.net.URLEncoder;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -404,43 +405,73 @@ public class DifyController {
     @PostMapping("/xbg/login")
     public ApiResponse<String> loginXiaoBaoGong(@RequestBody(required = false) Map<String, Object> request) {
         try {
-            long timestamp = System.currentTimeMillis() / 1000;
-            String nonce = UUID.randomUUID().toString().replace("-", "");
             String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
-            if (!"解纷工作人员".equals(role)) {
-                role = "普通市民";
-            }
-            String signStr = String.format("timestamp=%s&nonce=%s&secret=%s&timestamp=%s",
-                    timestamp, nonce, xbgSecret, timestamp);
-            String signature = sha256(signStr);
-
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("signature", signature);
-            payload.put("appid", xbgAppId);
-            payload.put("nonce", nonce);
-            payload.put("timestamp", timestamp);
-            payload.put("mode", "third");
-            payload.put("username", role);
-            log.info("xbg login req: {}", objectMapper.writeValueAsString(payload));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
-            RestTemplate restTemplate = new RestTemplate();
-            String result = restTemplate.postForObject(xbgBaseUrl + "/v2-api/signature", entity, String.class);
-            log.info("xbg login result: {}", result);
-
-            Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
-            Number statusCode = (Number) resultMap.get("statusCode");
-            Object data = resultMap.get("data");
-            if (statusCode != null && statusCode.intValue() == 1 && data != null) {
-                return ApiResponse.success(String.valueOf(data));
-            }
-            return ApiResponse.fail("获取失败请稍后再试");
+            return ApiResponse.success(loginXbgToken(role));
         } catch (Exception ex) {
             log.warn("xbg login failed: {}", ex.getMessage());
             return ApiResponse.fail("获取失败请稍后再试");
         }
+    }
+
+    /**
+     * 一站式获取xbg token并创建chat会话（新增question参数）。
+     */
+    @PostMapping("/xbg/login-chat")
+    public ApiResponse<Object> loginAndCreateChat(@RequestBody(required = false) Map<String, Object> request) {
+        try {
+            String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
+            String question = request == null ? "" : String.valueOf(request.getOrDefault("question", ""));
+            if (!StringUtils.hasText(question)) {
+                return ApiResponse.fail("question不能为空");
+            }
+            String token = loginXbgToken(role);
+            Map<String, Object> resultMap = callXbgChatSession(token, question);
+            String chatId = extractChatId(resultMap);
+            if (!StringUtils.hasText(chatId)) {
+                throw new IllegalArgumentException("xbg chat session missing id");
+            }
+            xbgChatTokenCache.put(chatId, token);
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("id", chatId);
+            return ApiResponse.success(data);
+        } catch (Exception ex) {
+            log.warn("xbg login-chat failed: {}", ex.getMessage());
+            return ApiResponse.fail("获取失败请稍后再试");
+        }
+    }
+
+    private String loginXbgToken(String role) throws Exception {
+        long timestamp = System.currentTimeMillis() / 1000;
+        String nonce = UUID.randomUUID().toString().replace("-", "");
+        String normalizedRole = "解纷工作人员".equals(role) ? "解纷工作人员" : "普通市民";
+        String signStr = String.format("timestamp=%s&nonce=%s&secret=%s&timestamp=%s",
+                timestamp, nonce, xbgSecret, timestamp);
+        String signature = sha256(signStr);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("signature", signature);
+        payload.put("appid", xbgAppId);
+        payload.put("nonce", nonce);
+        payload.put("timestamp", timestamp);
+        payload.put("mode", "third");
+        payload.put("username", normalizedRole);
+        log.info("xbg login req: {}", objectMapper.writeValueAsString(payload));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+        RestTemplate restTemplate = new RestTemplate();
+        String result = restTemplate.postForObject(xbgBaseUrl + "/v2-api/signature", entity, String.class);
+        log.info("xbg login result: {}", result);
+
+        Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
+        Number statusCode = (Number) resultMap.get("statusCode");
+        Object data = resultMap.get("data");
+        if (statusCode != null && statusCode.intValue() == 1 && data != null) {
+            return String.valueOf(data);
+        }
+        throw new IllegalArgumentException("xbg login failed");
     }
 
     /**
