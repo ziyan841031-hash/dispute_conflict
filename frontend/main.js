@@ -392,9 +392,9 @@ async function submitAudio() {
     return;
   }
 
-  const recognizedText = (audioData && audioData.transcriptText) ? audioData.transcriptText : ((audioData && audioData.text) ? audioData.text : '');
+  const recognizedText = (audioData && audioData.text) ? audioData.text : '';
   const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
-  const audioAnalysis = (audioData && audioData.text) ? audioData.text : '';
+  const audioAnalysis = recognizedText;
   markDone('audio');
 
   if (audioAnalysis) {

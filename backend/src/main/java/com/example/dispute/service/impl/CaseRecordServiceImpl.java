@@ -199,7 +199,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         Map<String, String> result = new HashMap<>();
         result.put("audioFileUrl", audioUrl);
         result.put("text", defaultVal(audioAnalysis, ""));
-        result.put("transcriptText", defaultVal(text, ""));
         return result;
     }
 
