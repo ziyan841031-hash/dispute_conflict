@@ -380,7 +380,7 @@ async function submitAudio() {
 
   const form = new FormData();
   form.append('file', file);
-  setParseModalMessage('音频案件处理中', '正在进行语音转写与角色分析，处理耗时较长（最长约12分钟），请稍候...');
+  setParseModalMessage('音频案件处理中', '正在进行语音转写与角色分析，处理耗时较长，请稍候...');
   let audioData = {};
   try {
     const audioJson = await requestAudioIngest(form);

@@ -463,7 +463,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         }
         try {
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("transcript_text", compactAudioTranscript(text));
+            inputs.put("transcript_text", defaultVal(text, ""));
             Object workflowResult = difyClient.runWorkflowWithInputs(inputs, audioAnalysisApiKey, "语音角色分析");
             return firstNonEmpty(
                     pickOutputValue(workflowResult, "result"),
@@ -477,14 +477,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             log.warn("语音角色分析失败: {}", ex.getMessage());
             return "";
         }
-    }
-
-    private String compactAudioTranscript(String text) {
-        String compact = defaultVal(text, "").replaceAll("\s+", " ").trim();
-        if (compact.length() <= 1600) {
-            return compact;
-        }
-        return compact.substring(0, 1600);
     }
 
     public String soundIdentify(String audioUrl) {
