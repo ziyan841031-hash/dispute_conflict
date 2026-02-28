@@ -20,6 +20,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -186,7 +187,7 @@ public class DifyController {
             }
             Resource resource = new FileSystemResource(target);
             String fileName = target.getFileName().toString();
-            String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+            String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20");
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -419,12 +420,11 @@ public class DifyController {
     @PostMapping("/xbg/login-chat")
     public ApiResponse<Object> loginAndCreateChat(@RequestBody(required = false) Map<String, Object> request) {
         try {
-            String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
             String question = request == null ? "" : String.valueOf(request.getOrDefault("question", ""));
             if (!StringUtils.hasText(question)) {
                 return ApiResponse.fail("question不能为空");
             }
-            String token = loginXbgToken(role);
+            String token = loginXbgToken("普通市民");
             Map<String, Object> resultMap = callXbgChatSession(token, question);
             String chatId = extractChatId(resultMap);
             if (!StringUtils.hasText(chatId)) {
