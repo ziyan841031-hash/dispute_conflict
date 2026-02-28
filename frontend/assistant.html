@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>矛盾纠纷系统管理 - 智能助手</title>
+  <title>智能化矛盾纠纷综合治理系统 - 智能助手</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="vendor/reactflow.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <h1>矛盾纠纷系统管理</h1>
-    <a href="index.html">智能工具</a>
+    <h1>智能化矛盾纠纷综合治理系统</h1>
+    <a href="index.html">首页</a>
+    <a href="smart-tools.html">智能工具</a>
     <a href="cases.html">案件管理</a>
     <a href="stats.html">案件统计</a>
   </aside>
@@ -152,7 +153,9 @@
       { id: 'status', position: { x: 760, y: 260 }, data: { title: '调解状态', subtitle: '' }, type: 'workflow' },
       { id: 'success', position: { x: 980, y: 180 }, data: { title: '调解成功', subtitle: '' }, type: 'workflow' },
       { id: 'failed', position: { x: 980, y: 340 }, data: { title: '调解失败', subtitle: '' }, type: 'workflow' },
-      { id: 'archive', position: { x: 1180, y: 260 }, data: { title: '案件归档', subtitle: '' }, type: 'workflow' }
+      { id: 'archive', position: { x: 1180, y: 180 }, data: { title: '案件归档', subtitle: '' }, type: 'workflow' },
+      { id: 'arbitration', position: { x: 1180, y: 320 }, data: { title: '仲裁', subtitle: '' }, type: 'workflow' },
+      { id: 'litigation', position: { x: 1180, y: 440 }, data: { title: '诉讼', subtitle: '' }, type: 'workflow' }
     ];
 
     const baseEdges = [
@@ -172,7 +175,8 @@
       { id: 'e-status-success', source: 'status', target: 'success' },
       { id: 'e-status-failed', source: 'status', target: 'failed' },
       { id: 'e-success-archive', source: 'success', target: 'archive' },
-      { id: 'e-failed-archive', source: 'failed', target: 'archive' }
+      { id: 'e-failed-arbitration', source: 'failed', target: 'arbitration' },
+      { id: 'e-failed-litigation', source: 'failed', target: 'litigation' }
     ];
 
     function getParentEdge(targetId, parentMap, preferMap) {
@@ -228,6 +232,14 @@
         setPreferredParents((prev) => ({ ...prev, status: target }));
       };
 
+      window.setWorkflowPreferredArchiveParent = function (nodeId) {
+        const target = nodeId || '';
+        if (!target) {
+          return;
+        }
+        setPreferredParents((prev) => ({ ...prev, archive: target }));
+      };
+
       window.setWorkflowActiveNode = function (nodeId) {
         const nextId = nodeId || 'accept';
         setActiveNodeId(nextId);
@@ -252,8 +264,28 @@
         const edgeSet = new Set();
         const nodeSet = new Set();
         walkUpstream(activeNodeId, parentMap, preferredParents, edgeSet, nodeSet);
+        const terminalArchive = mediationStatusText === '调解成功';
+        const thirdToStatusEdge = {
+          people: 'e-people-status',
+          admin: 'e-admin-status',
+          professional: 'e-professional-status'
+        };
+        if (terminalArchive && activeNodeId === 'status') {
+          nodeSet.add('success');
+          nodeSet.add('archive');
+          edgeSet.add('e-status-success');
+          edgeSet.add('e-success-archive');
+        }
+        if (terminalArchive && (activeNodeId === 'people' || activeNodeId === 'admin' || activeNodeId === 'professional')) {
+          nodeSet.add('status');
+          nodeSet.add('success');
+          nodeSet.add('archive');
+          edgeSet.add(thirdToStatusEdge[activeNodeId]);
+          edgeSet.add('e-status-success');
+          edgeSet.add('e-success-archive');
+        }
         return { edgeSet, nodeSet };
-      }, [activeNodeId, parentMap, preferredParents]);
+      }, [activeNodeId, mediationStatusText, parentMap, preferredParents]);
 
       const nodes = useMemo(() => {
         return baseNodes.map((node) => {
@@ -317,9 +349,22 @@
 
           const lockMeta = window.workflowLockMeta || {};
           const isThirdNode = nextId === 'people' || nextId === 'admin' || nextId === 'professional';
+          const terminalArchive = Boolean(lockMeta.terminalArchive);
           const keepStatusActive = Boolean(lockMeta.locked) && isThirdNode;
+          let finalNodeId = nextId;
 
-          if (keepStatusActive) {
+          if (terminalArchive && nextId === 'status') {
+            finalNodeId = 'status';
+            setActiveNodeId('status');
+          } else if (terminalArchive && nextId === 'archive') {
+            finalNodeId = 'archive';
+            setActiveNodeId('archive');
+          } else if (terminalArchive && isThirdNode) {
+            finalNodeId = nextId;
+            setPreferredParents((prev) => ({ ...prev, status: nextId }));
+            setActiveNodeId(nextId);
+          } else if (keepStatusActive) {
+            finalNodeId = 'status';
             setPreferredParents((prev) => ({ ...prev, status: nextId }));
             setActiveNodeId('status');
           } else {
@@ -333,7 +378,7 @@
           }
 
           if (window.onWorkflowNodeChange) {
-            window.onWorkflowNodeChange(nextId);
+            window.onWorkflowNodeChange(finalNodeId);
           }
         }
       },

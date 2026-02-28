@@ -9,10 +9,187 @@ const parseStatus = {
 };
 
 let casesPageNo = 1;
-const CASES_PAGE_SIZE = 20;
+let casesTotal = 0;
+let casesPages = 1;
+let casesPageSize = 20;
+const EXCEL_BATCH_WAIT_MS = 12 * 60 * 1000;
+const AUDIO_INGEST_WAIT_MS = 30 * 60 * 1000;
+let excelSubmitting = false;
+
+function getCasesPageSize() {
+  const el = document.getElementById('casesPageSize');
+  const value = Number((el && el.value) || casesPageSize || 20);
+  if (!Number.isFinite(value) || value <= 0) {
+    return 20;
+  }
+  return value;
+}
+
+function onCasesPageSizeChange(value) {
+  const parsed = Number(value);
+  casesPageSize = Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+  casesPageNo = 1;
+  loadCases();
+}
+
+
+
+const uploadPreviewUrls = {};
+
+function clearSelectedFile(inputId) {
+  const input = document.getElementById(inputId);
+  const dropzone = document.getElementById(`${inputId}Dropzone`);
+  const preview = document.getElementById(`${inputId}Preview`);
+  const nameNode = document.getElementById(`${inputId}Name`);
+  const audioPlayer = document.getElementById('audioFilePlayer');
+  if (input) {
+    input.value = '';
+  }
+  if (nameNode) {
+    nameNode.textContent = '未选择文件';
+  }
+  if (preview) {
+    preview.classList.add('hidden');
+  }
+  if (dropzone) {
+    dropzone.classList.remove('hidden');
+  }
+  if (inputId === 'audioFile' && audioPlayer) {
+    if (uploadPreviewUrls.audioFile) {
+      URL.revokeObjectURL(uploadPreviewUrls.audioFile);
+      uploadPreviewUrls.audioFile = '';
+    }
+    audioPlayer.removeAttribute('src');
+    audioPlayer.load();
+  }
+}
+
+function initFileDropzone(inputId, acceptChecker) {
+  const input = document.getElementById(inputId);
+  const dropzone = document.getElementById(`${inputId}Dropzone`);
+  const fileName = document.getElementById(`${inputId}Name`);
+  const preview = document.getElementById(`${inputId}Preview`);
+  const audioPlayer = inputId === 'audioFile' ? document.getElementById('audioFilePlayer') : null;
+  if (!input || !dropzone || !fileName || !preview) {
+    return;
+  }
+
+  const syncView = () => {
+    const selected = input.files && input.files[0] ? input.files[0] : null;
+    if (!selected) {
+      fileName.textContent = '未选择文件';
+      preview.classList.add('hidden');
+      dropzone.classList.remove('hidden');
+      if (audioPlayer) {
+        if (uploadPreviewUrls.audioFile) {
+          URL.revokeObjectURL(uploadPreviewUrls.audioFile);
+          uploadPreviewUrls.audioFile = '';
+        }
+        audioPlayer.removeAttribute('src');
+        audioPlayer.load();
+      }
+      return;
+    }
+
+    fileName.textContent = selected.name;
+    preview.classList.remove('hidden');
+    dropzone.classList.add('hidden');
+    if (audioPlayer) {
+      if (uploadPreviewUrls.audioFile) {
+        URL.revokeObjectURL(uploadPreviewUrls.audioFile);
+      }
+      uploadPreviewUrls.audioFile = URL.createObjectURL(selected);
+      audioPlayer.src = uploadPreviewUrls.audioFile;
+    }
+  };
+
+  input.addEventListener('change', syncView);
+
+  const setDragState = (isActive) => {
+    dropzone.classList.toggle('dragover', Boolean(isActive));
+  };
+
+  ['dragenter', 'dragover'].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragState(true);
+    });
+  });
+
+  ['dragleave', 'dragend', 'drop'].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragState(false);
+    });
+  });
+
+  dropzone.addEventListener('drop', (event) => {
+    const files = event.dataTransfer && event.dataTransfer.files;
+    if (!files || !files.length) {
+      return;
+    }
+    const picked = files[0];
+    if (acceptChecker && !acceptChecker(picked)) {
+      alert('文件类型不符合要求，请重新选择。');
+      return;
+    }
+    const transfer = new DataTransfer();
+    transfer.items.add(picked);
+    input.files = transfer.files;
+    syncView();
+  });
+
+  syncView();
+}
+
+function initUploadDropzones() {
+  initFileDropzone('audioFile', (file) => String(file.type || '').startsWith('audio/'));
+  initFileDropzone('excelFile', (file) => /\.(xlsx|xls)$/i.test(file.name || ''));
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUploadDropzones);
+} else {
+  initUploadDropzones();
+}
+
+function setExcelSubmitState(submitting) {
+  const btn = document.getElementById('excelSubmitBtn');
+  if (!btn) {
+    return;
+  }
+  btn.disabled = submitting;
+  btn.textContent = submitting ? '批量受理中...' : '提交批量导入';
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = EXCEL_BATCH_WAIT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {...options, signal: controller.signal});
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function requestAudioIngest(formData) {
+  const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: formData}, AUDIO_INGEST_WAIT_MS);
+  if (!res.ok) {
+    throw new Error('音频入库失败');
+  }
+  return await res.json();
+}
 
 // 提交文字案件。
 async function submitText() {
+  const caseTextValue = String((document.getElementById('caseText') || {}).value || '').trim();
+  if (!caseTextValue) {
+    alert('请输入案件描述后再提交');
+    return;
+  }
+
   // 打开解析弹窗。
   openParseModal('text');
   // 设置要素提取处理中。
@@ -21,7 +198,7 @@ async function submitText() {
   // 组装请求载荷。
   const payload = {
     // 读取案件描述。
-    caseText: document.getElementById('caseText').value,
+    caseText: caseTextValue,
     // 读取事件来源。
     eventSource: document.getElementById('eventSource').value
   };
@@ -63,14 +240,87 @@ function finishParseAndGoCases() {
   }, 600);
 }
 
+function buildExcelBatchIdempotencyKey(rows, file) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const filePart = file ? `${file.name || ''}|${file.size || 0}|${file.lastModified || 0}` : '';
+  const rowPart = safeRows.map((item) => `${(item && item.caseText) || ''}#${(item && item.eventSource) || ''}`).join('||');
+  const raw = `${filePart}::${rowPart}`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return `excel-batch-${safeRows.length}-${Math.abs(hash)}`;
+}
+
+async function runExcelBatchWithConcurrency(rows, file, concurrency = 5) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const details = [];
+  let cursor = 0;
+  const total = safeRows.length;
+
+  async function worker() {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= total) {
+        return;
+      }
+      const row = safeRows[index];
+      const idempotencyKey = `${buildExcelBatchIdempotencyKey([row], file)}-${index}`;
+      try {
+        const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel-batch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': idempotencyKey
+          },
+          body: JSON.stringify(row)
+        });
+        const json = await res.json();
+        const data = (json && json.data) ? json.data : {};
+        details.push({
+          success: Boolean(data.success),
+          caseId: data.caseId,
+          caseNo: data.caseNo,
+          error: data.error || ''
+        });
+      } catch (error) {
+        details.push({
+          success: false,
+          error: (error && error.message) || '请求失败'
+        });
+      }
+      const finished = details.length;
+      updateExcelProgress(total, finished);
+    }
+  }
+
+  const workerCount = Math.min(Math.max(1, concurrency), Math.max(1, total));
+  const tasks = [];
+  for (let i = 0; i < workerCount; i++) {
+    tasks.push(worker());
+  }
+  await Promise.all(tasks);
+
+  const success = details.filter((item) => item.success).length;
+  const failed = total - success;
+  return {total, success, failed, details};
+}
+
 // 提交Excel案件。
 async function submitExcel() {
+  if (excelSubmitting) {
+    return;
+  }
   const file = document.getElementById('excelFile').files[0];
   if (!file) {
     alert('请先选择Excel文件');
     return;
   }
 
+  excelSubmitting = true;
+  setExcelSubmitState(true);
   openParseModal('excel');
   setParseModalMessage('Excel案件批量受理', '表格解析中...');
   updateExcelProgress(0, 0);
@@ -79,43 +329,41 @@ async function submitExcel() {
   try {
     const form = new FormData();
     form.append('file', file);
-    const excelRes = await fetch(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
+    const excelRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/excel`, {method: 'POST', body: form});
     const excelJson = await excelRes.json();
-    const caseTextList = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
+    const parsedRows = Array.isArray(excelJson && excelJson.data) ? excelJson.data : [];
+    if (!parsedRows.length) {
+      throw new Error('Excel未解析到有效内容');
+    }
+    const excelEventSource = String((document.getElementById('excelEventSource') || {}).value || '线下接待').trim() || '线下接待';
+    const rowsForBatch = parsedRows.map((item) => ({
+      ...(item || {}),
+      eventSource: excelEventSource
+    }));
 
     markDone('text');
     setParseModalMessage('Excel案件批量受理', '案件受理中...');
-    const total = caseTextList.length;
+    const total = rowsForBatch.length;
     updateExcelProgress(total, 0);
 
-    let finished = 0;
-    for (const caseText of caseTextList) {
-      setLoading('classify');
-      const textRes = await fetch(`${API_BASE}/cases/ingest/text`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({caseText: String(caseText || ''), eventSource: '部门流转'})
-      });
-      const textJson = await textRes.json();
-      const caseId = textJson && textJson.data ? textJson.data.id : null;
-
-      const classifyRes = await fetch(`${API_BASE}/cases/intelligent-classify`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({caseId, caseText: String(caseText || '')})
-      });
-      await classifyRes.json();
-
-      finished += 1;
-      updateExcelProgress(total, finished);
-    }
+    setLoading('classify');
+    const batchData = await runExcelBatchWithConcurrency(rowsForBatch, file, 5);
+    const finished = Number(batchData.success || 0) + Number(batchData.failed || 0);
+    updateExcelProgress(total, finished);
 
     markDone('classify');
     finishParseAndGoCases();
   } catch (error) {
     console.error(error);
-    alert('Excel案件处理失败，请稍后重试');
+    if (error && error.name === 'AbortError') {
+      alert('批量导入处理超时，请稍后重试');
+    } else {
+      alert('Excel案件处理失败，请稍后重试');
+    }
     closeParseModal();
+  } finally {
+    excelSubmitting = false;
+    setExcelSubmitState(false);
   }
 }
 
@@ -132,9 +380,18 @@ async function submitAudio() {
 
   const form = new FormData();
   form.append('file', file);
-  const audioRes = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
-  const audioJson = await audioRes.json();
-  const audioData = audioJson && audioJson.data ? audioJson.data : {};
+  setParseModalMessage('音频案件处理中', '正在进行语音转写与角色分析，处理耗时较长，请稍候...');
+  let audioData = {};
+  try {
+    const audioJson = await requestAudioIngest(form);
+    audioData = audioJson && audioJson.data ? audioJson.data : {};
+  } catch (error) {
+    console.error(error);
+    alert('音频上传失败（接口响应较慢或连接中断），请稍后重试');
+    closeParseModal();
+    return;
+  }
+
   const recognizedText = (audioData && audioData.text) ? audioData.text : '';
   const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
   markDone('audio');
@@ -270,23 +527,87 @@ function refreshOneIcon(type) {
 
 // 查询案件列表。
 async function loadCases() {
+  casesPageSize = getCasesPageSize();
   const keyword = document.getElementById('keyword').value;
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: getCasesPageSize()});
   const res = await fetch(`${API_BASE}/cases?${params}`);
   const json = await res.json();
+  const pageData = (json && json.data) ? json.data : {};
+  const records = Array.isArray(pageData.records) ? pageData.records : [];
+  casesTotal = Number(pageData.total || 0);
+  casesPages = Math.max(1, Number(pageData.pages || Math.ceil(casesTotal / getCasesPageSize()) || 1));
+  const current = Number(pageData.current || casesPageNo || 1);
+  casesPageNo = Math.min(Math.max(1, current), casesPages);
+
   const tbody = document.getElementById('caseTableBody');
   tbody.innerHTML = '';
 
-  (json.data.records || []).forEach(item => {
+  records.forEach(item => {
     const tr = document.createElement('tr');
     caseListCache[item.id] = item;
     const actionBtn = `<button onclick="openAssistant(${item.id})">案件管理</button>`;
     tr.innerHTML = `<td>${item.caseNo || '-'}</td><td>${item.partyName || '-'}</td><td>${item.counterpartyName || '-'}</td><td>${item.disputeType || '-'}</td><td>${item.disputeSubType || '-'}</td><td>${item.eventSource || '-'}</td><td>${item.riskLevel || '-'}</td><td>${item.handlingProgress || '-'}</td><td>${item.receiver || '-'}</td><td>${item.registerTime || '-'}</td><td class="action-col">${actionBtn}</td>`;
     tbody.appendChild(tr);
   });
+
+  if (!records.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="11" class="cases-empty">暂无数据</td>';
+    tbody.appendChild(tr);
+  }
+
+  renderCasesPagination();
+}
+
+
+function searchCases() {
+  casesPageNo = 1;
+  loadCases();
+}
+
+function goCasesPage(pageNo) {
+  const nextPage = Number(pageNo || 1);
+  if (!Number.isFinite(nextPage)) {
+    return;
+  }
+  const target = Math.min(Math.max(1, nextPage), Math.max(1, casesPages));
+  if (target === casesPageNo) {
+    return;
+  }
+  casesPageNo = target;
+  loadCases();
+}
+
+function renderCasesPagination() {
+  const pager = document.getElementById('casesPagination');
+  if (!pager) {
+    return;
+  }
+  const total = Number(casesTotal || 0);
+  const pages = Math.max(1, Number(casesPages || 1));
+  const current = Math.min(Math.max(1, Number(casesPageNo || 1)), pages);
+  const start = total === 0 ? 0 : (current - 1) * getCasesPageSize() + 1;
+  const end = total === 0 ? 0 : Math.min(current * getCasesPageSize(), total);
+
+  pager.innerHTML = `
+    <div class="cases-pagination-info">共 ${total} 条，当前 ${start}-${end}</div>
+    <div class="cases-pagination-actions">
+      <select id="casesPageSize" onchange="onCasesPageSizeChange(this.value)">
+        <option value="20" ${getCasesPageSize() === 20 ? 'selected' : ''}>20条/页</option>
+        <option value="40" ${getCasesPageSize() === 40 ? 'selected' : ''}>40条/页</option>
+        <option value="60" ${getCasesPageSize() === 60 ? 'selected' : ''}>60条/页</option>
+        <option value="80" ${getCasesPageSize() === 80 ? 'selected' : ''}>80条/页</option>
+      </select>
+      <button type="button" onclick="goCasesPage(1)" ${current <= 1 ? 'disabled' : ''}>首页</button>
+      <button type="button" onclick="goCasesPage(${current - 1})" ${current <= 1 ? 'disabled' : ''}>上一页</button>
+      <span class="cases-pagination-current">第 ${current} / ${pages} 页</span>
+      <button type="button" onclick="goCasesPage(${current + 1})" ${current >= pages ? 'disabled' : ''}>下一页</button>
+      <button type="button" onclick="goCasesPage(${pages})" ${current >= pages ? 'disabled' : ''}>末页</button>
+    </div>
+  `;
 }
 
 async function exportCasesCurrentPage() {
@@ -294,7 +615,7 @@ async function exportCasesCurrentPage() {
   const disputeType = document.getElementById('disputeType').value;
   const eventSource = document.getElementById('eventSource').value;
   const riskLevel = document.getElementById('riskLevel').value;
-  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel, pageNo: casesPageNo, pageSize: CASES_PAGE_SIZE});
+  const params = new URLSearchParams({keyword, disputeType, eventSource, riskLevel});
   try {
     const res = await fetch(`${API_BASE}/cases/export?${params.toString()}`);
     if (!res.ok) {
@@ -304,7 +625,7 @@ async function exportCasesCurrentPage() {
     const objectUrl = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = `cases-export-page-${casesPageNo}.xlsx`;
+    anchor.download = 'cases-export.xlsx';
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -523,7 +844,9 @@ function getMediationStatusText() {
 function syncWorkflowLockMeta() {
   const locked = hasMediationStatusLocked();
   const selectedThirdNodeId = mapMediationCategoryToNodeId((workflowAdviceRecord && workflowAdviceRecord.flowLevel3) || assistantDataCache.flowLevel3 || '');
-  window.workflowLockMeta = {locked, selectedThirdNodeId};
+  const statusText = getMediationStatusText();
+  const terminalArchive = statusText === '调解成功';
+  window.workflowLockMeta = {locked, selectedThirdNodeId, statusText, terminalArchive};
   if (window.updateWorkflowMediationStatus) {
     window.updateWorkflowMediationStatus(getMediationStatusText() || '');
   }
@@ -538,6 +861,14 @@ window.canWorkflowNodeClick = function (nodeId) {
     return true;
   }
   const allowed = new Set(['status']);
+  if (meta.terminalArchive) {
+    allowed.add('archive');
+  }
+  if (meta.statusText === '调解失败') {
+    allowed.add('failed');
+    allowed.add('arbitration');
+    allowed.add('litigation');
+  }
   if (meta.selectedThirdNodeId) {
     allowed.add(meta.selectedThirdNodeId);
   }
@@ -713,6 +1044,12 @@ function mapFlowLevelToNodeId(level1, level2, level3, mediationStatus) {
     return 'accept';
   }
   const statusText = (mediationStatus || '').trim();
+  if (statusText === '调解成功') {
+    return 'archive';
+  }
+  if (statusText === '调解失败') {
+    return 'failed';
+  }
   if (statusText) {
     return 'status';
   }
@@ -746,6 +1083,10 @@ function syncWorkflowSelectionFromAdvice(record) {
   syncWorkflowLockMeta();
   if (window.setWorkflowPreferredStatusParent && thirdNodeId) {
     window.setWorkflowPreferredStatusParent(thirdNodeId);
+  }
+  const mediationStatusText = String(record.mediationStatus || '').trim();
+  if (window.setWorkflowPreferredArchiveParent && mediationStatusText === '调解成功') {
+    window.setWorkflowPreferredArchiveParent('success');
   }
   if (window.setWorkflowActiveNode) {
     window.setWorkflowActiveNode(nodeId);
@@ -781,12 +1122,37 @@ function normalizeRiskLevel(level) {
   return map[normalized] || '';
 }
 
+function resolveAssistantSummary(data, allowCaseTextFallback = false) {
+  const safeData = data || {};
+  const candidates = [
+    safeData.judgementBasisText,
+    safeData.factsSummary,
+    safeData.summaryText,
+    safeData.aiSummary,
+    safeData.caseSummary,
+    safeData.caseSmartSummary
+  ];
+  for (const item of candidates) {
+    const text = String(item || '').trim();
+    if (text) {
+      return text;
+    }
+  }
+  if (allowCaseTextFallback) {
+    const caseText = String(safeData.caseText || '').trim();
+    if (caseText) {
+      return caseText;
+    }
+  }
+  return '-';
+}
+
 // 渲染顶部案件信息。
 function renderAssistantTop(data) {
   const top = document.getElementById('assistantTopInfo');
   const party = data.partyName || '-';
   const counterparty = data.counterpartyName || '-';
-  const summary = data.judgementBasisText || data.factsSummary || data.caseText || '-';
+  const summary = resolveAssistantSummary(data, false);
   const dispute = `${data.disputeType || '-'} / ${data.disputeSubType || '-'}`;
   const riskLevel = normalizeRiskLevel(data.riskLevel);
   const riskDesc = riskLevel ? `${riskLevel}(${RISK_LEVEL_DESC[riskLevel]})` : (data.riskLevel || '-');
@@ -875,7 +1241,7 @@ function showCaseMaterial(data) {
     {label: '接待人', value: safeData.receiver}
   ];
 
-  const smartSummary = safeData.judgementBasisText || safeData.factsSummary || safeData.summaryText || '-';
+  const smartSummary = resolveAssistantSummary(safeData, false);
 
   const renderGrid = items => `<div class="case-detail-grid">${items.map(item => `<div class="case-detail-item"><span class="case-detail-label">${item.label}</span><span class="case-detail-value">${formatDetailValue(item.value)}</span></div>`).join('')}</div>`;
 
@@ -1312,6 +1678,24 @@ function buildMediationAdviceBlock(adviceHtml) {
   `;
 }
 
+function downloadArchiveDocument() {
+  const rawPath = (workflowAdviceRecord && workflowAdviceRecord.archiveDocumentPath) || assistantDataCache.archiveDocumentPath || '';
+  const normalizedPath = String(rawPath || '').trim();
+  if (!normalizedPath) {
+    alert('暂无可下载的案件调解协议');
+    return;
+  }
+  const downloadUrl = `${API_BASE}/dify/archive-document/download?path=${encodeURIComponent(normalizedPath)}`;
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.download = '';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // 渲染智能指引。
 function renderGuide(data) {
   const box = document.getElementById('guideList');
@@ -1324,9 +1708,23 @@ function renderGuide(data) {
   const mediationAdviceHtml = (workflowAdviceRecord && workflowAdviceRecord.mediationAdvice) || data.mediationAdvice || '';
   const isThirdNodeSelected = ['people', 'admin', 'professional'].includes(currentNode);
 
-  if (currentNode === 'status' && getMediationStatusText() === '调解中') {
+  if (currentNode === 'status') {
     box.classList.add('guide-advice-only');
     box.innerHTML = buildMediationAdviceBlock(mediationAdviceHtml || '<p>暂无调解建议</p>');
+    return;
+  }
+
+  if (currentNode === 'archive' && (getMediationStatusText() === '调解成功' || getMediationStatusText() === '调解失败')) {
+    box.classList.add('guide-advice-only');
+    const archiveSummary = (workflowAdviceRecord && workflowAdviceRecord.archiveSummary) || data.archiveSummary || '<p>暂无案件归档总结</p>';
+    const archiveDocumentPath = (workflowAdviceRecord && workflowAdviceRecord.archiveDocumentPath) || data.archiveDocumentPath || '';
+    const downloadClass = archiveDocumentPath ? 'guide-download-link' : 'guide-download-link disabled';
+    box.innerHTML = `
+      <div class="guide-advice-block">
+        <div class="guide-advice-html">${archiveSummary}</div>
+        <a class="${downloadClass}" href="javascript:void(0)" onclick="downloadArchiveDocument()">案件调解协议下载</a>
+      </div>
+    `;
     return;
   }
   box.classList.remove('guide-advice-only');
@@ -1481,6 +1879,8 @@ async function onGuideNodeConfirm() {
       assistantDataCache.mediationAdvice = record.mediationAdvice || assistantDataCache.mediationAdvice || '';
       assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
       assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+    assistantDataCache.archiveCompletedAt = record.archiveCompletedAt || assistantDataCache.archiveCompletedAt || '';
+    assistantDataCache.archiveSummary = record.archiveSummary || assistantDataCache.archiveSummary || '';
       assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
       workflowAdviceRecord.flowLevel3 = workflowAdviceRecord.flowLevel3 || mediationCategory;
       currentWorkflowNodeId = 'status';
@@ -1523,6 +1923,7 @@ function renderTimeline(data) {
 
   const diversionCompletedAt = data.diversionCompletedAt;
   const mediationCompletedAt = data.mediationCompletedAt;
+  const archiveCompletedAt = data.archiveCompletedAt;
   const mediationStatus = String(data.mediationStatus || '').trim();
 
   const diversionEnter = formatTimelineTime(data.workflowCreatedAt || data.createdAt);
@@ -1530,6 +1931,7 @@ function renderTimeline(data) {
   const statusEnterTime = parseTimelineDate(diversionCompletedAt);
   const statusEnter = formatTimelineTime(statusEnterTime);
   const mediationDone = formatTimelineTime(mediationCompletedAt);
+  const archiveDone = formatTimelineTime(archiveCompletedAt);
   const showCurrentProcessingTime = mediationStatus === '调解中';
 
   const actionButtons = mediationStatus === '调解中'
@@ -1537,6 +1939,7 @@ function renderTimeline(data) {
       <div class="timeline-action-row timeline-action-row-top">
         <button type="button" class="timeline-action-btn" onclick="onTimelineUrge()">⚡ 催办</button>
         <button type="button" class="timeline-action-btn timeline-action-btn-warning" onclick="onTimelineSupervise()">🛡 督办</button>
+        <button type="button" class="timeline-action-btn timeline-action-btn-success" onclick="onTimelineMediationSuccess()">✅ 调解成功</button>
       </div>
     `
     : '';
@@ -1561,6 +1964,27 @@ function renderTimeline(data) {
       extra: ''
     }
   ];
+
+  if (mediationStatus === '调解成功') {
+    timeline.unshift(
+      {
+        name: '案件归档',
+        enter: archiveDone,
+        done: archiveDone,
+        enterLabel: '进入时间',
+        doneLabel: '处理完成时间',
+        extra: ''
+      },
+      {
+        name: '调解成功',
+        enter: mediationDone,
+        done: mediationDone,
+        enterLabel: '进入时间',
+        doneLabel: '处理完成时间',
+        extra: ''
+      }
+    );
+  }
 
   const statusPill = mediationStatus
     ? `<span class="timeline-status-pill ${mediationStatus === '调解中' ? 'is-processing' : 'is-finished'}">${mediationStatus}</span>`
@@ -1667,6 +2091,53 @@ function onTimelineSupervise() {
   alert('已发起督办');
 }
 
+async function onTimelineMediationSuccess() {
+  const caseId = (assistantDataCache && assistantDataCache.caseId) || (workflowAdviceRecord && workflowAdviceRecord.caseId);
+  if (!caseId) {
+    return;
+  }
+  try {
+    showWorkflowWaitingModal('智能归档中', '正在更新为调解成功并归档');
+    const res = await fetch(`${API_BASE}/dify/workflow-complete`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({caseId})
+    });
+    const json = await res.json();
+    const payload = json && json.data ? json.data : null;
+    const record = payload && payload.record ? payload.record : payload;
+    if (!record) {
+      return;
+    }
+    workflowAdviceRecord = {
+      ...(workflowAdviceRecord || {}),
+      ...record
+    };
+    assistantDataCache.mediationStatus = record.mediationStatus || '调解成功';
+    assistantDataCache.mediationCompletedAt = record.mediationCompletedAt || assistantDataCache.mediationCompletedAt || '';
+    assistantDataCache.archiveCompletedAt = record.archiveCompletedAt || assistantDataCache.archiveCompletedAt || '';
+    assistantDataCache.archiveSummary = record.archiveSummary || assistantDataCache.archiveSummary || '';
+    assistantDataCache.diversionCompletedAt = record.diversionCompletedAt || assistantDataCache.diversionCompletedAt || '';
+    assistantDataCache.workflowCreatedAt = record.workflowCreatedAt || record.createdAt || assistantDataCache.workflowCreatedAt || '';
+    if (window.setWorkflowPreferredArchiveParent) {
+      window.setWorkflowPreferredArchiveParent('success');
+    }
+    currentWorkflowNodeId = 'archive';
+    if (window.setWorkflowActiveNode) {
+      window.setWorkflowActiveNode('archive');
+    }
+    syncWorkflowLockMeta();
+    renderGuide(assistantDataCache);
+    renderTimeline(assistantDataCache);
+    renderAssistantTop(assistantDataCache);
+  } catch (error) {
+    console.warn('调解成功更新失败', error);
+    alert('更新失败，请稍后再试');
+  } finally {
+    hideWorkflowWaitingModal();
+  }
+}
+
 // 绑定流程图点击交互（从主节点到当前节点高亮）。
 function bindFlowInteraction() {
   const edges = [
@@ -1683,7 +2154,8 @@ function bindFlowInteraction() {
     {from: 'mediationStatus', to: 'success', lineId: 'l-status-success'},
     {from: 'mediationStatus', to: 'failed', lineId: 'l-status-failed'},
     {from: 'success', to: 'archive', lineId: 'l-success-archive'},
-    {from: 'failed', to: 'archive', lineId: 'l-failed-archive'}
+    {from: 'failed', to: 'arbitration', lineId: 'l-failed-arbitration'},
+    {from: 'failed', to: 'litigation', lineId: 'l-failed-litigation'}
   ];
 
   const parentMap = {};
@@ -1735,9 +2207,18 @@ let lawAgentRole = '普通市民';
 let lawAgentLoginToken = '';
 let lawAgentRequestType = 0;
 let lawAgentLastRawResponse = '0';
+let lawAgentChatPending = false;
+let lawAgentRecommendPending = false;
+let lawAgentApiPending = false;
+let lawAgentAnswerEventSource = null;
+
+
+let homeToolLoadTimer = null;
+let homeToolLoadDone = false;
 
 function openRealtimeTranscription() {
-  openHomeToolDialog('语音实时转录', 'http://218.78.134.191:17989');
+  const url = 'http://218.78.134.191:17989';
+  window.location.assign(url);
 }
 
 function openAddToolTip() {
@@ -1755,7 +2236,26 @@ function openHomeToolDialog(title, url) {
     }
     return;
   }
+
   titleEl.textContent = title || '工具窗口';
+  homeToolLoadDone = false;
+  if (homeToolLoadTimer) {
+    clearTimeout(homeToolLoadTimer);
+    homeToolLoadTimer = null;
+  }
+
+  frame.onload = function () {
+    homeToolLoadDone = true;
+    if (homeToolLoadTimer) {
+      clearTimeout(homeToolLoadTimer);
+      homeToolLoadTimer = null;
+    }
+  };
+
+  frame.onerror = function () {
+    homeToolLoadDone = false;
+  };
+
   frame.src = url || 'about:blank';
   modal.classList.remove('hidden');
   modal.onclick = function (event) {
@@ -1763,16 +2263,34 @@ function openHomeToolDialog(title, url) {
       closeHomeToolDialog();
     }
   };
+
+  if (url && /^https?:/i.test(url)) {
+    homeToolLoadTimer = setTimeout(() => {
+      if (!homeToolLoadDone) {
+        const shouldOpen = window.confirm('当前页面可能不支持 iframe 加载，是否改为新窗口打开？');
+        if (shouldOpen) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      }
+    }, 8000);
+  }
 }
 
 function closeHomeToolDialog() {
   const modal = document.getElementById('homeToolModal');
   const frame = document.getElementById('homeToolFrame');
+  if (homeToolLoadTimer) {
+    clearTimeout(homeToolLoadTimer);
+    homeToolLoadTimer = null;
+  }
+  homeToolLoadDone = false;
   if (modal) {
     modal.classList.add('hidden');
   }
   if (frame) {
     frame.src = 'about:blank';
+    frame.onload = null;
+    frame.onerror = null;
   }
 }
 
@@ -1852,6 +2370,14 @@ function closeLawServiceDialog() {
   }
   lawAgentRequestType = 0;
   lawAgentLastRawResponse = '0';
+  lawAgentChatPending = false;
+  lawAgentRecommendPending = false;
+  lawAgentApiPending = false;
+  if (lawAgentAnswerEventSource) {
+    lawAgentAnswerEventSource.close();
+    lawAgentAnswerEventSource = null;
+  }
+  setLawAgentSendingState(false);
 }
 
 function onLawAgentInputKeydown(event) {
@@ -1861,7 +2387,258 @@ function onLawAgentInputKeydown(event) {
   }
 }
 
+function setLawAgentSendingState(pending) {
+  const input = document.getElementById('lawAgentInput');
+  const sendBtn = input && input.parentElement ? input.parentElement.querySelector('button') : null;
+  if (input) {
+    input.disabled = pending;
+  }
+  if (sendBtn) {
+    sendBtn.disabled = pending;
+    sendBtn.textContent = pending ? '发送中...' : '发送';
+  }
+}
+
+
+async function requestLawAgentChatMessage(payload) {
+  if (lawAgentApiPending) {
+    return null;
+  }
+  lawAgentApiPending = true;
+  try {
+    const res = await fetch(`${API_BASE}/dify/chat-message`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    const payloadData = json && json.data ? json.data : {};
+    return payloadData && payloadData.data ? payloadData.data : payloadData;
+  } catch (error) {
+    return null;
+  } finally {
+    lawAgentApiPending = false;
+  }
+}
+
+
+function appendLawAgentRecommendLinks(node) {
+  if (!node) {
+    return;
+  }
+  const actions = document.createElement('div');
+  actions.className = 'law-agent-recommend-links';
+  const lawLink = document.createElement('button');
+  lawLink.type = 'button';
+  lawLink.className = 'law-agent-link-btn';
+  lawLink.textContent = '相关法条推荐';
+  lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
+  const caseLink = document.createElement('button');
+  caseLink.type = 'button';
+  caseLink.className = 'law-agent-link-btn';
+  caseLink.textContent = '相关类案推荐';
+  caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
+  actions.appendChild(lawLink);
+  actions.appendChild(caseLink);
+  node.appendChild(actions);
+}
+
+
+
+function readFirstTextValue(obj, keys) {
+  if (!obj || typeof obj !== 'object') {
+    return '';
+  }
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'string' && value) {
+      return value;
+    }
+  }
+  return '';
+}
+
+function extractStreamTextFromObject(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return '';
+  }
+  const direct = readFirstTextValue(payload, ['answer', 'text', 'output', 'content', 'delta', 'message']);
+  if (direct) {
+    return direct;
+  }
+  if (payload.data && typeof payload.data === 'object') {
+    const nested = readFirstTextValue(payload.data, ['answer', 'text', 'output', 'content', 'delta', 'message']);
+    if (nested) {
+      return nested;
+    }
+  }
+  if (Array.isArray(payload.choices) && payload.choices.length > 0) {
+    const first = payload.choices[0];
+    if (first && typeof first === 'object') {
+      if (first.delta && typeof first.delta === 'object' && typeof first.delta.content === 'string') {
+        return first.delta.content;
+      }
+      if (first.message && typeof first.message === 'object' && typeof first.message.content === 'string') {
+        return first.message.content;
+      }
+    }
+  }
+  return '';
+}
+
+function extractTextFromStreamPayload(raw) {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '[DONE]') {
+    return '';
+  }
+  try {
+    const payload = JSON.parse(trimmed);
+    return extractStreamTextFromObject(payload);
+  } catch (e) {
+    return raw;
+  }
+}
+
+function extractDoneTextFromStreamPayload(raw) {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '[DONE]') {
+    return '';
+  }
+  try {
+    const payload = JSON.parse(trimmed);
+    return extractStreamTextFromObject(payload);
+  } catch (e) {
+    return '';
+  }
+}
+
+function normalizeDisplayText(rawText) {
+  return typeof rawText === 'string' ? rawText : '';
+}
+
+function sanitizeDisplayText(text) {
+  return typeof text === 'string' ? text : '';
+}
+
+function formatStreamDisplayText(rawText) {
+  return sanitizeDisplayText(normalizeDisplayText(rawText));
+}
+
+
+function renderLawAgentAssistantContent(node, text) {
+  if (!node) {
+    return;
+  }
+  const content = typeof text === 'string' ? text : '';
+  if (window.marked && typeof window.marked.parse === 'function') {
+    node.innerHTML = window.marked.parse(content, {breaks: true, gfm: true});
+  } else {
+    node.textContent = content;
+  }
+}
+
+function streamLawAgentAnswer(chatId, node, withRecommendLinks) {
+  return new Promise(resolve => {
+    if (!chatId || !node) {
+      resolve('');
+      return;
+    }
+    if (lawAgentAnswerEventSource) {
+      lawAgentAnswerEventSource.close();
+      lawAgentAnswerEventSource = null;
+    }
+    let finalText = '';
+    let finalRawText = '';
+    let streamStarted = false;
+    const streamUrl = `${API_BASE}/dify/answer-stream/${encodeURIComponent(chatId)}?useOriginal=true`;
+    const eventSource = new EventSource(streamUrl);
+    lawAgentAnswerEventSource = eventSource;
+
+    const scrollToBottom = () => {
+      const list = document.getElementById('lawAgentChatList');
+      if (list) {
+        list.scrollTop = list.scrollHeight;
+      }
+    };
+
+    const ensureStreamStarted = () => {
+      if (streamStarted) {
+        return;
+      }
+      streamStarted = true;
+      clearLawAgentWaitingState(node);
+    };
+
+    const closeWithResult = () => {
+      if (withRecommendLinks && finalText) {
+        appendLawAgentRecommendLinks(node);
+      }
+      scrollToBottom();
+      if (lawAgentAnswerEventSource === eventSource) {
+        lawAgentAnswerEventSource = null;
+      }
+      eventSource.close();
+      resolve(finalText);
+    };
+
+    eventSource.addEventListener('delta', event => {
+      const deltaRaw = extractTextFromStreamPayload(event.data || '');
+      if (!deltaRaw) {
+        return;
+      }
+      ensureStreamStarted();
+      finalRawText += deltaRaw;
+      finalText = formatStreamDisplayText(finalRawText);
+      renderLawAgentAssistantContent(node, finalText);
+      scrollToBottom();
+    });
+
+    eventSource.addEventListener('done', event => {
+      if (event && typeof event.data === 'string' && event.data.trim()) {
+        const doneRaw = extractDoneTextFromStreamPayload(event.data);
+        const doneText = formatStreamDisplayText(doneRaw);
+        if (doneText && doneText.length >= finalText.length && doneText.startsWith(finalText)) {
+          ensureStreamStarted();
+          finalRawText = doneRaw;
+          finalText = doneText;
+          renderLawAgentAssistantContent(node, finalText);
+        }
+      }
+      closeWithResult();
+    });
+
+    eventSource.onmessage = event => {
+      const msgRaw = extractTextFromStreamPayload(event && typeof event.data === 'string' ? event.data : '');
+      if (msgRaw && msgRaw !== '[DONE]') {
+        ensureStreamStarted();
+        finalRawText += msgRaw;
+        finalText = formatStreamDisplayText(finalRawText);
+        renderLawAgentAssistantContent(node, finalText);
+        scrollToBottom();
+      }
+    };
+
+    eventSource.addEventListener('error', () => {
+      if (!finalText) {
+        clearLawAgentWaitingState(node);
+        renderLawAgentAssistantContent(node, '请求处理中，请稍后再试。');
+      }
+      closeWithResult();
+    });
+  });
+}
+
+
 async function sendLawAgentMessage() {
+  if (lawAgentChatPending) {
+    return;
+  }
   const input = document.getElementById('lawAgentInput');
   if (!input) {
     return;
@@ -1870,66 +2647,80 @@ async function sendLawAgentMessage() {
   if (!question) {
     return;
   }
+  lawAgentChatPending = true;
+  setLawAgentSendingState(true);
   appendLawAgentMessage('user', question);
   input.value = '';
 
-  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  const waitingNode = appendLawAgentWaitingMessage();
   try {
-    const res = await fetch(`${API_BASE}/dify/chat-message`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        question,
-        role: lawAgentRole,
-        token: lawAgentLoginToken,
-        type: lawAgentRequestType,
-        rawResponse: lawAgentLastRawResponse
-      })
+    const dataObj = await requestLawAgentChatMessage({
+      question,
+      role: lawAgentRole,
+      token: lawAgentLoginToken,
+      type: lawAgentRequestType,
+      rawResponse: lawAgentLastRawResponse
     });
-    const json = await res.json();
-    const payload = json && json.data ? json.data : {};
-    const dataObj = payload && payload.data ? payload.data : payload;
-    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
-    const rawResponse = dataObj.rawResponse || answer || '';
-    if (answer) {
-      updateLawAgentMessage(waitingNode, answer, lawAgentRequestType !== 2);
-      lawAgentLastRawResponse = rawResponse || lawAgentLastRawResponse;
-      lawAgentRequestType = 1;
-      return;
+    const chatId = dataObj && (dataObj.id || dataObj.chatId || '');
+    if (chatId) {
+      const answerText = await streamLawAgentAnswer(chatId, waitingNode, lawAgentRequestType !== 2);
+      if (answerText) {
+        lawAgentLastRawResponse = answerText;
+        lawAgentRequestType = 1;
+        return;
+      }
     }
-  } catch (error) {
+  } finally {
+    lawAgentChatPending = false;
+    setLawAgentSendingState(false);
   }
-  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+  updateLawAgentMessage(waitingNode, '请求处理中，请稍后再试。', false);
 }
 
 async function askLawAgentRecommendation(tag) {
-  if (!lawAgentLoginToken || !lawAgentLastRawResponse || lawAgentLastRawResponse === '0') {
+  if (lawAgentRecommendPending || !lawAgentLoginToken || !lawAgentLastRawResponse || lawAgentLastRawResponse === '0') {
     return;
   }
-  const waitingNode = appendLawAgentMessage('assistant', '智能体思考中...');
+  lawAgentRecommendPending = true;
+  const waitingNode = appendLawAgentWaitingMessage();
   try {
-    const res = await fetch(`${API_BASE}/dify/chat-message`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        question: tag,
-        role: lawAgentRole,
-        token: lawAgentLoginToken,
-        type: 2,
-        rawResponse: lawAgentLastRawResponse
-      })
+    const dataObj = await requestLawAgentChatMessage({
+      question: tag,
+      role: lawAgentRole,
+      token: lawAgentLoginToken,
+      type: 2,
+      rawResponse: lawAgentLastRawResponse
     });
-    const json = await res.json();
-    const payload = json && json.data ? json.data : {};
-    const dataObj = payload && payload.data ? payload.data : payload;
-    const answer = dataObj.answer || dataObj.text || dataObj.output || dataObj.content || '';
-    if (answer) {
-      updateLawAgentMessage(waitingNode, answer, false);
-      return;
+    const chatId = dataObj && (dataObj.id || dataObj.chatId || '');
+    if (chatId) {
+      const answerText = await streamLawAgentAnswer(chatId, waitingNode, false);
+      if (answerText) {
+        lawAgentLastRawResponse = answerText;
+        return;
+      }
     }
-  } catch (error) {
+  } finally {
+    lawAgentRecommendPending = false;
   }
-  updateLawAgentMessage(waitingNode, '智能体思考中...', false);
+  updateLawAgentMessage(waitingNode, '请求处理中，请稍后再试。', false);
+}
+
+function appendLawAgentWaitingMessage() {
+  const node = appendLawAgentMessage('assistant', '');
+  if (!node) {
+    return null;
+  }
+  node.classList.add('law-agent-waiting');
+  node.innerHTML = '<span class="law-agent-waiting-ios"><span class="law-agent-waiting-dot"></span><span class="law-agent-waiting-dot"></span><span class="law-agent-waiting-dot"></span></span>';
+  return node;
+}
+
+function clearLawAgentWaitingState(node) {
+  if (!node || !node.classList || !node.classList.contains('law-agent-waiting')) {
+    return;
+  }
+  node.classList.remove('law-agent-waiting');
+  node.innerHTML = '';
 }
 
 function appendLawAgentMessage(role, text) {
@@ -1939,7 +2730,11 @@ function appendLawAgentMessage(role, text) {
   }
   const item = document.createElement('div');
   item.className = `law-agent-msg ${role === 'user' ? 'user' : 'assistant'}`;
-  item.textContent = text || '';
+  if (role === 'assistant') {
+    renderLawAgentAssistantContent(item, text || '');
+  } else {
+    item.textContent = text || '';
+  }
   list.appendChild(item);
   list.scrollTop = list.scrollHeight;
   return item;
@@ -1949,23 +2744,10 @@ function updateLawAgentMessage(node, text, withRecommendLinks) {
   if (!node) {
     return;
   }
+  clearLawAgentWaitingState(node);
   animateLawAgentTyping(node, text || '', () => {
     if (withRecommendLinks) {
-      const actions = document.createElement('div');
-      actions.className = 'law-agent-recommend-links';
-      const lawLink = document.createElement('button');
-      lawLink.type = 'button';
-      lawLink.className = 'law-agent-link-btn';
-      lawLink.textContent = '相关法条推荐';
-      lawLink.onclick = () => askLawAgentRecommendation('相关法条推荐');
-      const caseLink = document.createElement('button');
-      caseLink.type = 'button';
-      caseLink.className = 'law-agent-link-btn';
-      caseLink.textContent = '相关类案推荐';
-      caseLink.onclick = () => askLawAgentRecommendation('相关类案推荐');
-      actions.appendChild(lawLink);
-      actions.appendChild(caseLink);
-      node.appendChild(actions);
+      appendLawAgentRecommendLinks(node);
     }
     const list = document.getElementById('lawAgentChatList');
     if (list) {

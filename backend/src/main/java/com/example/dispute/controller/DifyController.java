@@ -5,23 +5,39 @@ import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.DifyInvokeRequest;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
+import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
+import com.example.dispute.mapper.CaseRecordMapper;
+import com.example.dispute.util.MediationDocUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.BufferedReader;
+import java.net.URLEncoder;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -29,6 +45,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Dify预留控制器。
@@ -43,6 +61,8 @@ public class DifyController {
     private final DifyClient difyClient;
     // 定义流水记录Mapper。
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
+    // 定义案件Mapper。
+    private final CaseRecordMapper caseRecordMapper;
     // 定义JSON工具。
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -57,6 +77,12 @@ public class DifyController {
     @Value("${dify.summary-api-key:replace-with-summary-key}")
     private String summaryApiKey;
 
+    @Value("${dify.archive-api-key:replace-with-archive-key}")
+    private String archiveApiKey;
+
+    @Value("${dify.archive-workflow-url:http://172.21.70.142/v1/workflows/run}")
+    private String archiveWorkflowUrl;
+
     @Value("${xiaobaogong.app-id:}")
     private String xbgAppId;
 
@@ -66,14 +92,19 @@ public class DifyController {
     @Value("${xiaobaogong.base-url:https://api.xiaobaogong.com}")
     private String xbgBaseUrl;
 
+    // 聊天会话ID与token映射。
+    private final Map<String, String> xbgChatTokenCache = new ConcurrentHashMap<>();
+
     /**
      * 构造函数。
      */
-    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper) {
+    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper, CaseRecordMapper caseRecordMapper) {
         // 注入Dify客户端。
         this.difyClient = difyClient;
         // 注入流水Mapper。
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
+        // 注入案件Mapper。
+        this.caseRecordMapper = caseRecordMapper;
     }
 
     /**
@@ -131,6 +162,214 @@ public class DifyController {
         return ApiResponse.success(record);
     }
 
+
+    /**
+     * 确认调解状态为调解成功并归档。
+     */
+    @GetMapping("/archive-document/download")
+    public ResponseEntity<Resource> downloadArchiveDocument(@RequestParam("path") String rawPath) {
+        String value = rawPath == null ? "" : rawPath.trim();
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException("path不能为空");
+        }
+        try {
+            Path base = Paths.get("generated-docs", "mediation-agreements").toAbsolutePath().normalize();
+            Path target = Paths.get(value);
+            if (!target.isAbsolute()) {
+                target = Paths.get(System.getProperty("user.dir")).resolve(target);
+            }
+            target = target.toAbsolutePath().normalize();
+            if (!target.startsWith(base)) {
+                throw new IllegalArgumentException("非法下载路径");
+            }
+            if (!java.nio.file.Files.exists(target) || !java.nio.file.Files.isRegularFile(target)) {
+                throw new IllegalArgumentException("文件不存在");
+            }
+            Resource resource = new FileSystemResource(target);
+            String fileName = target.getFileName().toString();
+            String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20");
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(resource.contentLength())
+                    .body(resource);
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new RuntimeException("下载文件失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    @PostMapping("/workflow-complete")
+    public ApiResponse<Object> completeWorkflow(@RequestBody DifyInvokeRequest request) {
+        Long caseId = request.getCaseId();
+        if (caseId == null) {
+            throw new IllegalArgumentException("caseId不能为空");
+        }
+        CaseDisposalWorkflowRecord record = findLatestRecordByCaseId(caseId);
+        if (record == null) {
+            throw new IllegalArgumentException("未找到workflow记录: " + caseId);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        record.setMediationStatus("调解成功");
+        record.setMediationCompletedAt(now);
+        caseDisposalWorkflowRecordMapper.updateById(record);
+
+        try {
+            CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
+            String archiveSummaryRaw = runArchiveSummaryWorkflow(caseRecord, record);
+            Map<String, Object> parsed = parseArchiveSummaryPayload(archiveSummaryRaw);
+            String archiveSummary = valueAsText(parsed.get("archive_summary"));
+            String factsProcess = valueAsText(parsed.get("facts_process"));
+            String responsibilitySplit = valueAsText(parsed.get("responsibility_split"));
+            record.setArchiveSummary(archiveSummary);
+            record.setFactsProcess(factsProcess);
+            record.setResponsibilitySplit(responsibilitySplit);
+            record.setArchiveDocumentPath(buildMediationAgreementDoc(caseRecord, factsProcess, responsibilitySplit));
+            record.setArchiveCompletedAt(LocalDateTime.now());
+            caseDisposalWorkflowRecordMapper.updateById(record);
+        } catch (Exception ex) {
+            log.warn("workflow complete archive summary failed: {}", ex.getMessage());
+        }
+        return ApiResponse.success(record);
+    }
+
+    private String buildMediationAgreementDoc(CaseRecord caseRecord, String factsProcess, String responsibilitySplit) {
+        if (caseRecord == null) {
+            return "";
+        }
+        MediationDocUtil.PartyInfo partyA = new MediationDocUtil.PartyInfo(
+                caseRecord.getPartyName(),
+                "",
+                caseRecord.getPartyId(),
+                caseRecord.getPartyPhone(),
+                caseRecord.getPartyAddress()
+        );
+        MediationDocUtil.PartyInfo partyB = new MediationDocUtil.PartyInfo(
+                caseRecord.getCounterpartyName(),
+                "",
+                caseRecord.getCounterpartyId(),
+                caseRecord.getCounterpartyPhone(),
+                caseRecord.getCounterpartyAddress()
+        );
+        try {
+            return MediationDocUtil.generateMediationAgreementDocPath(
+                    caseRecord.getCaseNo(),
+                    partyA,
+                    partyB,
+                    factsProcess,
+                    responsibilitySplit
+            );
+        } catch (Exception ex) {
+            log.warn("build mediation agreement failed: {}", ex.getMessage());
+            return "";
+        }
+    }
+
+    private String runArchiveSummaryWorkflow(CaseRecord caseRecord, CaseDisposalWorkflowRecord workflowRecord) {
+        if (caseRecord == null) {
+            return "";
+        }
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("case_info", defaultText(caseRecord.getCaseText()));
+        inputs.put("case_category", defaultText(caseRecord.getDisputeSubType()));
+        inputs.put("mediation_dept", workflowRecord == null ? "" : defaultText(workflowRecord.getRecommendedDepartment()));
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("inputs", inputs);
+        payload.put("response_mode", "streaming");
+        payload.put("user", "abc-123");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + archiveApiKey);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+        RestTemplate restTemplate = new RestTemplate();
+        String raw = restTemplate.postForObject(archiveWorkflowUrl, entity, String.class);
+        return StringUtils.hasText(raw) ? raw : "";
+    }
+
+    private String defaultText(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String extractArchiveSummary(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        Map<String, Object> parsed = parseArchiveSummaryPayload(raw);
+        String archiveSummary = valueAsText(parsed.get("archive_summary"));
+        String factsProcess = valueAsText(parsed.get("facts_process"));
+        String responsibilitySplit = valueAsText(parsed.get("responsibility_split"));
+        return archiveSummary + factsProcess + responsibilitySplit;
+    }
+
+    private Map<String, Object> parseArchiveSummaryPayload(String raw) {
+        try {
+            String text = raw.trim();
+            if (text.startsWith("{")) {
+                Map<String, Object> map = objectMapper.readValue(text, new TypeReference<Map<String, Object>>() {});
+                Map<String, Object> candidate = findArchiveSummaryMap(map);
+                return candidate == null ? Collections.emptyMap() : candidate;
+            }
+        } catch (Exception ex) {
+            log.warn("parse archive summary json failed: {}", ex.getMessage());
+            return Collections.emptyMap();
+        }
+        Map<String, Object> last = Collections.emptyMap();
+        String[] lines = raw.split("\r?\n");
+        for (String line : lines) {
+            if (!StringUtils.hasText(line) || !line.startsWith("data:")) {
+                continue;
+            }
+            String dataLine = line.substring(5).trim();
+            if (!StringUtils.hasText(dataLine) || "[DONE]".equalsIgnoreCase(dataLine)) {
+                continue;
+            }
+            try {
+                Map<String, Object> one = objectMapper.readValue(dataLine, new TypeReference<Map<String, Object>>() {});
+                Map<String, Object> candidate = findArchiveSummaryMap(one);
+                if (candidate != null && !candidate.isEmpty()) {
+                    last = candidate;
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        return last;
+    }
+
+    private Map<String, Object> findArchiveSummaryMap(Map<String, Object> root) {
+        if (root == null || root.isEmpty()) {
+            return null;
+        }
+        if (root.containsKey("archive_summary") || root.containsKey("facts_process") || root.containsKey("responsibility_split")) {
+            return root;
+        }
+        Object dataObj = root.get("data");
+        if (dataObj instanceof Map) {
+            Map<String, Object> nested = findArchiveSummaryMap((Map<String, Object>) dataObj);
+            if (nested != null && !nested.isEmpty()) {
+                return nested;
+            }
+        }
+        Object outputsObj = root.get("outputs");
+        if (outputsObj instanceof Map) {
+            Map<String, Object> nested = findArchiveSummaryMap((Map<String, Object>) outputsObj);
+            if (nested != null && !nested.isEmpty()) {
+                return nested;
+            }
+        }
+        return null;
+    }
+
+    private String valueAsText(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value).trim();
+        return StringUtils.hasText(text) ? text : "";
+    }
+
     private String extractHtmlAdvice(Object mediatorAdvice) {
         if (mediatorAdvice == null) {
             return null;
@@ -167,43 +406,72 @@ public class DifyController {
     @PostMapping("/xbg/login")
     public ApiResponse<String> loginXiaoBaoGong(@RequestBody(required = false) Map<String, Object> request) {
         try {
-            long timestamp = System.currentTimeMillis() / 1000;
-            String nonce = UUID.randomUUID().toString().replace("-", "");
             String role = request == null ? "普通市民" : String.valueOf(request.getOrDefault("role", "普通市民"));
-            if (!"解纷工作人员".equals(role)) {
-                role = "普通市民";
-            }
-            String signStr = String.format("timestamp=%s&nonce=%s&secret=%s&timestamp=%s",
-                    timestamp, nonce, xbgSecret, timestamp);
-            String signature = sha256(signStr);
-
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("signature", signature);
-            payload.put("appid", xbgAppId);
-            payload.put("nonce", nonce);
-            payload.put("timestamp", timestamp);
-            payload.put("mode", "third");
-            payload.put("username", role);
-            log.info("xbg login req: {}", objectMapper.writeValueAsString(payload));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
-            RestTemplate restTemplate = new RestTemplate();
-            String result = restTemplate.postForObject(xbgBaseUrl + "/v2-api/signature", entity, String.class);
-            log.info("xbg login result: {}", result);
-
-            Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
-            Number statusCode = (Number) resultMap.get("statusCode");
-            Object data = resultMap.get("data");
-            if (statusCode != null && statusCode.intValue() == 1 && data != null) {
-                return ApiResponse.success(String.valueOf(data));
-            }
-            return ApiResponse.fail("获取失败请稍后再试");
+            return ApiResponse.success(loginXbgToken(role));
         } catch (Exception ex) {
             log.warn("xbg login failed: {}", ex.getMessage());
             return ApiResponse.fail("获取失败请稍后再试");
         }
+    }
+
+    /**
+     * 一站式获取xbg token并创建chat会话（新增question参数）。
+     */
+    @PostMapping("/xbg/login-chat")
+    public ApiResponse<Object> loginAndCreateChat(@RequestBody(required = false) Map<String, Object> request) {
+        try {
+            String question = request == null ? "" : String.valueOf(request.getOrDefault("question", ""));
+            if (!StringUtils.hasText(question)) {
+                return ApiResponse.fail("question不能为空");
+            }
+            String token = loginXbgToken("普通市民");
+            Map<String, Object> resultMap = callXbgChatSession(token, question);
+            String chatId = extractChatId(resultMap);
+            if (!StringUtils.hasText(chatId)) {
+                throw new IllegalArgumentException("xbg chat session missing id");
+            }
+            xbgChatTokenCache.put(chatId, token);
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("id", chatId);
+            return ApiResponse.success(data);
+        } catch (Exception ex) {
+            log.warn("xbg login-chat failed: {}", ex.getMessage());
+            return ApiResponse.fail("获取失败请稍后再试");
+        }
+    }
+
+    private String loginXbgToken(String role) throws Exception {
+        long timestamp = System.currentTimeMillis() / 1000;
+        String nonce = UUID.randomUUID().toString().replace("-", "");
+        String normalizedRole = "解纷工作人员".equals(role) ? "解纷工作人员" : "普通市民";
+        String signStr = String.format("timestamp=%s&nonce=%s&secret=%s&timestamp=%s",
+                timestamp, nonce, xbgSecret, timestamp);
+        String signature = sha256(signStr);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("signature", signature);
+        payload.put("appid", xbgAppId);
+        payload.put("nonce", nonce);
+        payload.put("timestamp", timestamp);
+        payload.put("mode", "third");
+        payload.put("username", normalizedRole);
+        log.info("xbg login req: {}", objectMapper.writeValueAsString(payload));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+        RestTemplate restTemplate = new RestTemplate();
+        String result = restTemplate.postForObject(xbgBaseUrl + "/v2-api/signature", entity, String.class);
+        log.info("xbg login result: {}", result);
+
+        Map<String, Object> resultMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {});
+        Number statusCode = (Number) resultMap.get("statusCode");
+        Object data = resultMap.get("data");
+        if (statusCode != null && statusCode.intValue() == 1 && data != null) {
+            return String.valueOf(data);
+        }
+        throw new IllegalArgumentException("xbg login failed");
     }
 
     /**
@@ -240,9 +508,15 @@ public class DifyController {
                 finalQuestion = rawResponse + "。" + question;
             }
 
-            Map<String, Object> resultMap = callXbgChat(token, finalQuestion);
-            resultMap.put("rawResponse", extractAnswerText(resultMap));
-            return ApiResponse.success(resultMap);
+            Map<String, Object> resultMap = callXbgChatSession(token, finalQuestion);
+            String chatId = extractChatId(resultMap);
+            if (!StringUtils.hasText(chatId)) {
+                throw new IllegalArgumentException("xbg chat session missing id");
+            }
+            xbgChatTokenCache.put(chatId, token);
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", chatId);
+            return ApiResponse.success(data);
         } catch (Exception ex) {
             log.warn("xbg chat failed: {}", ex.getMessage());
             return ApiResponse.fail("获取失败请稍后再试");
@@ -297,11 +571,12 @@ public class DifyController {
         return "";
     }
 
-    private Map<String, Object> callXbgChat(String token, String question) throws Exception {
+    private Map<String, Object> callXbgChatSession(String token, String question) throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("question", question);
         payload.put("type", "case");
         payload.put("search", false);
+        payload.put("sign", "交通大学");
         log.info("xbg chat req: {}", objectMapper.writeValueAsString(payload));
 
         HttpHeaders headers = new HttpHeaders();
@@ -309,7 +584,7 @@ public class DifyController {
         headers.set("Authorization", token);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
         RestTemplate restTemplate = new RestTemplate();
-        String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/completions", entity, String.class);
+        String result = restTemplate.postForObject(xbgBaseUrl + "/v1/api/chat/session", entity, String.class);
         log.info("xbg chat result: {}", result);
         if (!StringUtils.hasText(result)) {
             throw new IllegalArgumentException("xbg chat empty result");
@@ -321,14 +596,126 @@ public class DifyController {
         if (resultMap == null) {
             return "";
         }
-        Object direct = firstNonNull(firstNonNull(resultMap.get("answer"), resultMap.get("text")), firstNonNull(resultMap.get("output"), resultMap.get("content")));
-        if (direct != null) {
+        Object direct = firstNonNull(
+                firstNonNull(resultMap.get("answer"), resultMap.get("text")),
+                firstNonNull(
+                        firstNonNull(resultMap.get("output"), resultMap.get("content")),
+                        firstNonNull(resultMap.get("delta"), resultMap.get("message"))
+                )
+        );
+        if (direct != null && StringUtils.hasText(String.valueOf(direct))) {
             return String.valueOf(direct);
+        }
+
+        Object dataObj = resultMap.get("data");
+        if (dataObj instanceof Map) {
+            Object nested = firstNonNull(
+                    firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text")),
+                    firstNonNull(
+                            firstNonNull(((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content")),
+                            firstNonNull(((Map<?, ?>) dataObj).get("delta"), ((Map<?, ?>) dataObj).get("message"))
+                    )
+            );
+            if (nested != null && StringUtils.hasText(String.valueOf(nested))) {
+                return String.valueOf(nested);
+            }
+        }
+
+        Object choicesObj = resultMap.get("choices");
+        if (choicesObj instanceof List && !((List<?>) choicesObj).isEmpty()) {
+            Object first = ((List<?>) choicesObj).get(0);
+            if (first instanceof Map) {
+                Object deltaObj = ((Map<?, ?>) first).get("delta");
+                if (deltaObj instanceof Map) {
+                    Object content = ((Map<?, ?>) deltaObj).get("content");
+                    if (content != null && StringUtils.hasText(String.valueOf(content))) {
+                        return String.valueOf(content);
+                    }
+                }
+                Object messageObj = ((Map<?, ?>) first).get("message");
+                if (messageObj instanceof Map) {
+                    Object content = ((Map<?, ?>) messageObj).get("content");
+                    if (content != null && StringUtils.hasText(String.valueOf(content))) {
+                        return String.valueOf(content);
+                    }
+                }
+            }
+        }
+
+        return "";
+    }
+
+
+    @GetMapping(value = "/answer-stream/{chatId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter answerStream(@PathVariable("chatId") String chatId,
+                                   @RequestParam(value = "useOriginal", required = false, defaultValue = "true") boolean useOriginal) {
+        SseEmitter emitter = new SseEmitter(0L);
+        String token = xbgChatTokenCache.get(chatId);
+        if (!StringUtils.hasText(token)) {
+            try {
+                emitter.send(SseEmitter.event().name("error").data("会话已过期，请重试"));
+            } catch (Exception ignore) {
+            }
+            emitter.complete();
+            return emitter;
+        }
+
+        CompletableFuture.runAsync(() -> streamXbgAnswer(chatId, useOriginal, token, emitter));
+        return emitter;
+    }
+
+    private void streamXbgAnswer(String chatId, boolean useOriginal, String token, SseEmitter emitter) {
+        String url = xbgBaseUrl + "/v6/chat/answer-stream/" + chatId + "?useOriginal=" + useOriginal;
+        StringBuilder answerBuilder = new StringBuilder();
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            restTemplate.execute(url, HttpMethod.GET, request -> {
+                HttpHeaders headers = request.getHeaders();
+                headers.set("Authorization", token);
+                headers.setAccept(Collections.singletonList(MediaType.TEXT_EVENT_STREAM));
+            }, response -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (!StringUtils.hasText(line) || !line.startsWith("data:")) {
+                            continue;
+                        }
+                        String dataLine = line.substring(5).trim();
+                        if (!StringUtils.hasText(dataLine) || "[DONE]".equalsIgnoreCase(dataLine)) {
+                            continue;
+                        }
+                        answerBuilder.append(dataLine);
+                        emitter.send(SseEmitter.event().name("delta").data(dataLine));
+                    }
+                }
+                return null;
+            });
+            emitter.send(SseEmitter.event().name("done").data(answerBuilder.toString()));
+            emitter.complete();
+        } catch (Exception ex) {
+            log.warn("xbg answer stream failed: {}", ex.getMessage());
+            try {
+                emitter.send(SseEmitter.event().name("error").data("获取失败请稍后再试"));
+            } catch (Exception ignore) {
+            }
+            emitter.complete();
+        } finally {
+            xbgChatTokenCache.remove(chatId);
+        }
+    }
+
+    private String extractChatId(Map<String, Object> resultMap) {
+        if (resultMap == null) {
+            return "";
+        }
+        Object id = firstNonNull(resultMap.get("id"), resultMap.get("chatId"));
+        if (id != null && StringUtils.hasText(String.valueOf(id))) {
+            return String.valueOf(id);
         }
         Object dataObj = resultMap.get("data");
         if (dataObj instanceof Map) {
-            Object nested = firstNonNull(firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("text")), firstNonNull(((Map<?, ?>) dataObj).get("output"), ((Map<?, ?>) dataObj).get("content")));
-            if (nested != null) {
+            Object nested = firstNonNull(((Map<?, ?>) dataObj).get("id"), ((Map<?, ?>) dataObj).get("chatId"));
+            if (nested != null && StringUtils.hasText(String.valueOf(nested))) {
                 return String.valueOf(nested);
             }
         }

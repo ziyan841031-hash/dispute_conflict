@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.CaseQueryRequest;
 import com.example.dispute.dto.TextIngestRequest;
+import com.example.dispute.dto.ExcelCaseIngestItem;
 import com.example.dispute.entity.CaseClassifyRecord;
 import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseClassifyRecordMapper;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -43,11 +45,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 案件服务实现类。
@@ -72,6 +70,9 @@ public class CaseRecordServiceImpl implements CaseRecordService {
 
     @Value("${dashscope.sound-api-key:}")
     private String soundApiKey;
+
+    @Value("${dify.audio-analysis-api-key:replace-with-audio-analysis-key}")
+    private String audioAnalysisApiKey;
 
     // 定义日志对象。
     private static final Logger log = LoggerFactory.getLogger(CaseRecordServiceImpl.class);
@@ -173,11 +174,11 @@ public class CaseRecordServiceImpl implements CaseRecordService {
      * Excel案件入库。
      */
     @Override // 重写接口方法。
-    public List<String> ingestExcel(MultipartFile file) {
+    public List<ExcelCaseIngestItem> ingestExcel(MultipartFile file) {
         // 打印服务日志。
         log.info("服务层-Excel入库开始: fileName={}", file.getOriginalFilename());
         // 解析Excel第二列内容为列表。
-        List<String> contents = parseExcelToContentList(file);
+        List<ExcelCaseIngestItem> contents = parseExcelToContentList(file);
         log.info("服务层-Excel解析完成: size={}", contents.size());
         return contents;
     }
@@ -194,9 +195,10 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         log.info("语音文件已上传，路径：{}", audioUrl);
 
         String text = soundIdentify(audioUrl);
+        String audioAnalysis = runAudioRoleAnalysis(text);
         Map<String, String> result = new HashMap<>();
         result.put("audioFileUrl", audioUrl);
-        result.put("text", defaultVal(text, ""));
+        result.put("text", defaultVal(audioAnalysis, ""));
         return result;
     }
 
@@ -253,8 +255,22 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             // 抛出参数异常。
             throw new IllegalArgumentException("caseId不能为空");
         }
+        // 查询案件记录。
+        CaseRecord record = caseRecordMapper.selectById(request.getCaseId());
+        // 判断记录是否存在。
+        if (record == null) {
+            // 抛出参数异常。
+            throw new IllegalArgumentException("未找到案件记录: " + request.getCaseId());
+        }
+        // 优先使用请求文本；若为空则回退到案件文本。
+        String classifyText = StringUtils.hasText(request.getCaseText()) ? request.getCaseText() : record.getCaseText();
+        // 校验用于分类的文本。
+        if (!StringUtils.hasText(classifyText)) {
+            // 抛出参数异常。
+            throw new IllegalArgumentException("案件文本不能为空");
+        }
         // 调用Dify智能分类工作流。
-        Object classifyResult = difyClient.runClassifyWorkflow(request.getCaseText());
+        Object classifyResult = difyClient.runClassifyWorkflow(classifyText);
         // 提取纠纷类型。
         String disputeType = firstNonEmpty(
                 pickOutputValue(classifyResult, "dispute_category_l1"),
@@ -272,13 +288,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 pickOutputValue(classifyResult, "risk_level"),
                 pickOutputValue(classifyResult, "风险等级")
         );
-        // 查询案件记录。
-        CaseRecord record = caseRecordMapper.selectById(request.getCaseId());
-        // 判断记录是否存在。
-        if (record == null) {
-            // 抛出参数异常。
-            throw new IllegalArgumentException("未找到案件记录: " + request.getCaseId());
-        }
         // 回写纠纷类型。
         record.setDisputeType(defaultVal(disputeType, record.getDisputeType()));
         // 回写纠纷子类型。
@@ -450,6 +459,32 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 调用千问录音文件识别并返回识别文本。
      */
+    private String runAudioRoleAnalysis(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        if (!StringUtils.hasText(audioAnalysisApiKey) || audioAnalysisApiKey.startsWith("replace-with")) {
+            log.warn("dify.audio-analysis-api-key未配置，跳过语音角色分析");
+            return "";
+        }
+        try {
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("transcript_text", defaultVal(text, ""));
+            Object workflowResult = difyClient.runWorkflowWithInputs(inputs, audioAnalysisApiKey, "语音角色分析");
+            return firstNonEmpty(
+                    pickOutputValue(workflowResult, "result"),
+                    pickOutputValue(workflowResult, "analysis"),
+                    pickOutputValue(workflowResult, "role_ordered_transcript"),
+                    pickOutputValue(workflowResult, "role_analysis"),
+                    pickOutputValue(workflowResult, "answer"),
+                    pickRootValue(workflowResult, "message")
+            );
+        } catch (Exception ex) {
+            log.warn("语音角色分析失败: {}", ex.getMessage());
+            return "";
+        }
+    }
+
     public String soundIdentify(String audioUrl) {
         if (!StringUtils.hasText(soundApiKey)) {
             throw new IllegalStateException("dashscope.sound-api-key未配置，无法调用语音识别");
@@ -674,12 +709,13 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 解析Excel为文本。
      */
-    private List<String> parseExcelToContentList(MultipartFile file) {
+    private List<ExcelCaseIngestItem> parseExcelToContentList(MultipartFile file) {
         // 使用try-with-resource打开工作簿。
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             // 获取第一个sheet。
             Sheet sheet = workbook.getSheetAt(0);
-            List<String> result = new ArrayList<>();
+            List<ExcelCaseIngestItem> result = new ArrayList<>();
+            DataFormatter dataFormatter = new DataFormatter();
             boolean firstRowChecked = false;
             for (int i = 0; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
@@ -690,15 +726,22 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 if (contentCell == null) {
                     continue;
                 }
-                String content = contentCell.toString() == null ? "" : contentCell.toString().trim();
+                String content = dataFormatter.formatCellValue(contentCell).trim();
+                Cell eventSourceCell = row.getCell(2, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                String eventSource = eventSourceCell == null ? "" : dataFormatter.formatCellValue(eventSourceCell).trim();
                 if (!firstRowChecked) {
                     firstRowChecked = true;
-                    if ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content)) {
+                    boolean isHeader = ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content) || "案件原文".equals(content))
+                            || ("事件来源".equals(eventSource) || "来源".equals(eventSource));
+                    if (isHeader) {
                         continue;
                     }
                 }
                 if (!content.isEmpty()) {
-                    result.add(content);
+                    ExcelCaseIngestItem item = new ExcelCaseIngestItem();
+                    item.setCaseText(content);
+                    item.setEventSource(eventSource);
+                    result.add(item);
                 }
             }
             return result;
