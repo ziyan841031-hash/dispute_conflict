@@ -12,7 +12,8 @@ let casesPageNo = 1;
 let casesTotal = 0;
 let casesPages = 1;
 let casesPageSize = 20;
-const EXCEL_BATCH_WAIT_MS = 5 * 60 * 1000;
+const EXCEL_BATCH_WAIT_MS = 12 * 60 * 1000;
+const AUDIO_INGEST_WAIT_MS = 12 * 60 * 1000;
 let excelSubmitting = false;
 
 function getCasesPageSize() {
@@ -173,24 +174,12 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = EXCEL_BATCH_WAIT_
   }
 }
 
-async function requestAudioIngest(formData, maxRetries = 1) {
-  let attempt = 0;
-  while (attempt <= maxRetries) {
-    try {
-      const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: formData}, EXCEL_BATCH_WAIT_MS);
-      if (!res.ok) {
-        throw new Error('音频入库失败');
-      }
-      return await res.json();
-    } catch (error) {
-      if (attempt >= maxRetries) {
-        throw error;
-      }
-      attempt += 1;
-      await new Promise((resolve) => setTimeout(resolve, 800));
-    }
+async function requestAudioIngest(formData) {
+  const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: formData}, AUDIO_INGEST_WAIT_MS);
+  if (!res.ok) {
+    throw new Error('音频入库失败');
   }
-  throw new Error('音频入库失败');
+  return await res.json();
 }
 
 // 提交文字案件。
@@ -391,10 +380,10 @@ async function submitAudio() {
 
   const form = new FormData();
   form.append('file', file);
-  setParseModalMessage('音频案件处理中', '正在进行语音转写与角色分析，通常需要30-60秒，请稍候...');
+  setParseModalMessage('音频案件处理中', '正在进行语音转写与角色分析，处理耗时较长（最长约12分钟），请稍候...');
   let audioData = {};
   try {
-    const audioJson = await requestAudioIngest(form, 1);
+    const audioJson = await requestAudioIngest(form);
     audioData = audioJson && audioJson.data ? audioJson.data : {};
   } catch (error) {
     console.error(error);
