@@ -13,7 +13,7 @@ let casesTotal = 0;
 let casesPages = 1;
 let casesPageSize = 20;
 const EXCEL_BATCH_WAIT_MS = 12 * 60 * 1000;
-const AUDIO_INGEST_WAIT_MS = 12 * 60 * 1000;
+const AUDIO_INGEST_WAIT_MS = 20 * 60 * 1000;
 let excelSubmitting = false;
 
 function getCasesPageSize() {
