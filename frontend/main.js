@@ -371,9 +371,21 @@ async function submitAudio() {
 
   const form = new FormData();
   form.append('file', file);
-  const audioRes = await fetch(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
-  const audioJson = await audioRes.json();
-  const audioData = audioJson && audioJson.data ? audioJson.data : {};
+  let audioData = {};
+  try {
+    const audioRes = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: form});
+    if (!audioRes.ok) {
+      throw new Error('音频入库失败');
+    }
+    const audioJson = await audioRes.json();
+    audioData = audioJson && audioJson.data ? audioJson.data : {};
+  } catch (error) {
+    console.error(error);
+    alert('音频上传失败，请稍后重试');
+    closeParseModal();
+    return;
+  }
+
   const recognizedText = (audioData && audioData.text) ? audioData.text : '';
   const audioFileUrl = (audioData && audioData.audioFileUrl) ? audioData.audioFileUrl : '';
   const audioAnalysis = (audioData && audioData.audioAnalysis) ? audioData.audioAnalysis : '';

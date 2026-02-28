@@ -195,10 +195,10 @@ public class CaseRecordServiceImpl implements CaseRecordService {
         log.info("语音文件已上传，路径：{}", audioUrl);
 
         String text = soundIdentify(audioUrl);
-        String audioAnalysis = runAudioRoleAnalysis(text);
         Map<String, String> result = new HashMap<>();
         result.put("audioFileUrl", audioUrl);
-        result.put("text", defaultVal(audioAnalysis, ""));
+        result.put("text", defaultVal(text, ""));
+        result.put("audioAnalysis", "");
         return result;
     }
 
