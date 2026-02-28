@@ -150,12 +150,12 @@ public class CaseStatsController {
                 }
                 CaseStatsDetail detail = new CaseStatsDetail();
                 detail.setSerialNo(cellString(row, 0));
-                detail.setEventTime(cellDateTimeString(row, 1));
+                detail.setEventTime(safeCellDateTimeString(row, 1));
                 detail.setDistrict(cellString(row, 2));
                 detail.setStreetTown(cellString(row, 3));
                 detail.setRegisterSource(cellString(row, 4));
                 detail.setCaseType(cellString(row, 5));
-                detail.setRegisterTime(cellDateTimeString(row, 6));
+                detail.setRegisterTime(safeCellDateTimeString(row, 6));
                 detail.setCurrentStatus(cellString(row, 7));
                 detail.setCreatedAt(LocalDateTime.now());
                 details.add(detail);
@@ -1095,6 +1095,16 @@ public class CaseStatsController {
             return String.valueOf(cell.getBooleanCellValue());
         }
         return cell.toString().trim();
+    }
+
+
+    private String safeCellDateTimeString(Row row, int index) {
+        try {
+            return cellDateTimeString(row, index);
+        } catch (Exception ex) {
+            log.warn("读取日期时间单元格失败，已跳过该字段: row={}, col={}, error={}", row == null ? -1 : row.getRowNum(), index, ex.getMessage());
+            return "";
+        }
     }
 
     private String cellDateTimeString(Row row, int index) {
