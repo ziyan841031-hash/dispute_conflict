@@ -337,13 +337,21 @@ public class CaseController {
     }
 
     private List<CaseRecord> queryExportRecords(CaseQueryRequest request) {
-        if (isBlank(request.getKeyword()) && isBlank(request.getDisputeType())
-                && isBlank(request.getEventSource()) && isBlank(request.getRiskLevel())) {
-            return caseRecordMapper.selectList(new LambdaQueryWrapper<CaseRecord>()
-                    .orderByDesc(CaseRecord::getCreatedAt));
+        LambdaQueryWrapper<CaseRecord> wrapper = new LambdaQueryWrapper<>();
+        if (!isBlank(request.getKeyword())) {
+            wrapper.like(CaseRecord::getCaseText, request.getKeyword());
         }
-        IPage<CaseRecord> pageData = caseRecordService.queryCases(request);
-        return pageData.getRecords();
+        if (!isBlank(request.getDisputeType())) {
+            wrapper.eq(CaseRecord::getDisputeType, request.getDisputeType());
+        }
+        if (!isBlank(request.getEventSource())) {
+            wrapper.eq(CaseRecord::getEventSource, request.getEventSource());
+        }
+        if (!isBlank(request.getRiskLevel())) {
+            wrapper.eq(CaseRecord::getRiskLevel, request.getRiskLevel());
+        }
+        wrapper.orderByDesc(CaseRecord::getRegisterTime);
+        return caseRecordMapper.selectList(wrapper);
     }
 
     private boolean isBlank(String value) {
