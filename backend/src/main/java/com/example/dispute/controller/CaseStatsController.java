@@ -183,7 +183,7 @@ public class CaseStatsController {
             detailMapper.insert(detail);
         }
 
-        // 生成四维度统计数据。
+        // 生成五维度统计数据。
         Map<String, Object> analysis = buildAnalysis(details);
         // 渲染图表并生成PPT文件。
         Map<String, String> files = generateChartsAndPpt(batch, analysis);
@@ -194,10 +194,12 @@ public class CaseStatsController {
         batch.setStreetTop10Json(toJson(analysis.get("streetTop10")));
         batch.setTypeTop10Json(toJson(analysis.get("typeTop10")));
         batch.setDistrictStatusJson(toJson(analysis.get("districtStatus")));
+        batch.setDistrictHighRiskJson(toJson(analysis.get("districtHighRisk")));
         batch.setTimeChartPath(files.get("timeChartPath"));
         batch.setStreetChartPath(files.get("streetChartPath"));
         batch.setTypeChartPath(files.get("typeChartPath"));
         batch.setDistrictChartPath(files.get("districtChartPath"));
+        batch.setDistrictHighRiskChartPath(files.get("districtHighRiskChartPath"));
         batch.setReportFilePath(files.get("pptPath"));
         batchMapper.updateById(batch);
 
@@ -209,10 +211,12 @@ public class CaseStatsController {
         result.put("streetTop10Json", batch.getStreetTop10Json());
         result.put("typeTop10Json", batch.getTypeTop10Json());
         result.put("districtStatusJson", batch.getDistrictStatusJson());
+        result.put("districtHighRiskJson", batch.getDistrictHighRiskJson());
         result.put("timeChartPath", batch.getTimeChartPath());
         result.put("streetChartPath", batch.getStreetChartPath());
         result.put("typeChartPath", batch.getTypeChartPath());
         result.put("districtChartPath", batch.getDistrictChartPath());
+        result.put("districtHighRiskChartPath", batch.getDistrictHighRiskChartPath());
         return ApiResponse.success(result);
     }
 
@@ -251,10 +255,12 @@ public class CaseStatsController {
         result.put("streetTop10Json", batch.getStreetTop10Json());
         result.put("typeTop10Json", batch.getTypeTop10Json());
         result.put("districtStatusJson", batch.getDistrictStatusJson());
+        result.put("districtHighRiskJson", batch.getDistrictHighRiskJson());
         result.put("timeChartPath", batch.getTimeChartPath());
         result.put("streetChartPath", batch.getStreetChartPath());
         result.put("typeChartPath", batch.getTypeChartPath());
         result.put("districtChartPath", batch.getDistrictChartPath());
+        result.put("districtHighRiskChartPath", batch.getDistrictHighRiskChartPath());
         result.put("reportFileUrl", batch.getReportFileUrl());
         return ApiResponse.success(result);
     }
@@ -282,7 +288,7 @@ public class CaseStatsController {
     }
 
     /**
-     * 基于明细列表构建四个维度统计分析数据。
+     * 基于明细列表构建五个维度统计分析数据。
      */
     private Map<String, Object> buildAnalysis(List<CaseStatsDetail> details) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -351,6 +357,11 @@ public class CaseStatsController {
             statusMap.put(status, statusMap.getOrDefault(status, 0L) + 1);
         }
         result.put("districtStatus", districtStatus);
+
+        Map<String, Long> districtHighRisk = topNMap(details.stream()
+                .filter(item -> isHighRiskLevel(item.getRiskLevel()))
+                .collect(Collectors.groupingBy(item -> safe(item.getDistrict()), Collectors.counting())), 10);
+        result.put("districtHighRisk", districtHighRisk);
         return result;
     }
 
@@ -366,6 +377,7 @@ public class CaseStatsController {
             String streetChartPath = dir.resolve("street-top10.png").toString();
             String typeChartPath = dir.resolve("type-top10.png").toString();
             String districtChartPath = dir.resolve("district-status.png").toString();
+            String districtHighRiskChartPath = dir.resolve("district-high-risk.png").toString();
             String pptPath = dir.resolve("case-stats-report.pptx").toString();
 
             drawLineChart("近6个月趋势", ((Map<String, Long>) analysis.get("timeTrend")),
@@ -373,15 +385,17 @@ public class CaseStatsController {
             drawVerticalBarChart("街镇高发Top10", ((Map<String, Long>) analysis.get("streetTop10")), streetChartPath);
             drawHorizontalBarChart("类型高发Top10", ((Map<String, Long>) analysis.get("typeTop10")), typeChartPath);
             drawGroupedBarChart("区办理状态", ((Map<String, Map<String, Long>>) analysis.get("districtStatus")), districtChartPath);
+            drawPieChart("区高发案件统计（高风险）", ((Map<String, Long>) analysis.get("districtHighRisk")), districtHighRiskChartPath);
 
             Map<String, String> aiSummary = callDifyForCaseStatsSummary(analysis);
-            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath, batch.getImportedAt());
+            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath, districtHighRiskChartPath, batch.getImportedAt());
 
             Map<String, String> files = new HashMap<>();
             files.put("timeChartPath", timeChartPath);
             files.put("streetChartPath", streetChartPath);
             files.put("typeChartPath", typeChartPath);
             files.put("districtChartPath", districtChartPath);
+            files.put("districtHighRiskChartPath", districtHighRiskChartPath);
             files.put("pptPath", pptPath);
             return files;
         } catch (Exception ex) {
@@ -390,7 +404,7 @@ public class CaseStatsController {
     }
 
     /**
-     * 调用Dify工作流生成四个维度的标题与摘要。
+     * 调用Dify工作流生成五个维度的标题与摘要。
      */
     private Map<String, String> callDifyForCaseStatsSummary(Map<String, Object> analysis) {
         Map<String, String> result = new HashMap<>();
@@ -402,12 +416,15 @@ public class CaseStatsController {
         result.put("type_summary", "1）类型高发Top10见图；2）建议聚焦头部类型强化源头治理。");
         result.put("district_title", "各区办理状态分布分析");
         result.put("district_summary", "1）各区办理状态分布见图；2）建议跟踪办理中事项提升闭环效率。");
+        result.put("district_high_risk_title", "区高发案件统计（高风险）");
+        result.put("district_high_risk_summary", "1）各区高风险案件占比见图；2）建议针对高风险高发区开展预警与联动处置。");
         try {
             Map<String, Object> inputs = new HashMap<>();
             inputs.put("monthly_trend_json", toJson(analysis.get("timeTrend")));
             inputs.put("street_top10_json", toJson(analysis.get("streetTop10")));
             inputs.put("type_top10_json", toJson(analysis.get("typeTop10")));
             inputs.put("district_status_json", toJson(analysis.get("districtStatus")));
+            inputs.put("district_high_risk_json", toJson(analysis.get("districtHighRisk")));
             Object response = difyClient.runWorkflowWithInputs(inputs, caseStatsApiKey, "案件统计摘要");
             if (response instanceof Map) {
                 Object outputs = ((Map<?, ?>) response).get("outputs");
@@ -421,6 +438,8 @@ public class CaseStatsController {
                     mergeSummaryField(result, map, "type_summary");
                     mergeSummaryField(result, map, "district_title");
                     mergeSummaryField(result, map, "district_summary");
+                    mergeSummaryField(result, map, "district_high_risk_title");
+                    mergeSummaryField(result, map, "district_high_risk_summary");
                 }
             }
         } catch (Exception ex) {
@@ -440,10 +459,10 @@ public class CaseStatsController {
     }
 
     /**
-     * 将标题、分段摘要和图表排版到PPT（四页）。
+     * 将标题、分段摘要和图表排版到PPT（五页）。
      */
     private void buildPpt(String pptPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
-                          String typeChartPath, String districtChartPath, LocalDateTime importedAt) throws Exception {
+                          String typeChartPath, String districtChartPath, String districtHighRiskChartPath, LocalDateTime importedAt) throws Exception {
         XMLSlideShow ppt = new XMLSlideShow();
         ppt.setPageSize(new java.awt.Dimension(PPT_WIDTH, PPT_HEIGHT));
         addCoverSlide(ppt, importedAt);
@@ -451,6 +470,7 @@ public class CaseStatsController {
         addPptSlide(ppt, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
         addPptSlide(ppt, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
         addPptSlide(ppt, summary.get("district_title"), summary.get("district_summary"), districtChartPath);
+        addPptSlide(ppt, summary.get("district_high_risk_title"), summary.get("district_high_risk_summary"), districtHighRiskChartPath);
         try (FileOutputStream out = new FileOutputStream(pptPath)) {
             ppt.write(out);
         }
@@ -607,6 +627,60 @@ public class CaseStatsController {
     /**
      * 绘制折线图（近6个月趋势）。
      */
+
+    private void drawPieChart(String title, Map<String, Long> data, String output) throws Exception {
+        BufferedImage image = createCanvas();
+        Graphics2D g = image.createGraphics();
+        try {
+            enableAA(g);
+            paintBackground(g);
+            drawTitle(g, title);
+
+            if (data == null || data.isEmpty()) {
+                savePng(image, output);
+                return;
+            }
+            int pieSize = 360;
+            int pieX = 90;
+            int pieY = 180;
+            long total = data.values().stream().filter(Objects::nonNull).mapToLong(Long::longValue).sum();
+            if (total <= 0) {
+                savePng(image, output);
+                return;
+            }
+            Color[] colors = new Color[]{new Color(59,130,246), new Color(16,185,129), new Color(245,158,11), new Color(239,68,68), new Color(139,92,246), new Color(20,184,166), new Color(99,102,241), new Color(249,115,22), new Color(168,85,247), new Color(34,197,94)};
+            int start = 0;
+            int idx = 0;
+            for (Map.Entry<String, Long> e : data.entrySet()) {
+                long v = e.getValue() == null ? 0L : e.getValue();
+                int angle = (int) Math.round(v * 360.0 / total);
+                if (idx == data.size() - 1) {
+                    angle = 360 - start;
+                }
+                g.setColor(colors[idx % colors.length]);
+                g.fillArc(pieX, pieY, pieSize, pieSize, start, angle);
+                start += angle;
+                idx++;
+            }
+            int legendX = pieX + pieSize + 70;
+            int legendY = pieY + 20;
+            idx = 0;
+            g.setFont(new Font(CHINESE_FONT_FAMILY, Font.PLAIN, 18));
+            for (Map.Entry<String, Long> e : data.entrySet()) {
+                long v = e.getValue() == null ? 0L : e.getValue();
+                double pct = total == 0 ? 0 : (v * 100.0 / total);
+                g.setColor(colors[idx % colors.length]);
+                g.fillRect(legendX, legendY + idx * 34, 18, 18);
+                g.setColor(new Color(31, 41, 55));
+                g.drawString(String.format("%s  %d (%.1f%%)", safe(e.getKey()), v, pct), legendX + 28, legendY + 15 + idx * 34);
+                idx++;
+            }
+            savePng(image, output);
+        } finally {
+            g.dispose();
+        }
+    }
+
     private void drawLineChart(String title, Map<String, Long> data, Map<String, Map<String, Long>> top3Series, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
@@ -1010,6 +1084,14 @@ public class CaseStatsController {
         g.setColor(new Color(100, 116, 139));
         g.drawLine(left, bottom, right, bottom);
         g.drawLine(left, top, left, bottom);
+    }
+
+    private boolean isHighRiskLevel(String riskLevel) {
+        if (riskLevel == null) {
+            return false;
+        }
+        String normalized = riskLevel.trim();
+        return normalized.contains("高") || "HIGH".equalsIgnoreCase(normalized);
     }
 
     /**
