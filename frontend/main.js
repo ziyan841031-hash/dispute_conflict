@@ -1302,6 +1302,7 @@ function closeCaseMaterial() {
   if (caseAudioPlayer) {
     caseAudioPlayer.pause();
   }
+  currentCaseAudioUrl = "";
   stopCaseAudioCountdown();
   const audioBtn = document.getElementById('playCaseAudioBtn');
   if (audioBtn) {
@@ -1313,6 +1314,7 @@ function closeCaseMaterial() {
 
 let currentCaseOptimizeData = null;
 let caseAudioPlayer = null;
+let currentCaseAudioUrl = "";
 let caseAudioCountdownTimer = null;
 let caseOptimizeSubmitting = false;
 
@@ -1412,25 +1414,39 @@ function closeCaseOptimizeDialog() {
 }
 
 
+function normalizeAudioUrl(url) {
+  const raw = String(url || '').trim();
+  if (!raw) {
+    return '';
+  }
+  try {
+    return new URL(raw, window.location.origin).toString();
+  } catch (error) {
+    return raw;
+  }
+}
+
 function toggleCaseAudioPlay(data) {
   const btn = document.getElementById('playCaseAudioBtn');
   if (!btn) {
     return;
   }
   const audioUrl = data && data.audioFileUrl ? String(data.audioFileUrl) : '';
-  if (!audioUrl) {
+  const normalizedAudioUrl = normalizeAudioUrl(audioUrl);
+  if (!normalizedAudioUrl) {
     alert('当前案件暂无音频文件');
     return;
   }
-  if (!caseAudioPlayer || caseAudioPlayer.src !== audioUrl) {
+  if (!caseAudioPlayer || currentCaseAudioUrl !== normalizedAudioUrl) {
     if (caseAudioPlayer) {
       caseAudioPlayer.pause();
     }
     stopCaseAudioCountdown();
-    caseAudioPlayer = new Audio(audioUrl);
+    caseAudioPlayer = new Audio(normalizedAudioUrl);
+    currentCaseAudioUrl = normalizedAudioUrl;
     caseAudioPlayer.addEventListener('loadedmetadata', () => {
       if (Number.isFinite(caseAudioPlayer.duration) && caseAudioPlayer.duration > 0) {
-        btn.textContent = `▶ 音频 ${formatAudioDuration(caseAudioPlayer.duration)}`;
+        btn.textContent = `⏸ 音频 ${formatAudioDuration(caseAudioPlayer.duration)}`;
       }
     });
     caseAudioPlayer.addEventListener('timeupdate', () => {
@@ -1441,16 +1457,18 @@ function toggleCaseAudioPlay(data) {
     caseAudioPlayer.addEventListener('ended', () => {
       stopCaseAudioCountdown();
       btn.classList.remove('audio-counting');
-      btn.textContent = '▶ 音频 00:00';
+      btn.textContent = '▶ 音频';
     });
   }
 
   if (caseAudioPlayer.paused) {
     caseAudioPlayer.play().then(() => {
       btn.classList.add('audio-counting');
-      renderCaseAudioRemaining();
+      renderCaseAudioRemaining('⏸');
       startCaseAudioCountdown();
     }).catch(() => {
+      btn.classList.remove('audio-counting');
+      btn.textContent = '▶ 音频';
       alert('音频播放失败，请检查链接是否可访问');
     });
     return;
