@@ -629,56 +629,63 @@ public class CaseStatsController {
      */
 
     private void drawPieChart(String title, Map<String, Long> data, String output) throws Exception {
-        BufferedImage image = createCanvas();
-        Graphics2D g = image.createGraphics();
-        try {
-            enableAA(g);
-            paintBackground(g);
-            drawTitle(g, title);
-
-            if (data == null || data.isEmpty()) {
-                savePng(image, output);
-                return;
-            }
-            int pieSize = 360;
-            int pieX = 90;
-            int pieY = 180;
-            long total = data.values().stream().filter(Objects::nonNull).mapToLong(Long::longValue).sum();
-            if (total <= 0) {
-                savePng(image, output);
-                return;
-            }
-            Color[] colors = new Color[]{new Color(59,130,246), new Color(16,185,129), new Color(245,158,11), new Color(239,68,68), new Color(139,92,246), new Color(20,184,166), new Color(99,102,241), new Color(249,115,22), new Color(168,85,247), new Color(34,197,94)};
-            int start = 0;
-            int idx = 0;
-            for (Map.Entry<String, Long> e : data.entrySet()) {
-                long v = e.getValue() == null ? 0L : e.getValue();
-                int angle = (int) Math.round(v * 360.0 / total);
-                if (idx == data.size() - 1) {
-                    angle = 360 - start;
-                }
-                g.setColor(colors[idx % colors.length]);
-                g.fillArc(pieX, pieY, pieSize, pieSize, start, angle);
-                start += angle;
-                idx++;
-            }
-            int legendX = pieX + pieSize + 70;
-            int legendY = pieY + 20;
-            idx = 0;
-            g.setFont(new Font(CHINESE_FONT_FAMILY, Font.PLAIN, 18));
-            for (Map.Entry<String, Long> e : data.entrySet()) {
-                long v = e.getValue() == null ? 0L : e.getValue();
-                double pct = total == 0 ? 0 : (v * 100.0 / total);
-                g.setColor(colors[idx % colors.length]);
-                g.fillRect(legendX, legendY + idx * 34, 18, 18);
-                g.setColor(new Color(31, 41, 55));
-                g.drawString(String.format("%s  %d (%.1f%%)", safe(e.getKey()), v, pct), legendX + 28, legendY + 15 + idx * 34);
-                idx++;
-            }
-            savePng(image, output);
-        } finally {
+        BufferedImage img = createCanvas(title);
+        Graphics2D g = img.createGraphics();
+        setupGraphics(g);
+        if (data == null || data.isEmpty()) {
+            ImageIO.write(img, "png", new File(output));
             g.dispose();
+            return;
         }
+
+        long total = data.values().stream().filter(Objects::nonNull).mapToLong(Long::longValue).sum();
+        if (total <= 0) {
+            ImageIO.write(img, "png", new File(output));
+            g.dispose();
+            return;
+        }
+
+        int pieSize = 360;
+        int pieX = 100;
+        int pieY = 170;
+        Color[] colors = {
+                new Color(59, 130, 246), new Color(16, 185, 129), new Color(245, 158, 11),
+                new Color(239, 68, 68), new Color(139, 92, 246), new Color(20, 184, 166),
+                new Color(99, 102, 241), new Color(249, 115, 22), new Color(168, 85, 247),
+                new Color(34, 197, 94)
+        };
+
+        int start = 0;
+        int idx = 0;
+        for (Map.Entry<String, Long> entry : data.entrySet()) {
+            long value = entry.getValue() == null ? 0L : entry.getValue();
+            int angle = (int) Math.round(value * 360.0 / total);
+            if (idx == data.size() - 1) {
+                angle = 360 - start;
+            }
+            g.setColor(colors[idx % colors.length]);
+            g.fillArc(pieX, pieY, pieSize, pieSize, start, angle);
+            start += angle;
+            idx++;
+        }
+
+        int legendX = pieX + pieSize + 70;
+        int legendY = pieY + 20;
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.PLAIN, 18));
+        idx = 0;
+        for (Map.Entry<String, Long> entry : data.entrySet()) {
+            long value = entry.getValue() == null ? 0L : entry.getValue();
+            double pct = value * 100.0 / total;
+            g.setColor(colors[idx % colors.length]);
+            g.fillRect(legendX, legendY + idx * 34, 18, 18);
+            g.setColor(new Color(31, 41, 55));
+            g.drawString(String.format("%s  %d (%.1f%%)", safe(entry.getKey()), value, pct),
+                    legendX + 28, legendY + 15 + idx * 34);
+            idx++;
+        }
+
+        ImageIO.write(img, "png", new File(output));
+        g.dispose();
     }
 
     private void drawLineChart(String title, Map<String, Long> data, Map<String, Map<String, Long>> top3Series, String output) throws Exception {
