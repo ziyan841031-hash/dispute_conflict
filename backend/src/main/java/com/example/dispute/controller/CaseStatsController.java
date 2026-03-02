@@ -657,6 +657,10 @@ public class CaseStatsController {
 
         int start = 0;
         int idx = 0;
+        int centerX = pieX + pieSize / 2;
+        int centerY = pieY + pieSize / 2;
+        int labelRadius = pieSize / 2 + 26;
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.BOLD, 14));
         for (Map.Entry<String, Long> entry : data.entrySet()) {
             long value = entry.getValue() == null ? 0L : entry.getValue();
             int angle = (int) Math.round(value * 360.0 / total);
@@ -665,6 +669,15 @@ public class CaseStatsController {
             }
             g.setColor(colors[idx % colors.length]);
             g.fillArc(pieX, pieY, pieSize, pieSize, start, angle);
+
+            if (angle > 0) {
+                double middleAngle = Math.toRadians(start + angle / 2.0);
+                int labelX = centerX + (int) Math.round(Math.cos(middleAngle) * labelRadius);
+                int labelY = centerY - (int) Math.round(Math.sin(middleAngle) * labelRadius);
+                String districtLabel = safe(entry.getKey());
+                g.setColor(new Color(31, 41, 55));
+                g.drawString(districtLabel, labelX, labelY);
+            }
             start += angle;
             idx++;
         }
