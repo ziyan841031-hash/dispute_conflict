@@ -416,8 +416,8 @@ public class CaseStatsController {
         result.put("type_summary", "1）类型高发Top10见图；2）建议聚焦头部类型强化源头治理。");
         result.put("district_title", "各区办理状态分布分析");
         result.put("district_summary", "1）各区办理状态分布见图；2）建议跟踪办理中事项提升闭环效率。");
-        result.put("district_high_risk_title", "区高发案件统计（高风险）");
-        result.put("district_high_risk_summary", "1）各区高风险案件占比见图；2）建议针对高风险高发区开展预警与联动处置。");
+        result.put("high_risk_title", "区高发案件统计（高风险）");
+        result.put("high_risk_summary", "1）各区高风险案件占比见图；2）建议针对高风险高发区开展预警与联动处置。");
         try {
             Map<String, Object> inputs = new HashMap<>();
             inputs.put("monthly_trend_json", toJson(analysis.get("timeTrend")));
@@ -438,8 +438,8 @@ public class CaseStatsController {
                     mergeSummaryField(result, map, "type_summary");
                     mergeSummaryField(result, map, "district_title");
                     mergeSummaryField(result, map, "district_summary");
-                    mergeSummaryField(result, map, "district_high_risk_title");
-                    mergeSummaryField(result, map, "district_high_risk_summary");
+                    mergeSummaryField(result, map, "high_risk_title");
+                    mergeSummaryField(result, map, "high_risk_summary");
                 }
             }
         } catch (Exception ex) {
@@ -470,7 +470,7 @@ public class CaseStatsController {
         addPptSlide(ppt, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
         addPptSlide(ppt, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
         addPptSlide(ppt, summary.get("district_title"), summary.get("district_summary"), districtChartPath);
-        addPptSlide(ppt, summary.get("district_high_risk_title"), summary.get("district_high_risk_summary"), districtHighRiskChartPath);
+        addPptSlide(ppt, summary.get("high_risk_title"), summary.get("high_risk_summary"), districtHighRiskChartPath);
         try (FileOutputStream out = new FileOutputStream(pptPath)) {
             ppt.write(out);
         }
