@@ -290,7 +290,7 @@ public class CaseController {
             String[] headers = {
                     "案件编号", "纠纷类型", "纠纷子类型", "当事人", "当事人身份证号", "当事人电话",
                     "当事人地址", "对方当事人", "对方当事人身份证号",
-                    "对方当事人电话", "对方当事人地址", "事件来源", "推荐部门", "摘要"
+                    "对方当事人电话", "对方当事人地址", "矛盾纠纷发生地址", "事件来源", "推荐部门", "矛盾纠纷概要信息"
             };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
@@ -318,9 +318,10 @@ public class CaseController {
                 row.createCell(8).setCellValue(nullSafe(r.getCounterpartyId()));
                 row.createCell(9).setCellValue(nullSafe(r.getCounterpartyPhone()));
                 row.createCell(10).setCellValue(nullSafe(r.getCounterpartyAddress()));
-                row.createCell(11).setCellValue(nullSafe(r.getEventSource()));
-                row.createCell(12).setCellValue(workflowRecord == null ? "" : nullSafe(workflowRecord.getRecommendedDepartment()));
-                row.createCell(13).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
+                row.createCell(11).setCellValue(nullSafe(r.getDisputeLocation()));
+                row.createCell(12).setCellValue(nullSafe(r.getEventSource()));
+                row.createCell(13).setCellValue(workflowRecord == null ? "" : nullSafe(workflowRecord.getRecommendedDepartment()));
+                row.createCell(14).setCellValue(classifyRecord == null ? "" : nullSafe(classifyRecord.getFactsSummary()));
             }
             workbook.write(out);
             return ResponseEntity.ok()

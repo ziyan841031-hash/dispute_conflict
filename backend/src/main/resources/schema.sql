@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS case_stats_detail (
     street_town VARCHAR(128),
     register_source VARCHAR(128),
     case_type VARCHAR(128),
-    register_time VARCHAR(64),
+    risk_level VARCHAR(32),
     current_status VARCHAR(128),
     created_at TIMESTAMP NOT NULL
 );
@@ -278,10 +278,12 @@ COMMENT ON COLUMN case_stats_detail.district IS '区';
 COMMENT ON COLUMN case_stats_detail.street_town IS '街镇';
 COMMENT ON COLUMN case_stats_detail.register_source IS '登记来源';
 COMMENT ON COLUMN case_stats_detail.case_type IS '类型';
-COMMENT ON COLUMN case_stats_detail.register_time IS '登记时间';
+COMMENT ON COLUMN case_stats_detail.risk_level IS '风险等级';
 COMMENT ON COLUMN case_stats_detail.current_status IS '当前办理状态';
 
 CREATE INDEX IF NOT EXISTS idx_case_stats_detail_batch_id ON case_stats_detail(batch_id);
+ALTER TABLE case_stats_detail ADD COLUMN IF NOT EXISTS risk_level VARCHAR(32);
+ALTER TABLE case_stats_detail DROP COLUMN IF EXISTS register_time;
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS time_trend_json TEXT;
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS street_top10_json TEXT;
 ALTER TABLE case_stats_batch ADD COLUMN IF NOT EXISTS type_top10_json TEXT;

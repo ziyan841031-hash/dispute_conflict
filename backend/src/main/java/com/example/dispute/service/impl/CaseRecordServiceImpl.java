@@ -716,8 +716,7 @@ public class CaseRecordServiceImpl implements CaseRecordService {
             Sheet sheet = workbook.getSheetAt(0);
             List<ExcelCaseIngestItem> result = new ArrayList<>();
             DataFormatter dataFormatter = new DataFormatter();
-            boolean firstRowChecked = false;
-            for (int i = 0; i <= sheet.getLastRowNum(); i++) {
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) {
                     continue;
@@ -729,14 +728,6 @@ public class CaseRecordServiceImpl implements CaseRecordService {
                 String content = dataFormatter.formatCellValue(contentCell).trim();
                 Cell eventSourceCell = row.getCell(2, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
                 String eventSource = eventSourceCell == null ? "" : dataFormatter.formatCellValue(eventSourceCell).trim();
-                if (!firstRowChecked) {
-                    firstRowChecked = true;
-                    boolean isHeader = ("内容".equals(content) || "案件内容".equals(content) || "文本".equals(content) || "案件原文".equals(content))
-                            || ("事件来源".equals(eventSource) || "来源".equals(eventSource));
-                    if (isHeader) {
-                        continue;
-                    }
-                }
                 if (!content.isEmpty()) {
                     ExcelCaseIngestItem item = new ExcelCaseIngestItem();
                     item.setCaseText(content);

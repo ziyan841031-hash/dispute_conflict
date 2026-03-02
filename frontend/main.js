@@ -775,7 +775,7 @@ async function openStatsDetail(batchId) {
       <td>${item.streetTown || '-'}</td>
       <td>${item.registerSource || '-'}</td>
       <td>${item.caseType || '-'}</td>
-      <td>${item.registerTime || '-'}</td>
+      <td>${item.riskLevel || '-'}</td>
       <td>${item.currentStatus || '-'}</td>
     `;
     tbody.appendChild(tr);

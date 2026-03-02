@@ -76,7 +76,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/case-stats")
 public class CaseStatsController {
 
-    private static final List<String> REQUIRED_HEADERS = Arrays.asList("序号", "时间", "区", "街镇", "登记来源", "类型", "登记时间", "当前办理状态");
+    private static final List<String> REQUIRED_HEADERS = Arrays.asList("序号", "时间", "区", "街镇", "登记来源", "类型", "风险等级", "当前办理状态");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4})[-/](\\d{1,2})");
     private static final int PPT_WIDTH = 1366;
@@ -140,7 +140,7 @@ public class CaseStatsController {
             }
             Row headerRow = sheet.getRow(0);
             if (!validateHeader(headerRow)) {
-                return ApiResponse.fail("Excel表头不符合要求，应为：序号，时间，区，街镇，登记来源，类型，登记时间，当前办理状态");
+                return ApiResponse.fail("Excel表头不符合要求，应为：序号，时间，区，街镇，登记来源，类型，风险等级，当前办理状态");
             }
 
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
@@ -155,7 +155,7 @@ public class CaseStatsController {
                 detail.setStreetTown(cellString(row, 3));
                 detail.setRegisterSource(cellString(row, 4));
                 detail.setCaseType(cellString(row, 5));
-                detail.setRegisterTime(safeCellDateTimeString(row, 6));
+                detail.setRiskLevel(cellString(row, 6));
                 detail.setCurrentStatus(cellString(row, 7));
                 detail.setCreatedAt(LocalDateTime.now());
                 details.add(detail);
@@ -297,7 +297,7 @@ public class CaseStatsController {
             monthMap.put(key, 0L);
         }
         for (CaseStatsDetail d : details) {
-            String month = extractMonth(d.getRegisterTime(), d.getEventTime());
+            String month = extractMonth(d.getEventTime());
             if (monthMap.containsKey(month)) {
                 monthMap.put(month, monthMap.get(month) + 1);
             }
@@ -322,7 +322,7 @@ public class CaseStatsController {
                 if (!street.equals(safe(d.getStreetTown()))) {
                     continue;
                 }
-                String month = extractMonth(d.getRegisterTime(), d.getEventTime());
+                String month = extractMonth(d.getEventTime());
                 if (streetMonth.containsKey(month)) {
                     streetMonth.put(month, streetMonth.get(month) + 1);
                 }
@@ -1013,10 +1013,10 @@ public class CaseStatsController {
     }
 
     /**
-     * 从登记时间或事件时间提取“yyyy-MM”月份键。
+     * 从事件时间提取“yyyy-MM”月份键。
      */
-    private String extractMonth(String registerTime, String eventTime) {
-        String source = (registerTime == null || registerTime.trim().isEmpty()) ? eventTime : registerTime;
+    private String extractMonth(String eventTime) {
+        String source = eventTime;
         if (source == null) {
             return "";
         }

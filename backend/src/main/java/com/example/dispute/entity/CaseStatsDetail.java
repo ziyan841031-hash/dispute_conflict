@@ -36,8 +36,8 @@ public class CaseStatsDetail {
     @TableField("case_type")
     private String caseType;
 
-    @TableField("register_time")
-    private String registerTime;
+    @TableField("risk_level")
+    private String riskLevel;
 
     @TableField("current_status")
     private String currentStatus;
