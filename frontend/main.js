@@ -2815,6 +2815,8 @@ function animateLawAgentTyping(node, text, onDone) {
 
 let districtInsightData = {};
 let shMapChart = null;
+let shMapScene = null;
+let shMapLayers = [];
 
 function resolveFeatureCenter(feature) {
   const props = feature && feature.properties ? feature.properties : {};
@@ -2871,15 +2873,24 @@ async function loadDistrictInsight() {
 
 async function renderShanghaiMap(data) {
   const dom = document.getElementById('shMapChart');
-  if (!dom || typeof echarts === 'undefined') {
+  if (!dom) {
     return;
   }
-  if (!shMapChart) {
-    shMapChart = echarts.init(dom);
-    window.addEventListener('resize', () => {
-      if (shMapChart) shMapChart.resize();
-    });
+  if (typeof L7 === 'undefined' || typeof L7Maps === 'undefined') {
+    dom.innerHTML = '<div style="padding:16px;color:#f8fafc;">L7 地图组件加载失败</div>';
+    return;
   }
+
+  if (shMapScene) {
+    try {
+      shMapScene.destroy();
+    } catch (e) {
+      console.warn('旧地图销毁失败', e);
+    }
+    shMapScene = null;
+    shMapLayers = [];
+  }
+  dom.innerHTML = '';
 
   const geoRes = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/310000_full.json');
   const geo = await geoRes.json();
@@ -2889,222 +2900,116 @@ async function renderShanghaiMap(data) {
     const name = String(p.name || '');
     const level = String(p.level || '');
     return level === 'district' || name.endsWith('区');
-  });
-  const filteredGeo = {
-    type: 'FeatureCollection',
-    features: districtFeatures
-  };
-  echarts.registerMap('上海各区', filteredGeo);
-
-  const mapData = districtFeatures.map((f) => {
+  }).map((f) => {
     const name = String((f.properties && f.properties.name) || '');
     const value = Number((data || {})[name] || 0);
-    return {name, value, center: resolveFeatureCenter(f)};
-  });
-  const maxVal = mapData.length ? Math.max(...mapData.map((x) => x.value)) : 0;
-  const barData = mapData
-    .filter((item) => Array.isArray(item.center) && item.center.length >= 2)
-    .map((item) => ({
-      name: item.name,
-      value: [item.center[0], item.center[1], Math.max(1, Number(item.value || 0))]
-    }));
-
-  try {
-    shMapChart.setOption({
-      backgroundColor: 'transparent',
-      animationDurationUpdate: 900,
-      tooltip: {
-        backgroundColor: 'rgba(5, 18, 40, 0.92)',
-        borderColor: '#38bdf8',
-        borderWidth: 1,
-        textStyle: {color: '#e2e8f0'},
-        formatter: (p) => {
-          const current = mapData.find((item) => item.name === p.name);
-          const value = current ? current.value : (Array.isArray(p.value) ? p.value[2] : p.value);
-          return `${p.name}<br/>案件数量：<b>${Number(value || 0)}</b>`;
-        }
-      },
-      visualMap: {
-        min: 0,
-        max: Math.max(10, maxVal),
-        left: 14,
-        bottom: 16,
-        itemWidth: 12,
-        itemHeight: 88,
-        text: ['高', '低'],
-        seriesIndex: [0],
-        inRange: {
-          color: ['#1d4ed8', '#2563eb', '#0ea5e9', '#22d3ee']
-        },
-        textStyle: {color: '#bae6fd'},
-        calculable: true
-      },
-      postEffect: {
-        enable: true,
-        bloom: {enable: true, bloomIntensity: 0.26},
-        SSAO: {enable: true, intensity: 0.95, radius: 1.4},
-        FXAA: {enable: true}
-      },
-      geo3D: {
-        map: '上海各区',
-        roam: true,
-        boxDepth: 20,
-        regionHeight: 2,
-        shading: 'lambert',
-        groundPlane: {
-          show: true,
-          color: '#030712'
-        },
-        environment: 'rgba(5, 18, 40, 0.4)',
-        viewControl: {
-          distance: 98,
-          alpha: 44,
-          beta: -16,
-          panSensitivity: 0,
-          rotateSensitivity: 1,
-          zoomSensitivity: 1.2,
-          autoRotate: false
-        },
-        light: {
-          main: {intensity: 1.35, shadow: true, alpha: 42, beta: 26},
-          ambient: {intensity: 0.4},
-          ambientCubemap: {exposure: 1, diffuseIntensity: 0.45, specularIntensity: 1.05}
-        },
-        itemStyle: {
-          color: 'rgba(0,0,0,0)',
-          borderColor: 'rgba(0,0,0,0)',
-          opacity: 0
-        },
-        label: {show: false}
-      },
-      series: [
-        {
-          name: '上海各区',
-          type: 'map3D',
-          map: '上海各区',
-          roam: true,
-          data: mapData,
-          shading: 'realistic',
-          realisticMaterial: {
-            roughness: 0.28,
-            metalness: 0.12
-          },
-          boxDepth: 20,
-          regionHeight: 2,
-          viewControl: {
-            distance: 98,
-            alpha: 44,
-            beta: -16,
-            panSensitivity: 0,
-            rotateSensitivity: 1,
-            zoomSensitivity: 1.2,
-            autoRotate: false
-          },
-          light: {
-            main: {intensity: 1.35, shadow: true, alpha: 42, beta: 26},
-            ambient: {intensity: 0.4},
-            ambientCubemap: {exposure: 1, diffuseIntensity: 0.45, specularIntensity: 1.05}
-          },
-          label: {
-            show: true,
-            color: '#dbeafe',
-            fontSize: 11,
-            backgroundColor: 'rgba(15, 23, 42, 0.55)',
-            padding: [2, 4],
-            borderRadius: 3
-          },
-          itemStyle: {
-            color: '#102a6b',
-            borderColor: '#38bdf8',
-            borderWidth: 1.4,
-            opacity: 0.98
-          },
-          emphasis: {
-            label: {show: true, color: '#ffffff'},
-            itemStyle: {
-              color: '#1d4ed8',
-              borderColor: '#67e8f9',
-              borderWidth: 2
-            }
-          }
-        },
-        {
-          name: '区域案件数量',
-          type: 'bar3D',
-          coordinateSystem: 'geo3D',
-          bevelSize: 0.25,
-          shading: 'lambert',
-          data: barData,
-          barSize: 1.35,
-          minHeight: 0.35,
-          itemStyle: {
-            color: '#22d3ee',
-            opacity: 0.98
-          },
-          emphasis: {
-            itemStyle: {
-              color: '#67e8f9'
-            }
-          }
-        },
-        {
-          name: '区域光点',
-          type: 'scatter3D',
-          coordinateSystem: 'geo3D',
-          data: barData,
-          symbol: 'circle',
-          symbolSize: 8,
-          itemStyle: {
-            color: '#a5f3fc',
-            opacity: 0.95
-          }
-        }
-      ]
-    });
-    return;
-  } catch (err) {
-    console.warn('3D地图渲染失败，回退2D模式', err);
-  }
-
-  shMapChart.setOption({
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      formatter: (p) => `${p.name}<br/>案件数量：${Number(p.value || 0)}`
-    },
-    visualMap: {
-      min: 0,
-      max: Math.max(10, maxVal),
-      left: 10,
-      bottom: 10,
-      text: ['高', '低'],
-      inRange: {
-        color: ['#bfdbfe', '#60a5fa', '#2563eb', '#1d4ed8']
-      },
-      textStyle: {color: '#cbd5e1'},
-      calculable: true
-    },
-    series: [{
-      type: 'map',
-      map: '上海各区',
-      roam: true,
-      data: mapData,
-      label: {
-        show: true,
-        color: '#e2e8f0',
-        fontSize: 11
-      },
-      itemStyle: {
-        areaColor: '#1e3a8a',
-        borderColor: '#38bdf8',
-        borderWidth: 1.1
-      },
-      emphasis: {
-        label: {color: '#ffffff'},
-        itemStyle: {areaColor: '#3b82f6'}
+    return {
+      ...f,
+      properties: {
+        ...(f.properties || {}),
+        name,
+        value
       }
-    }]
+    };
   });
+
+  const pointData = districtFeatures
+    .map((f) => {
+      const center = resolveFeatureCenter(f);
+      if (!Array.isArray(center) || center.length < 2) {
+        return null;
+      }
+      const props = f.properties || {};
+      return {
+        lng: Number(center[0]),
+        lat: Number(center[1]),
+        name: String(props.name || ''),
+        value: Math.max(1, Number(props.value || 0))
+      };
+    })
+    .filter(Boolean);
+
+  const scene = new L7.Scene({
+    id: 'shMapChart',
+    map: new L7Maps.Map({
+      style: 'dark',
+      center: [121.47, 31.23],
+      zoom: 8.3,
+      pitch: 55,
+      bearing: -12
+    })
+  });
+
+  await new Promise((resolve) => {
+    scene.on('loaded', resolve);
+  });
+
+  const polygonLayer = new L7.PolygonLayer({autoFit: false})
+    .source({type: 'FeatureCollection', features: districtFeatures})
+    .shape('fill')
+    .color('value', ['#0b2f7f', '#1d4ed8', '#2563eb', '#06b6d4'])
+    .style({
+      opacity: 0.86,
+      raisingHeight: 18,
+      heightfixed: true
+    })
+    .active({color: '#67e8f9'});
+
+  const borderLayer = new L7.LineLayer({autoFit: false})
+    .source({type: 'FeatureCollection', features: districtFeatures})
+    .shape('line')
+    .size(1.5)
+    .color('#7dd3fc')
+    .style({
+      opacity: 0.9
+    });
+
+  const pillarLayer = new L7.PointLayer({autoFit: false, blend: 'additive'})
+    .source(pointData, {
+      parser: {
+        type: 'json',
+        x: 'lng',
+        y: 'lat'
+      }
+    })
+    .shape('cylinder')
+    .size('value', [6, 58])
+    .color('value', ['#22d3ee', '#67e8f9', '#a5f3fc'])
+    .style({
+      opacity: 0.95
+    })
+    .animate(true);
+
+  const lightDotLayer = new L7.PointLayer({autoFit: false, blend: 'additive'})
+    .source(pointData, {
+      parser: {
+        type: 'json',
+        x: 'lng',
+        y: 'lat'
+      }
+    })
+    .shape('circle')
+    .size(6)
+    .color('#a5f3fc')
+    .style({
+      opacity: 0.9
+    });
+
+  scene.addLayer(polygonLayer);
+  scene.addLayer(borderLayer);
+  scene.addLayer(pillarLayer);
+  scene.addLayer(lightDotLayer);
+
+  pillarLayer.on('mousemove', (e) => {
+    const feature = e && e.feature ? e.feature : null;
+    const name = feature && feature.name ? feature.name : '';
+    const value = feature && feature.value ? feature.value : 0;
+    dom.title = `${name}：${value} 件`;
+  });
+
+  shMapScene = scene;
+  shMapLayers = [polygonLayer, borderLayer, pillarLayer, lightDotLayer];
+  shMapChart = scene;
 }
 
 function drawDistrictBarChart(data) {
