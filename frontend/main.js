@@ -2876,8 +2876,15 @@ async function renderShanghaiMap(data) {
   if (!dom) {
     return;
   }
-  if (typeof L7 === 'undefined' || typeof L7Maps === 'undefined') {
-    dom.innerHTML = '<div style="padding:16px;color:#f8fafc;">L7 地图组件加载失败</div>';
+  const hasL7 = typeof L7 !== 'undefined';
+  const hasL7Maps = typeof L7Maps !== 'undefined';
+  const MapCtor = hasL7Maps
+    ? (L7Maps.Map || L7Maps.GaodeMap || L7Maps.Mapbox || L7Maps.MapboxMap)
+    : (hasL7 ? (L7.Map || L7.GaodeMap || L7.Mapbox || L7.MapboxMap) : null);
+
+  if (!hasL7 || !MapCtor) {
+    dom.innerHTML = '<div style="padding:16px;color:#f8fafc;">L7 地图组件加载失败，请检查网络或 CDN 资源。</div>';
+    console.error('L7 load failed', {hasL7, hasL7Maps, l7Keys: hasL7 ? Object.keys(L7) : []});
     return;
   }
 
@@ -2931,7 +2938,7 @@ async function renderShanghaiMap(data) {
 
   const scene = new L7.Scene({
     id: 'shMapChart',
-    map: new L7Maps.Map({
+    map: new MapCtor({
       style: 'dark',
       center: [121.47, 31.23],
       zoom: 8.3,
