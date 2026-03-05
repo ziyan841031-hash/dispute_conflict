@@ -20,7 +20,7 @@
     <section class="card stats-insight-layout">
       <div class="insight-left">
         <h2>上海市各区域案件数量统计</h2>
-        <svg id="shMapSvg" viewBox="0 0 800 520" class="sh-map-svg"></svg>
+        <div id="shMapChart" class="sh-map-chart" aria-label="上海各区案件数量地图"></div>
       </div>
       <div class="insight-right">
         <div class="insight-chat">
@@ -39,6 +39,7 @@
     </section>
   </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="main.js"></script>
 <script>loadDistrictInsight();</script>
 </body>

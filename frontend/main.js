@@ -2814,49 +2814,98 @@ function animateLawAgentTyping(node, text, onDone) {
 
 
 let districtInsightData = {};
+let shMapChart = null;
 
 async function loadDistrictInsight() {
-  const mapEl = document.getElementById('shMapSvg');
+  const mapEl = document.getElementById('shMapChart');
   if (!mapEl) return;
   try {
     const res = await fetch(`${API_BASE}/case-stats/district-insight`);
     const json = await res.json();
     districtInsightData = (json && json.data && json.data.districtCount) ? json.data.districtCount : {};
-    renderShanghaiMap(districtInsightData);
+    await renderShanghaiMap(districtInsightData);
     drawDistrictBarChart(districtInsightData);
     drawDistrictPieChart(districtInsightData);
     const log = document.getElementById('insightChatLog');
     if (log) log.innerHTML = '<div class="msg bot">已加载区域数据，可直接提问。</div>';
   } catch (e) {
-    renderShanghaiMap({});
+    await renderShanghaiMap({});
   }
 }
 
-function renderShanghaiMap(data) {
-  const svg = document.getElementById('shMapSvg');
-  if (!svg) return;
-  const districts = [
-    ['浦东新区', 480, 180, 220, 220], ['闵行区', 280, 300, 190, 130], ['徐汇区', 220, 250, 90, 70],
-    ['长宁区', 180, 210, 80, 60], ['静安区', 250, 185, 70, 50], ['黄浦区', 290, 230, 60, 45],
-    ['普陀区', 140, 170, 95, 70], ['虹口区', 320, 160, 80, 55], ['杨浦区', 390, 150, 95, 70],
-    ['宝山区', 280, 70, 180, 100], ['嘉定区', 70, 80, 180, 120], ['青浦区', 30, 250, 170, 130],
-    ['松江区', 120, 340, 170, 130], ['金山区', 40, 430, 160, 80], ['奉贤区', 260, 420, 180, 80],
-    ['崇明区', 520, 20, 220, 120]
-  ];
-  const values = Object.values(data || {}).map(v => Number(v) || 0);
-  const max = values.length ? Math.max(...values) : 1;
-  const min = values.length ? Math.min(...values) : 0;
-  const colorFor = (n) => {
-    if (!n) return '#e2e8f0';
-    const t = (n - min) / Math.max(1, max - min);
-    const b = Math.round(140 + t * 90);
-    return `rgb(${20 + Math.round(t*30)}, ${80 + Math.round(t*80)}, ${b})`;
+async function renderShanghaiMap(data) {
+  const dom = document.getElementById('shMapChart');
+  if (!dom || typeof echarts === 'undefined') {
+    return;
+  }
+  if (!shMapChart) {
+    shMapChart = echarts.init(dom);
+    window.addEventListener('resize', () => {
+      if (shMapChart) shMapChart.resize();
+    });
+  }
+
+  const geoRes = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/310000_full.json');
+  const geo = await geoRes.json();
+  const features = Array.isArray(geo && geo.features) ? geo.features : [];
+  const districtFeatures = features.filter((f) => {
+    const p = f && f.properties ? f.properties : {};
+    const name = String(p.name || '');
+    const level = String(p.level || '');
+    return level === 'district' || name.endsWith('区');
+  });
+  const filteredGeo = {
+    type: 'FeatureCollection',
+    features: districtFeatures
   };
-  svg.innerHTML = districts.map(([name,x,y,w,h]) => {
-    const val = Number((data||{})[name] || 0);
-    const color = colorFor(val);
-    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" ry="12" fill="${color}" stroke="#38bdf8" stroke-width="2"></rect><text x="${x+w/2}" y="${y+h/2-8}" text-anchor="middle" fill="#fff" font-size="14">${name}</text><text x="${x+w/2}" y="${y+h/2+16}" text-anchor="middle" fill="#dbeafe" font-size="14">${val}</text></g>`;
-  }).join('');
+  echarts.registerMap('上海各区', filteredGeo);
+
+  const mapData = districtFeatures.map((f) => {
+    const name = String((f.properties && f.properties.name) || '');
+    const value = Number((data || {})[name] || 0);
+    return {name, value};
+  });
+  const maxVal = mapData.length ? Math.max(...mapData.map(x => x.value)) : 0;
+
+  shMapChart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: (p) => `${p.name}<br/>案件数量：${Number(p.value || 0)}`
+    },
+    visualMap: {
+      min: 0,
+      max: Math.max(10, maxVal),
+      left: 10,
+      bottom: 10,
+      text: ['高', '低'],
+      inRange: {
+        color: ['#bfdbfe', '#60a5fa', '#2563eb', '#1d4ed8']
+      },
+      textStyle: {color: '#cbd5e1'},
+      calculable: true
+    },
+    series: [{
+      type: 'map',
+      map: '上海各区',
+      roam: true,
+      data: mapData,
+      label: {
+        show: true,
+        color: '#e2e8f0',
+        fontSize: 11
+      },
+      itemStyle: {
+        areaColor: '#1e3a8a',
+        borderColor: '#38bdf8',
+        borderWidth: 1.1
+      },
+      emphasis: {
+        label: {color: '#ffffff'},
+        itemStyle: {areaColor: '#3b82f6'}
+      }
+    }]
+  });
 }
 
 function drawDistrictBarChart(data) {
@@ -2884,7 +2933,7 @@ function drawDistrictPieChart(data) {
   const ctx = c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
   const entries = Object.entries(data || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const total = entries.reduce((s,x)=>s+(Number(x[1])||0),0) || 1;
+  const total = entries.reduce((sum,item)=>sum+(Number(item[1])||0),0) || 1;
   const colors = ['#2563eb','#0ea5e9','#22c55e','#f59e0b','#ef4444','#8b5cf6'];
   let start = -Math.PI/2;
   ctx.font = '13px sans-serif';
@@ -2892,11 +2941,17 @@ function drawDistrictPieChart(data) {
   ctx.fillText('区域占比（饼状图）', 8, 16);
   entries.forEach((e,i)=>{
     const ang = (e[1]/total) * Math.PI * 2;
-    ctx.beginPath(); ctx.moveTo(110,125); ctx.arc(110,125,72,start,start+ang); ctx.closePath();
-    ctx.fillStyle = colors[i%colors.length]; ctx.fill();
-    const mid = start + ang/2;
-    const lx = 110 + Math.cos(mid)*90, ly = 125 + Math.sin(mid)*90;
-    ctx.fillStyle = '#1f2937'; ctx.fillText(e[0], lx, ly);
+    ctx.beginPath();
+    ctx.moveTo(110,125);
+    ctx.arc(110,125,72,start,start+ang);
+    ctx.closePath();
+    ctx.fillStyle = colors[i%colors.length];
+    ctx.fill();
+    const mid = start + ang / 2;
+    const lx = 110 + Math.cos(mid) * 90;
+    const ly = 125 + Math.sin(mid) * 90;
+    ctx.fillStyle = '#1f2937';
+    ctx.fillText(e[0], lx, ly);
     start += ang;
   });
 }
