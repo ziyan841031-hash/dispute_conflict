@@ -324,13 +324,7 @@ public class CaseStatsController {
             Object analysisResponse = difyClient.runWorkflowWithInputs(analysisInputs, analysisApiKey, "统计结果分析与逐条风险评级");
 
             Map<String, Object> parsedAnalysis = extractAnalysisPayload(analysisResponse);
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("question", question);
-            result.put("sql", normalizedSql);
-            result.put("resultJson", jsonResult);
-            result.put("analysisParsed", parsedAnalysis);
-            result.put("analysisText", String.valueOf(parsedAnalysis.getOrDefault("analysisMarkdown", "")));
-            return ApiResponse.success(result);
+            return ApiResponse.success(parsedAnalysis);
         } catch (IllegalArgumentException ex) {
             return ApiResponse.fail(ex.getMessage());
         } catch (Exception ex) {

@@ -2814,9 +2814,19 @@ function animateLawAgentTyping(node, text, onDone) {
 
 
 let districtInsightData = {};
+let districtInsightRatedMap = {};
 let shMapChart = null;
 let shMapScene = null;
 let shMapLayers = [];
+
+const DISTRICT_RISK_COLOR_MAP = {
+  R0: '#22c55e',
+  R1: '#84cc16',
+  R2: '#facc15',
+  R3: '#fb923c',
+  R4: '#ef4444',
+  R5: '#7f1d1d'
+};
 
 function resolveFeatureCenter(feature) {
   const props = feature && feature.properties ? feature.properties : {};
@@ -2861,17 +2871,19 @@ async function loadDistrictInsight() {
     const res = await fetch(`${API_BASE}/case-stats/district-insight`);
     const json = await res.json();
     districtInsightData = (json && json.data && json.data.districtCount) ? json.data.districtCount : {};
-    await renderShanghaiMap(districtInsightData);
+    districtInsightRatedMap = {};
+    await renderShanghaiMap(districtInsightData, districtInsightRatedMap);
     drawDistrictBarChart(districtInsightData);
     drawDistrictPieChart(districtInsightData);
     const log = document.getElementById('insightChatLog');
     if (log) log.innerHTML = '<div class="msg bot">已加载区域数据，可直接提问。</div>';
   } catch (e) {
-    await renderShanghaiMap({});
+    districtInsightRatedMap = {};
+    await renderShanghaiMap({}, districtInsightRatedMap);
   }
 }
 
-async function renderShanghaiMap(data) {
+async function renderShanghaiMap(data, ratedMap = {}) {
   const dom = document.getElementById('shMapChart');
   if (!dom) {
     return;
@@ -2910,12 +2922,18 @@ async function renderShanghaiMap(data) {
   }).map((f) => {
     const name = String((f.properties && f.properties.name) || '');
     const value = Number((data || {})[name] || 0);
+    const rated = (ratedMap && ratedMap[name]) ? ratedMap[name] : {};
+    const riskRating = String(rated.risk_rating || 'R0').toUpperCase();
     return {
       ...f,
       properties: {
         ...(f.properties || {}),
         name,
-        value
+        value,
+        risk_rating: riskRating,
+        risk_reason: String(rated.risk_reason || ''),
+        assess_brief: String(rated.assess_brief || ''),
+        dimension_display: String(rated.dimension_display || '')
       }
     };
   });
@@ -2927,11 +2945,16 @@ async function renderShanghaiMap(data) {
         return null;
       }
       const props = f.properties || {};
+      const riskRating = String(props.risk_rating || 'R0').toUpperCase();
       return {
         lng: Number(center[0]),
         lat: Number(center[1]),
         name: String(props.name || ''),
-        value: Math.max(1, Number(props.value || 0))
+        value: Math.max(1, Number(props.value || 0)),
+        risk_rating: riskRating,
+        risk_reason: String(props.risk_reason || ''),
+        assess_brief: String(props.assess_brief || ''),
+        dimension_display: String(props.dimension_display || '')
       };
     })
     .filter(Boolean);
@@ -2986,7 +3009,8 @@ async function renderShanghaiMap(data) {
       const height = 16 + (normalized * 72);
       return [7, height];
     })
-    .color('value', ['#22d3ee', '#67e8f9', '#a5f3fc'])
+    .color('risk_rating', ['#22c55e', '#84cc16', '#facc15', '#fb923c', '#ef4444', '#7f1d1d'])
+    .scale('risk_rating', {type: 'cat', domain: ['R0', 'R1', 'R2', 'R3', 'R4', 'R5']})
     .style({
       opacity: 0.95
     })
@@ -3033,11 +3057,24 @@ async function renderShanghaiMap(data) {
   scene.addLayer(lightDotLayer);
   scene.addLayer(districtNameLayer);
 
+  const updateHoverTitle = (feature) => {
+    const f = feature && feature.properties ? feature.properties : feature;
+    const name = String((f && f.name) || '-');
+    const value = String((f && f.value) || 0);
+    const risk = String((f && f.risk_rating) || 'R0');
+    const reason = String((f && f.risk_reason) || '');
+    const brief = String((f && f.assess_brief) || '');
+    const display = String((f && f.dimension_display) || '');
+    dom.title = `${name}｜数量:${value}｜等级:${risk}${reason ? `｜原因:${reason}` : ''}${brief ? `｜简述:${brief}` : ''}${display ? `｜${display}` : ''}`;
+  };
+
   pillarLayer.on('mousemove', (e) => {
     const feature = e && e.feature ? e.feature : null;
-    const name = feature && feature.name ? feature.name : '';
-    const value = feature && feature.value ? feature.value : 0;
-    dom.title = `${name}：${value} 件`;
+    updateHoverTitle(feature);
+  });
+  polygonLayer.on('mousemove', (e) => {
+    const feature = e && e.feature ? e.feature : null;
+    updateHoverTitle(feature);
   });
 
   shMapScene = scene;
@@ -3116,21 +3153,40 @@ async function askDistrictInsight() {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    const sql = String(data.sql || '');
-    const resultJson = String(data.resultJson || '[]');
-    const analysisText = String(data.analysisText || '');
-    const analysisParsed = data.analysisParsed && typeof data.analysisParsed === 'object' ? data.analysisParsed : {};
-    const ratedItems = Array.isArray(analysisParsed.ratedItems) ? analysisParsed.ratedItems : [];
-    const topRisk = ratedItems.slice(0, 5).map((item) => {
+    const analysisMarkdown = String(data.analysisMarkdown || '');
+    const renderMap = Number(data.renderMap || 0);
+    const ratedItems = Array.isArray(data.ratedItems) ? data.ratedItems : [];
+    if (ok && renderMap === 1 && ratedItems.length) {
+      const nextCount = {};
+      const nextRated = {};
+      ratedItems.forEach((item) => {
+        const district = String((item && item.district) || '').trim();
+        if (!district) return;
+        const metricValue = Number((item && item.metric_value) || 0);
+        nextCount[district] = metricValue;
+        nextRated[district] = {
+          risk_rating: String((item && item.risk_rating) || 'R0').toUpperCase(),
+          risk_reason: String((item && item.risk_reason) || ''),
+          assess_brief: String((item && item.assess_brief) || ''),
+          dimension_display: String((item && item.dimension_display) || '')
+        };
+      });
+      districtInsightData = nextCount;
+      districtInsightRatedMap = nextRated;
+      await renderShanghaiMap(districtInsightData, districtInsightRatedMap);
+      drawDistrictBarChart(districtInsightData);
+      drawDistrictPieChart(districtInsightData);
+    }
+    const topRisk = ratedItems.slice(0, 8).map((item) => {
       const d = String((item && item.district) || '-');
       const r = String((item && item.risk_rating) || '-');
       const v = String((item && item.metric_value) || '-');
       return `${d}(${r}/${v})`;
     }).join('，');
     const msg = ok
-      ? `SQL：<pre>${escapeHtml(sql)}</pre>结果JSON：<pre>${escapeHtml(resultJson)}</pre>${analysisText ? `分析结论：<pre>${escapeHtml(analysisText)}</pre>` : ''}${topRisk ? `风险评级Top：<pre>${escapeHtml(topRisk)}</pre>` : ''}`
+      ? `${analysisMarkdown ? `分析结论：<pre>${escapeHtml(analysisMarkdown)}</pre>` : ''}${topRisk ? `风险评级：<pre>${escapeHtml(topRisk)}</pre>` : ''}`
       : `问答失败：${escapeHtml(String((json && json.msg) || '未知错误'))}`;
-    log.innerHTML += `<div class="msg bot">${msg}</div>`;
+    log.innerHTML += `<div class="msg bot">${msg || '未返回分析内容'}</div>`;
   } catch (e) {
     log.innerHTML += `<div class="msg bot">问答失败：${String((e && e.message) || '网络异常')}</div>`;
   }
