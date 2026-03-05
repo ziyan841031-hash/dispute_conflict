@@ -3007,10 +3007,31 @@ async function renderShanghaiMap(data) {
       opacity: 0.9
     });
 
+  const districtNameLayer = new L7.PointLayer({autoFit: false})
+    .source(pointData, {
+      parser: {
+        type: 'json',
+        x: 'lng',
+        y: 'lat'
+      }
+    })
+    .shape('name', 'text')
+    .size(12)
+    .color('#dbeafe')
+    .style({
+      textAnchor: 'center',
+      textOffset: [0, 14],
+      stroke: '#0f172a',
+      strokeWidth: 1.2,
+      opacity: 0.95,
+      raisingHeight: 22
+    });
+
   scene.addLayer(polygonLayer);
   scene.addLayer(borderLayer);
   scene.addLayer(pillarLayer);
   scene.addLayer(lightDotLayer);
+  scene.addLayer(districtNameLayer);
 
   pillarLayer.on('mousemove', (e) => {
     const feature = e && e.feature ? e.feature : null;
@@ -3020,7 +3041,7 @@ async function renderShanghaiMap(data) {
   });
 
   shMapScene = scene;
-  shMapLayers = [polygonLayer, borderLayer, pillarLayer, lightDotLayer];
+  shMapLayers = [polygonLayer, borderLayer, pillarLayer, lightDotLayer, districtNameLayer];
   shMapChart = scene;
 }
 
