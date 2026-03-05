@@ -323,12 +323,13 @@ public class CaseStatsController {
                     ? caseStatsSqlRunnerApiKey : caseStatsAnalysisApiKey;
             Object analysisResponse = difyClient.runWorkflowWithInputs(analysisInputs, analysisApiKey, "统计结果分析与逐条风险评级");
 
+            Map<String, Object> parsedAnalysis = extractAnalysisPayload(analysisResponse);
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("question", question);
             result.put("sql", normalizedSql);
             result.put("resultJson", jsonResult);
-            result.put("analysis", analysisResponse);
-            result.put("analysisText", extractAnalysisText(analysisResponse));
+            result.put("analysisParsed", parsedAnalysis);
+            result.put("analysisText", String.valueOf(parsedAnalysis.getOrDefault("analysisMarkdown", "")));
             return ApiResponse.success(result);
         } catch (IllegalArgumentException ex) {
             return ApiResponse.fail(ex.getMessage());
@@ -360,7 +361,56 @@ public class CaseStatsController {
                 .body(resource);
     }
 
+    private Map<String, Object> extractAnalysisPayload(Object analysisResponse) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("analysisMarkdown", "");
+        payload.put("renderMap", 0);
+        payload.put("ratedItems", Collections.emptyList());
+        if (!(analysisResponse instanceof Map)) {
+            return payload;
+        }
+        Map<?, ?> root = (Map<?, ?>) analysisResponse;
+        Map<?, ?> outputs = null;
+        Object directOutputs = root.get("outputs");
+        if (directOutputs instanceof Map) {
+            outputs = (Map<?, ?>) directOutputs;
+        }
+        if (outputs == null) {
+            Object data = root.get("data");
+            if (data instanceof Map) {
+                Object nested = ((Map<?, ?>) data).get("outputs");
+                if (nested instanceof Map) {
+                    outputs = (Map<?, ?>) nested;
+                }
+            }
+        }
+        if (outputs == null) {
+            return payload;
+        }
+        Object markdown = outputs.get("analysis_markdown");
+        if (markdown != null) {
+            payload.put("analysisMarkdown", String.valueOf(markdown));
+        }
+        Object renderMap = outputs.get("render_map");
+        if (renderMap != null) {
+            payload.put("renderMap", renderMap);
+        }
+        Object ratedData = outputs.get("rated_data");
+        if (ratedData instanceof Map) {
+            Object items = ((Map<?, ?>) ratedData).get("items");
+            if (items instanceof List) {
+                payload.put("ratedItems", items);
+            }
+        }
+        return payload;
+    }
+
     private String extractAnalysisText(Object analysisResponse) {
+        Map<String, Object> payload = extractAnalysisPayload(analysisResponse);
+        Object markdown = payload.get("analysisMarkdown");
+        if (markdown != null && !String.valueOf(markdown).trim().isEmpty()) {
+            return String.valueOf(markdown).trim();
+        }
         if (!(analysisResponse instanceof Map)) {
             return "";
         }

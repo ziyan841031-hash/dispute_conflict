@@ -3119,9 +3119,16 @@ async function askDistrictInsight() {
     const sql = String(data.sql || '');
     const resultJson = String(data.resultJson || '[]');
     const analysisText = String(data.analysisText || '');
-    const analysisRaw = data.analysis ? escapeHtml(JSON.stringify(data.analysis)) : '';
+    const analysisParsed = data.analysisParsed && typeof data.analysisParsed === 'object' ? data.analysisParsed : {};
+    const ratedItems = Array.isArray(analysisParsed.ratedItems) ? analysisParsed.ratedItems : [];
+    const topRisk = ratedItems.slice(0, 5).map((item) => {
+      const d = String((item && item.district) || '-');
+      const r = String((item && item.risk_rating) || '-');
+      const v = String((item && item.metric_value) || '-');
+      return `${d}(${r}/${v})`;
+    }).join('，');
     const msg = ok
-      ? `SQL：<pre>${escapeHtml(sql)}</pre>结果JSON：<pre>${escapeHtml(resultJson)}</pre>${analysisText ? `分析结论：<pre>${escapeHtml(analysisText)}</pre>` : ''}${analysisRaw ? `分析原始输出：<pre>${analysisRaw}</pre>` : ''}`
+      ? `SQL：<pre>${escapeHtml(sql)}</pre>结果JSON：<pre>${escapeHtml(resultJson)}</pre>${analysisText ? `分析结论：<pre>${escapeHtml(analysisText)}</pre>` : ''}${topRisk ? `风险评级Top：<pre>${escapeHtml(topRisk)}</pre>` : ''}`
       : `问答失败：${escapeHtml(String((json && json.msg) || '未知错误'))}`;
     log.innerHTML += `<div class="msg bot">${msg}</div>`;
   } catch (e) {
