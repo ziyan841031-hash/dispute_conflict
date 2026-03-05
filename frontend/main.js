@@ -3012,7 +3012,9 @@ async function renderShanghaiMap(data, ratedMap = {}) {
     .color('risk_rating', ['#22c55e', '#84cc16', '#facc15', '#fb923c', '#ef4444', '#7f1d1d'])
     .scale('risk_rating', {type: 'cat', domain: ['R0', 'R1', 'R2', 'R3', 'R4', 'R5']})
     .style({
-      opacity: 0.95
+      opacity: 1,
+      stroke: '#0b1220',
+      strokeWidth: 0.15
     })
     .animate(true);
 
@@ -3130,6 +3132,19 @@ function drawDistrictPieChart(data) {
   });
 }
 
+
+function renderInsightMarkdown(content) {
+  const safe = String(content || '');
+  if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+    return marked.parse(safe);
+  }
+  return safe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br/>');
+}
+
 async function askDistrictInsight() {
   const input = document.getElementById('insightQuestion');
   const log = document.getElementById('insightChatLog');
@@ -3179,7 +3194,7 @@ async function askDistrictInsight() {
       drawDistrictPieChart(districtInsightData);
     }
     const answer = ok ? (analysisMarkdown || '已完成分析，但未返回文字结论。') : `问答失败：${String((json && (json.message || json.msg)) || '未知错误')}`;
-    log.innerHTML += `<div class="msg bot">${escapeHtml(answer)}</div>`;
+    log.innerHTML += `<div class="msg bot">${renderInsightMarkdown(answer)}</div>`;
   } catch (e) {
     log.innerHTML += `<div class="msg bot">问答失败：${String((e && e.message) || '网络异常')}</div>`;
   }
