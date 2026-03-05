@@ -2935,6 +2935,7 @@ async function renderShanghaiMap(data) {
       };
     })
     .filter(Boolean);
+  const maxPointValue = pointData.length ? Math.max(...pointData.map((item) => Number(item.value || 0))) : 1;
 
   const scene = new L7.Scene({
     id: 'shMapChart',
@@ -2980,7 +2981,11 @@ async function renderShanghaiMap(data) {
       }
     })
     .shape('cylinder')
-    .size('value', [6, 58])
+    .size('value', (value) => {
+      const normalized = maxPointValue > 0 ? Number(value || 0) / maxPointValue : 0;
+      const height = 16 + (normalized * 72);
+      return [7, height];
+    })
     .color('value', ['#22d3ee', '#67e8f9', '#a5f3fc'])
     .style({
       opacity: 0.95
