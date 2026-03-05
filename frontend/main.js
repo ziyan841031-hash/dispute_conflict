@@ -3093,19 +3093,37 @@ function drawDistrictPieChart(data) {
   });
 }
 
-function askDistrictInsight() {
+async function askDistrictInsight() {
   const input = document.getElementById('insightQuestion');
   const log = document.getElementById('insightChatLog');
   if (!input || !log) return;
   const q = String(input.value || '').trim();
   if (!q) return;
-  const entries = Object.entries(districtInsightData || {}).sort((a,b)=>b[1]-a[1]);
-  const top = entries[0] || ['-',0];
-  const total = entries.reduce((s,x)=>s+(Number(x[1])||0),0);
-  let ans = `共统计 ${total} 件，当前最高为${top[0]}（${top[1]}件）。`;
-  if (q.includes('最多')) ans = `${top[0]} 案件最多，共 ${top[1]} 件。`;
-  if (q.includes('总数')) ans = `当前统计总案件数为 ${total} 件。`;
-  log.innerHTML += `<div class="msg user">${q}</div><div class="msg bot">${ans}</div>`;
+  log.innerHTML += `<div class="msg user">${q}</div><div class="msg bot">正在生成SQL并查询，请稍候...</div>`;
   log.scrollTop = log.scrollHeight;
   input.value = '';
+
+  try {
+    const res = await fetch(`${API_BASE}/case-stats/district-insight/ask`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q})
+    });
+    const json = await res.json();
+    const ok = json && Number(json.code) === 200;
+    const data = ok && json.data ? json.data : {};
+    const escapeHtml = (value) => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const sql = String(data.sql || '');
+    const resultJson = String(data.resultJson || '[]');
+    const msg = ok
+      ? `SQL：<pre>${escapeHtml(sql)}</pre>结果JSON：<pre>${escapeHtml(resultJson)}</pre>`
+      : `问答失败：${escapeHtml(String((json && json.msg) || '未知错误'))}`;
+    log.innerHTML += `<div class="msg bot">${msg}</div>`;
+  } catch (e) {
+    log.innerHTML += `<div class="msg bot">问答失败：${String((e && e.message) || '网络异常')}</div>`;
+  }
+  log.scrollTop = log.scrollHeight;
 }

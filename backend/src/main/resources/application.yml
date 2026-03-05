@@ -32,6 +32,8 @@ dify:
   summary-api-key: replace-with-summary-key
   correction-api-key: replace-with-correction-key
   audio-analysis-api-key: replace-with-audio-analysis-key
+  case-stats-sql-generator-api-key: replace-with-case-stats-sql-generator-key
+  case-stats-sql-runner-api-key: replace-with-case-stats-sql-runner-key
 
 oss:
   endpoint: https://oss-cn-hangzhou.aliyuncs.com

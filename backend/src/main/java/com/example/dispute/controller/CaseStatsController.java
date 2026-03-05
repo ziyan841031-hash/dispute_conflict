@@ -34,6 +34,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
@@ -112,14 +113,22 @@ public class CaseStatsController {
     private final CaseStatsBatchMapper batchMapper;
     private final CaseStatsDetailMapper detailMapper;
     private final DifyClient difyClient;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("${dify.case-stats-api-key:replace-with-case-stats-key}")
     private String caseStatsApiKey;
 
-    public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient) {
+    @Value("${dify.case-stats-sql-generator-api-key:replace-with-case-stats-sql-generator-key}")
+    private String caseStatsSqlGeneratorApiKey;
+
+    @Value("${dify.case-stats-sql-runner-api-key:replace-with-case-stats-sql-runner-key}")
+    private String caseStatsSqlRunnerApiKey;
+
+    public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient, JdbcTemplate jdbcTemplate) {
         this.batchMapper = batchMapper;
         this.detailMapper = detailMapper;
         this.difyClient = difyClient;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
@@ -282,6 +291,42 @@ public class CaseStatsController {
         return ApiResponse.success(result);
     }
 
+
+    @PostMapping("/district-insight/ask")
+    public ApiResponse<Map<String, Object>> askDistrictInsightBySql(@RequestBody Map<String, Object> request) {
+        String question = request == null ? "" : String.valueOf(request.getOrDefault("question", "")).trim();
+        if (question.isEmpty()) {
+            return ApiResponse.fail("请输入问题");
+        }
+        try {
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("question", question);
+            inputs.put("ask_text", question);
+            String sqlApiKey = (caseStatsSqlGeneratorApiKey == null || caseStatsSqlGeneratorApiKey.trim().isEmpty()
+                    || caseStatsSqlGeneratorApiKey.startsWith("replace-with"))
+                    ? caseStatsSqlRunnerApiKey : caseStatsSqlGeneratorApiKey;
+            Object difyResponse = difyClient.runWorkflowWithInputs(inputs, sqlApiKey, "统计SQL生成器");
+            String sql = extractSqlFromDifyResponse(difyResponse);
+            if (sql == null || sql.trim().isEmpty()) {
+                return ApiResponse.fail("未从SQL生成器返回中解析到sql字段");
+            }
+            String normalizedSql = normalizeSelectSql(sql);
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(normalizedSql);
+            String jsonResult = OBJECT_MAPPER.writeValueAsString(rows);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("question", question);
+            result.put("sql", normalizedSql);
+            result.put("resultJson", jsonResult);
+            return ApiResponse.success(result);
+        } catch (IllegalArgumentException ex) {
+            return ApiResponse.fail(ex.getMessage());
+        } catch (Exception ex) {
+            log.error("洞察问答SQL执行失败", ex);
+            return ApiResponse.fail("洞察问答失败: " + ex.getMessage());
+        }
+    }
+
     /**
      * 下载指定批次生成的报告文件。
      */
@@ -302,6 +347,50 @@ public class CaseStatsController {
                         "attachment; filename=\"" + file.getName() + "\"; filename*=UTF-8''" + encodedName)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.presentationml.presentation"))
                 .body(resource);
+    }
+
+    private String extractSqlFromDifyResponse(Object difyResponse) {
+        if (!(difyResponse instanceof Map)) {
+            return null;
+        }
+        Map<?, ?> root = (Map<?, ?>) difyResponse;
+        Object directSql = root.get("sql");
+        if (directSql != null && !directSql.toString().trim().isEmpty()) {
+            return directSql.toString().trim();
+        }
+        Object outputs = root.get("outputs");
+        if (outputs instanceof Map) {
+            Object sqlObj = ((Map<?, ?>) outputs).get("sql");
+            if (sqlObj != null && !sqlObj.toString().trim().isEmpty()) {
+                return sqlObj.toString().trim();
+            }
+        }
+        Object data = root.get("data");
+        if (data instanceof Map) {
+            Object outputs2 = ((Map<?, ?>) data).get("outputs");
+            if (outputs2 instanceof Map) {
+                Object sqlObj2 = ((Map<?, ?>) outputs2).get("sql");
+                if (sqlObj2 != null && !sqlObj2.toString().trim().isEmpty()) {
+                    return sqlObj2.toString().trim();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String normalizeSelectSql(String sql) {
+        String normalized = sql == null ? "" : sql.trim();
+        if (normalized.endsWith(";")) {
+            normalized = normalized.substring(0, normalized.length() - 1).trim();
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (!(lower.startsWith("select") || lower.startsWith("with"))) {
+            throw new IllegalArgumentException("仅允许执行查询SQL");
+        }
+        if (normalized.contains(";")) {
+            throw new IllegalArgumentException("不允许执行多条SQL");
+        }
+        return normalized;
     }
 
     /**
