@@ -2901,7 +2901,7 @@ async function renderShanghaiMap(data) {
     const value = Number((data || {})[name] || 0);
     return {name, value, center: resolveFeatureCenter(f)};
   });
-  const maxVal = mapData.length ? Math.max(...mapData.map(x => x.value)) : 0;
+  const maxVal = mapData.length ? Math.max(...mapData.map((x) => x.value)) : 0;
   const barData = mapData
     .filter((item) => Array.isArray(item.center) && item.center.length >= 2)
     .map((item) => ({
@@ -2925,11 +2925,39 @@ async function renderShanghaiMap(data) {
         left: 10,
         bottom: 10,
         text: ['高', '低'],
+        seriesIndex: [0],
         inRange: {
           color: ['#bfdbfe', '#60a5fa', '#2563eb', '#1d4ed8']
         },
         textStyle: {color: '#cbd5e1'},
         calculable: true
+      },
+      geo3D: {
+        map: '上海各区',
+        roam: true,
+        boxDepth: 14,
+        regionHeight: 2,
+        shading: 'lambert',
+        viewControl: {
+          distance: 92,
+          alpha: 42,
+          beta: -8,
+          panSensitivity: 0,
+          rotateSensitivity: 1,
+          zoomSensitivity: 1
+        },
+        light: {
+          main: {intensity: 1.1, shadow: true},
+          ambient: {intensity: 0.55}
+        },
+        itemStyle: {
+          color: 'rgba(0,0,0,0)',
+          borderColor: 'rgba(0,0,0,0)',
+          opacity: 0
+        },
+        label: {
+          show: false
+        }
       },
       series: [
         {
@@ -2972,7 +3000,7 @@ async function renderShanghaiMap(data) {
         {
           name: '区域案件数量',
           type: 'bar3D',
-          coordinateSystem: 'map3D',
+          coordinateSystem: 'geo3D',
           bevelSize: 0.2,
           shading: 'lambert',
           data: barData,
