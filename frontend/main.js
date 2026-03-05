@@ -2912,52 +2912,70 @@ async function renderShanghaiMap(data) {
   try {
     shMapChart.setOption({
       backgroundColor: 'transparent',
+      animationDurationUpdate: 900,
       tooltip: {
+        backgroundColor: 'rgba(5, 18, 40, 0.92)',
+        borderColor: '#38bdf8',
+        borderWidth: 1,
+        textStyle: {color: '#e2e8f0'},
         formatter: (p) => {
           const current = mapData.find((item) => item.name === p.name);
           const value = current ? current.value : (Array.isArray(p.value) ? p.value[2] : p.value);
-          return `${p.name}<br/>案件数量：${Number(value || 0)}`;
+          return `${p.name}<br/>案件数量：<b>${Number(value || 0)}</b>`;
         }
       },
       visualMap: {
         min: 0,
         max: Math.max(10, maxVal),
-        left: 10,
-        bottom: 10,
+        left: 14,
+        bottom: 16,
+        itemWidth: 12,
+        itemHeight: 88,
         text: ['高', '低'],
         seriesIndex: [0],
         inRange: {
-          color: ['#bfdbfe', '#60a5fa', '#2563eb', '#1d4ed8']
+          color: ['#1d4ed8', '#2563eb', '#0ea5e9', '#22d3ee']
         },
-        textStyle: {color: '#cbd5e1'},
+        textStyle: {color: '#bae6fd'},
         calculable: true
+      },
+      postEffect: {
+        enable: true,
+        bloom: {enable: true, bloomIntensity: 0.26},
+        SSAO: {enable: true, intensity: 0.95, radius: 1.4},
+        FXAA: {enable: true}
       },
       geo3D: {
         map: '上海各区',
         roam: true,
-        boxDepth: 14,
+        boxDepth: 20,
         regionHeight: 2,
         shading: 'lambert',
+        groundPlane: {
+          show: true,
+          color: '#030712'
+        },
+        environment: 'rgba(5, 18, 40, 0.4)',
         viewControl: {
-          distance: 92,
-          alpha: 42,
-          beta: -8,
+          distance: 98,
+          alpha: 44,
+          beta: -16,
           panSensitivity: 0,
           rotateSensitivity: 1,
-          zoomSensitivity: 1
+          zoomSensitivity: 1.2,
+          autoRotate: false
         },
         light: {
-          main: {intensity: 1.1, shadow: true},
-          ambient: {intensity: 0.55}
+          main: {intensity: 1.35, shadow: true, alpha: 42, beta: 26},
+          ambient: {intensity: 0.4},
+          ambientCubemap: {exposure: 1, diffuseIntensity: 0.45, specularIntensity: 1.05}
         },
         itemStyle: {
           color: 'rgba(0,0,0,0)',
           borderColor: 'rgba(0,0,0,0)',
           opacity: 0
         },
-        label: {
-          show: false
-        }
+        label: {show: false}
       },
       series: [
         {
@@ -2966,49 +2984,79 @@ async function renderShanghaiMap(data) {
           map: '上海各区',
           roam: true,
           data: mapData,
-          shading: 'lambert',
-          boxDepth: 14,
+          shading: 'realistic',
+          realisticMaterial: {
+            roughness: 0.28,
+            metalness: 0.12
+          },
+          boxDepth: 20,
           regionHeight: 2,
           viewControl: {
-            distance: 92,
-            alpha: 42,
-            beta: -8,
+            distance: 98,
+            alpha: 44,
+            beta: -16,
             panSensitivity: 0,
             rotateSensitivity: 1,
-            zoomSensitivity: 1
+            zoomSensitivity: 1.2,
+            autoRotate: false
           },
           light: {
-            main: {intensity: 1.1, shadow: true},
-            ambient: {intensity: 0.55}
+            main: {intensity: 1.35, shadow: true, alpha: 42, beta: 26},
+            ambient: {intensity: 0.4},
+            ambientCubemap: {exposure: 1, diffuseIntensity: 0.45, specularIntensity: 1.05}
           },
           label: {
             show: true,
-            color: '#e2e8f0',
-            fontSize: 11
+            color: '#dbeafe',
+            fontSize: 11,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            padding: [2, 4],
+            borderRadius: 3
           },
           itemStyle: {
-            color: '#1e3a8a',
+            color: '#102a6b',
             borderColor: '#38bdf8',
-            borderWidth: 1.1,
-            opacity: 0.95
+            borderWidth: 1.4,
+            opacity: 0.98
           },
           emphasis: {
-            label: {show: true, color: '#fff'},
-            itemStyle: {color: '#3b82f6'}
+            label: {show: true, color: '#ffffff'},
+            itemStyle: {
+              color: '#1d4ed8',
+              borderColor: '#67e8f9',
+              borderWidth: 2
+            }
           }
         },
         {
           name: '区域案件数量',
           type: 'bar3D',
           coordinateSystem: 'geo3D',
-          bevelSize: 0.2,
+          bevelSize: 0.25,
           shading: 'lambert',
           data: barData,
-          barSize: 1.0,
-          minHeight: 0.2,
+          barSize: 1.35,
+          minHeight: 0.35,
           itemStyle: {
             color: '#22d3ee',
-            opacity: 0.96
+            opacity: 0.98
+          },
+          emphasis: {
+            itemStyle: {
+              color: '#67e8f9'
+            }
+          }
+        },
+        {
+          name: '区域光点',
+          type: 'scatter3D',
+          coordinateSystem: 'geo3D',
+          data: barData,
+          symbol: 'circle',
+          symbolSize: 8,
+          itemStyle: {
+            color: '#a5f3fc',
+            opacity: 0.95
           }
         }
       ]

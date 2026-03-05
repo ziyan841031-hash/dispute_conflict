@@ -1660,7 +1660,7 @@ table { width: 100%; border-collapse: collapse; }
 
 
 .stats-insight-layout{display:flex;gap:16px;min-height:760px}
-.insight-left{flex:0 0 70%;background:linear-gradient(180deg,#eff6ff,#dbeafe);border-radius:14px;padding:12px}
+.insight-left{flex:0 0 70%;background:linear-gradient(160deg,#020617 0%,#0b1120 45%,#111827 100%);border:1px solid #1d4ed8;border-radius:14px;padding:12px;box-shadow:inset 0 0 0 1px rgba(56,189,248,.18),0 14px 36px rgba(2,6,23,.45)}
 .insight-right{flex:0 0 calc(30% - 8px);display:flex;flex-direction:column;gap:12px;height:760px}
 .insight-chat{flex:1 1 50%;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:10px;display:flex;flex-direction:column;overflow-y:auto}
 .insight-chat-log{flex:1;overflow:auto;background:#fff;border-radius:8px;padding:8px;margin-bottom:8px}
@@ -1670,4 +1670,4 @@ table { width: 100%; border-collapse: collapse; }
 .insight-chat-row{display:flex;gap:6px}
 .insight-chat-row input{flex:1;padding:6px}
 .insight-charts{flex:1 1 50%;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
-.sh-map-chart{width:100%;height:640px;background:radial-gradient(circle at 30% 20%,#1e3a8a,#0f172a);border-radius:12px}
+.sh-map-chart{width:100%;height:640px;background:radial-gradient(circle at 30% 22%,rgba(30,64,175,.45),rgba(2,6,23,.96) 58%),linear-gradient(180deg,#030712,#0b1120);border:1px solid rgba(56,189,248,.4);border-radius:12px;box-shadow:inset 0 0 70px rgba(8,47,73,.42),0 0 35px rgba(37,99,235,.22);position:relative;overflow:hidden}.sh-map-chart::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(56,189,248,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.08) 1px,transparent 1px);background-size:32px 32px;mix-blend-mode:screen;opacity:.38}
