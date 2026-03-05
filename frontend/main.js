@@ -2816,6 +2816,42 @@ function animateLawAgentTyping(node, text, onDone) {
 let districtInsightData = {};
 let shMapChart = null;
 
+function resolveFeatureCenter(feature) {
+  const props = feature && feature.properties ? feature.properties : {};
+  const preferred = props.centroid || props.center;
+  if (Array.isArray(preferred) && preferred.length >= 2) {
+    return [Number(preferred[0]), Number(preferred[1])];
+  }
+  const geometry = feature && feature.geometry ? feature.geometry : {};
+  const coordinates = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+  let minLng = Infinity;
+  let minLat = Infinity;
+  let maxLng = -Infinity;
+  let maxLat = -Infinity;
+
+  const walk = (coord) => {
+    if (!Array.isArray(coord)) {
+      return;
+    }
+    if (coord.length >= 2 && typeof coord[0] === 'number' && typeof coord[1] === 'number') {
+      const lng = coord[0];
+      const lat = coord[1];
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      return;
+    }
+    coord.forEach(walk);
+  };
+
+  walk(coordinates);
+  if (!Number.isFinite(minLng) || !Number.isFinite(minLat) || !Number.isFinite(maxLng) || !Number.isFinite(maxLat)) {
+    return null;
+  }
+  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+}
+
 async function loadDistrictInsight() {
   const mapEl = document.getElementById('shMapChart');
   if (!mapEl) return;
@@ -2863,9 +2899,96 @@ async function renderShanghaiMap(data) {
   const mapData = districtFeatures.map((f) => {
     const name = String((f.properties && f.properties.name) || '');
     const value = Number((data || {})[name] || 0);
-    return {name, value};
+    return {name, value, center: resolveFeatureCenter(f)};
   });
   const maxVal = mapData.length ? Math.max(...mapData.map(x => x.value)) : 0;
+  const supports3D = typeof echarts !== 'undefined' && typeof echarts.version === 'string' && !!echarts.graphicGL;
+
+  if (supports3D) {
+    const barData = mapData
+      .filter((item) => Array.isArray(item.center) && item.center.length >= 2)
+      .map((item) => ({
+        name: item.name,
+        value: [item.center[0], item.center[1], Math.max(1, Number(item.value || 0))]
+      }));
+
+    shMapChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        formatter: (p) => {
+          const current = mapData.find((item) => item.name === p.name);
+          const value = current ? current.value : (Array.isArray(p.value) ? p.value[2] : p.value);
+          return `${p.name}<br/>案件数量：${Number(value || 0)}`;
+        }
+      },
+      visualMap: {
+        min: 0,
+        max: Math.max(10, maxVal),
+        left: 10,
+        bottom: 10,
+        text: ['高', '低'],
+        inRange: {
+          color: ['#bfdbfe', '#60a5fa', '#2563eb', '#1d4ed8']
+        },
+        textStyle: {color: '#cbd5e1'},
+        calculable: true
+      },
+      geo3D: {
+        map: '上海各区',
+        roam: true,
+        boxDepth: 14,
+        regionHeight: 2,
+        shading: 'lambert',
+        viewControl: {
+          distance: 92,
+          alpha: 42,
+          beta: -8,
+          panSensitivity: 0,
+          rotateSensitivity: 1,
+          zoomSensitivity: 1
+        },
+        light: {
+          main: {intensity: 1.1, shadow: true},
+          ambient: {intensity: 0.55}
+        },
+        itemStyle: {
+          color: '#1e3a8a',
+          borderColor: '#38bdf8',
+          borderWidth: 1.1,
+          opacity: 0.95
+        },
+        emphasis: {
+          itemStyle: {
+            color: '#3b82f6'
+          },
+          label: {
+            show: true,
+            color: '#fff'
+          }
+        },
+        label: {
+          show: true,
+          color: '#e2e8f0',
+          fontSize: 11
+        }
+      },
+      series: [{
+        name: '区域案件数量',
+        type: 'bar3D',
+        coordinateSystem: 'geo3D',
+        bevelSize: 0.2,
+        shading: 'lambert',
+        data: barData,
+        barSize: 1.0,
+        minHeight: 0.2,
+        itemStyle: {
+          color: '#22d3ee',
+          opacity: 0.96
+        }
+      }]
+    });
+    return;
+  }
 
   shMapChart.setOption({
     backgroundColor: 'transparent',
