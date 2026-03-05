@@ -3136,7 +3136,7 @@ async function askDistrictInsight() {
   if (!input || !log) return;
   const q = String(input.value || '').trim();
   if (!q) return;
-  log.innerHTML += `<div class="msg user">${q}</div><div class="msg bot">正在生成SQL并查询，请稍候...</div>`;
+  log.innerHTML += `<div class="msg user">${q}</div>`;
   log.scrollTop = log.scrollHeight;
   input.value = '';
 
@@ -3147,7 +3147,8 @@ async function askDistrictInsight() {
       body: JSON.stringify({question: q})
     });
     const json = await res.json();
-    const ok = json && Number(json.code) === 200;
+    const code = Number((json && json.code));
+    const ok = json && (code === 0 || code === 200);
     const data = ok && json.data ? json.data : {};
     const escapeHtml = (value) => String(value || '')
       .replace(/&/g, '&amp;')
@@ -3177,16 +3178,8 @@ async function askDistrictInsight() {
       drawDistrictBarChart(districtInsightData);
       drawDistrictPieChart(districtInsightData);
     }
-    const topRisk = ratedItems.slice(0, 8).map((item) => {
-      const d = String((item && item.district) || '-');
-      const r = String((item && item.risk_rating) || '-');
-      const v = String((item && item.metric_value) || '-');
-      return `${d}(${r}/${v})`;
-    }).join('，');
-    const msg = ok
-      ? `${analysisMarkdown ? `分析结论：<pre>${escapeHtml(analysisMarkdown)}</pre>` : ''}${topRisk ? `风险评级：<pre>${escapeHtml(topRisk)}</pre>` : ''}`
-      : `问答失败：${escapeHtml(String((json && json.msg) || '未知错误'))}`;
-    log.innerHTML += `<div class="msg bot">${msg || '未返回分析内容'}</div>`;
+    const answer = ok ? (analysisMarkdown || '已完成分析，但未返回文字结论。') : `问答失败：${String((json && (json.message || json.msg)) || '未知错误')}`;
+    log.innerHTML += `<div class="msg bot">${escapeHtml(answer)}</div>`;
   } catch (e) {
     log.innerHTML += `<div class="msg bot">问答失败：${String((e && e.message) || '网络异常')}</div>`;
   }
