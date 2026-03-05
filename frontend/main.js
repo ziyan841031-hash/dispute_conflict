@@ -2820,12 +2820,12 @@ let shMapScene = null;
 let shMapLayers = [];
 
 const DISTRICT_RISK_COLOR_MAP = {
-  R0: '#22c55e',
-  R1: '#84cc16',
-  R2: '#facc15',
-  R3: '#fb923c',
-  R4: '#ef4444',
-  R5: '#7f1d1d'
+  R0: '#00ff85',
+  R1: '#a3ff12',
+  R2: '#ffe600',
+  R3: '#ff9f1a',
+  R4: '#ff3b30',
+  R5: '#ff0055'
 };
 
 function resolveFeatureCenter(feature) {
@@ -2995,7 +2995,7 @@ async function renderShanghaiMap(data, ratedMap = {}) {
       opacity: 0.9
     });
 
-  const pillarLayer = new L7.PointLayer({autoFit: false, blend: 'additive'})
+  const pillarLayer = new L7.PointLayer({autoFit: false})
     .source(pointData, {
       parser: {
         type: 'json',
@@ -3009,12 +3009,12 @@ async function renderShanghaiMap(data, ratedMap = {}) {
       const height = 16 + (normalized * 72);
       return [7, height];
     })
-    .color('risk_rating', ['#22c55e', '#84cc16', '#facc15', '#fb923c', '#ef4444', '#7f1d1d'])
+    .color('risk_rating', ['#00ff85', '#a3ff12', '#ffe600', '#ff9f1a', '#ff3b30', '#ff0055'])
     .scale('risk_rating', {type: 'cat', domain: ['R0', 'R1', 'R2', 'R3', 'R4', 'R5']})
     .style({
       opacity: 1,
-      stroke: '#0b1220',
-      strokeWidth: 0.15
+      stroke: '#ffffff',
+      strokeWidth: 0.35
     })
     .animate(true);
 
@@ -3145,13 +3145,35 @@ function renderInsightMarkdown(content) {
     .replace(/\n/g, '<br/>');
 }
 
+function createInsightWaitingAnimation(log) {
+  const node = document.createElement('div');
+  node.className = 'msg bot';
+  node.textContent = '分析中';
+  let dots = 0;
+  node._timer = setInterval(() => {
+    dots = (dots + 1) % 4;
+    node.textContent = `分析中${'.'.repeat(dots)}`;
+  }, 320);
+  log.appendChild(node);
+  return node;
+}
+
+function stopInsightWaitingAnimation(node) {
+  if (!node) return;
+  if (node._timer) {
+    clearInterval(node._timer);
+    node._timer = null;
+  }
+}
+
 async function askDistrictInsight() {
   const input = document.getElementById('insightQuestion');
   const log = document.getElementById('insightChatLog');
   if (!input || !log) return;
   const q = String(input.value || '').trim();
   if (!q) return;
-  log.innerHTML += `<div class="msg user">${q}</div>`;
+  log.innerHTML += `<div class=\"msg user\">${q}</div>`;
+  const waitingNode = createInsightWaitingAnimation(log);
   log.scrollTop = log.scrollHeight;
   input.value = '';
 
@@ -3194,9 +3216,11 @@ async function askDistrictInsight() {
       drawDistrictPieChart(districtInsightData);
     }
     const answer = ok ? (analysisMarkdown || '已完成分析，但未返回文字结论。') : `问答失败：${String((json && (json.message || json.msg)) || '未知错误')}`;
-    log.innerHTML += `<div class="msg bot">${renderInsightMarkdown(answer)}</div>`;
+    stopInsightWaitingAnimation(waitingNode);
+    waitingNode.innerHTML = renderInsightMarkdown(answer);
   } catch (e) {
-    log.innerHTML += `<div class="msg bot">问答失败：${String((e && e.message) || '网络异常')}</div>`;
+    stopInsightWaitingAnimation(waitingNode);
+    waitingNode.textContent = `问答失败：${String((e && e.message) || '网络异常')}`;
   }
   log.scrollTop = log.scrollHeight;
 }
