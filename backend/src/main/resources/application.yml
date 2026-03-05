@@ -34,6 +34,7 @@ dify:
   audio-analysis-api-key: replace-with-audio-analysis-key
   case-stats-sql-generator-api-key: replace-with-case-stats-sql-generator-key
   case-stats-sql-runner-api-key: replace-with-case-stats-sql-runner-key
+  case-stats-analysis-api-key: replace-with-case-stats-analysis-key
 
 oss:
   endpoint: https://oss-cn-hangzhou.aliyuncs.com

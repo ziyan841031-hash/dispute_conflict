@@ -3118,8 +3118,10 @@ async function askDistrictInsight() {
       .replace(/>/g, '&gt;');
     const sql = String(data.sql || '');
     const resultJson = String(data.resultJson || '[]');
+    const analysisText = String(data.analysisText || '');
+    const analysisRaw = data.analysis ? escapeHtml(JSON.stringify(data.analysis)) : '';
     const msg = ok
-      ? `SQL：<pre>${escapeHtml(sql)}</pre>结果JSON：<pre>${escapeHtml(resultJson)}</pre>`
+      ? `SQL：<pre>${escapeHtml(sql)}</pre>结果JSON：<pre>${escapeHtml(resultJson)}</pre>${analysisText ? `分析结论：<pre>${escapeHtml(analysisText)}</pre>` : ''}${analysisRaw ? `分析原始输出：<pre>${analysisRaw}</pre>` : ''}`
       : `问答失败：${escapeHtml(String((json && json.msg) || '未知错误'))}`;
     log.innerHTML += `<div class="msg bot">${msg}</div>`;
   } catch (e) {

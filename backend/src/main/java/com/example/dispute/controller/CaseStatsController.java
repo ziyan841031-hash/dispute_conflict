@@ -124,6 +124,9 @@ public class CaseStatsController {
     @Value("${dify.case-stats-sql-runner-api-key:replace-with-case-stats-sql-runner-key}")
     private String caseStatsSqlRunnerApiKey;
 
+    @Value("${dify.case-stats-analysis-api-key:replace-with-case-stats-analysis-key}")
+    private String caseStatsAnalysisApiKey;
+
     public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient, JdbcTemplate jdbcTemplate) {
         this.batchMapper = batchMapper;
         this.detailMapper = detailMapper;
@@ -300,8 +303,7 @@ public class CaseStatsController {
         }
         try {
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("question", question);
-            inputs.put("ask_text", question);
+            inputs.put("user_request", question);
             String sqlApiKey = (caseStatsSqlGeneratorApiKey == null || caseStatsSqlGeneratorApiKey.trim().isEmpty()
                     || caseStatsSqlGeneratorApiKey.startsWith("replace-with"))
                     ? caseStatsSqlRunnerApiKey : caseStatsSqlGeneratorApiKey;
@@ -313,11 +315,20 @@ public class CaseStatsController {
             String normalizedSql = normalizeSelectSql(sql);
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(normalizedSql);
             String jsonResult = OBJECT_MAPPER.writeValueAsString(rows);
+            Map<String, Object> analysisInputs = new HashMap<>();
+            analysisInputs.put("question", question);
+            analysisInputs.put("stats_json", jsonResult);
+            String analysisApiKey = (caseStatsAnalysisApiKey == null || caseStatsAnalysisApiKey.trim().isEmpty()
+                    || caseStatsAnalysisApiKey.startsWith("replace-with"))
+                    ? caseStatsSqlRunnerApiKey : caseStatsAnalysisApiKey;
+            Object analysisResponse = difyClient.runWorkflowWithInputs(analysisInputs, analysisApiKey, "统计结果分析与逐条风险评级");
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("question", question);
             result.put("sql", normalizedSql);
             result.put("resultJson", jsonResult);
+            result.put("analysis", analysisResponse);
+            result.put("analysisText", extractAnalysisText(analysisResponse));
             return ApiResponse.success(result);
         } catch (IllegalArgumentException ex) {
             return ApiResponse.fail(ex.getMessage());
@@ -347,6 +358,45 @@ public class CaseStatsController {
                         "attachment; filename=\"" + file.getName() + "\"; filename*=UTF-8''" + encodedName)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.presentationml.presentation"))
                 .body(resource);
+    }
+
+    private String extractAnalysisText(Object analysisResponse) {
+        if (!(analysisResponse instanceof Map)) {
+            return "";
+        }
+        Map<?, ?> root = (Map<?, ?>) analysisResponse;
+        Object text = root.get("text");
+        if (text != null && !text.toString().trim().isEmpty()) {
+            return text.toString().trim();
+        }
+        Object outputs = root.get("outputs");
+        if (outputs instanceof Map) {
+            Map<?, ?> outputMap = (Map<?, ?>) outputs;
+            Object summary = outputMap.get("summary");
+            if (summary != null && !summary.toString().trim().isEmpty()) {
+                return summary.toString().trim();
+            }
+            Object analysis = outputMap.get("analysis");
+            if (analysis != null && !analysis.toString().trim().isEmpty()) {
+                return analysis.toString().trim();
+            }
+            Object risk = outputMap.get("risk_rating");
+            if (risk != null && !risk.toString().trim().isEmpty()) {
+                return risk.toString().trim();
+            }
+        }
+        Object data = root.get("data");
+        if (data instanceof Map) {
+            Object outputs2 = ((Map<?, ?>) data).get("outputs");
+            if (outputs2 instanceof Map) {
+                for (Object v : ((Map<?, ?>) outputs2).values()) {
+                    if (v != null && !v.toString().trim().isEmpty()) {
+                        return v.toString().trim();
+                    }
+                }
+            }
+        }
+        return "";
     }
 
     private String extractSqlFromDifyResponse(Object difyResponse) {
