@@ -2902,16 +2902,14 @@ async function renderShanghaiMap(data) {
     return {name, value, center: resolveFeatureCenter(f)};
   });
   const maxVal = mapData.length ? Math.max(...mapData.map(x => x.value)) : 0;
-  const supports3D = typeof echarts !== 'undefined' && typeof echarts.version === 'string' && !!echarts.graphicGL;
+  const barData = mapData
+    .filter((item) => Array.isArray(item.center) && item.center.length >= 2)
+    .map((item) => ({
+      name: item.name,
+      value: [item.center[0], item.center[1], Math.max(1, Number(item.value || 0))]
+    }));
 
-  if (supports3D) {
-    const barData = mapData
-      .filter((item) => Array.isArray(item.center) && item.center.length >= 2)
-      .map((item) => ({
-        name: item.name,
-        value: [item.center[0], item.center[1], Math.max(1, Number(item.value || 0))]
-      }));
-
+  try {
     shMapChart.setOption({
       backgroundColor: 'transparent',
       tooltip: {
@@ -2933,61 +2931,63 @@ async function renderShanghaiMap(data) {
         textStyle: {color: '#cbd5e1'},
         calculable: true
       },
-      geo3D: {
-        map: '上海各区',
-        roam: true,
-        boxDepth: 14,
-        regionHeight: 2,
-        shading: 'lambert',
-        viewControl: {
-          distance: 92,
-          alpha: 42,
-          beta: -8,
-          panSensitivity: 0,
-          rotateSensitivity: 1,
-          zoomSensitivity: 1
-        },
-        light: {
-          main: {intensity: 1.1, shadow: true},
-          ambient: {intensity: 0.55}
-        },
-        itemStyle: {
-          color: '#1e3a8a',
-          borderColor: '#38bdf8',
-          borderWidth: 1.1,
-          opacity: 0.95
-        },
-        emphasis: {
-          itemStyle: {
-            color: '#3b82f6'
+      series: [
+        {
+          name: '上海各区',
+          type: 'map3D',
+          map: '上海各区',
+          roam: true,
+          data: mapData,
+          shading: 'lambert',
+          boxDepth: 14,
+          regionHeight: 2,
+          viewControl: {
+            distance: 92,
+            alpha: 42,
+            beta: -8,
+            panSensitivity: 0,
+            rotateSensitivity: 1,
+            zoomSensitivity: 1
+          },
+          light: {
+            main: {intensity: 1.1, shadow: true},
+            ambient: {intensity: 0.55}
           },
           label: {
             show: true,
-            color: '#fff'
+            color: '#e2e8f0',
+            fontSize: 11
+          },
+          itemStyle: {
+            color: '#1e3a8a',
+            borderColor: '#38bdf8',
+            borderWidth: 1.1,
+            opacity: 0.95
+          },
+          emphasis: {
+            label: {show: true, color: '#fff'},
+            itemStyle: {color: '#3b82f6'}
           }
         },
-        label: {
-          show: true,
-          color: '#e2e8f0',
-          fontSize: 11
+        {
+          name: '区域案件数量',
+          type: 'bar3D',
+          coordinateSystem: 'map3D',
+          bevelSize: 0.2,
+          shading: 'lambert',
+          data: barData,
+          barSize: 1.0,
+          minHeight: 0.2,
+          itemStyle: {
+            color: '#22d3ee',
+            opacity: 0.96
+          }
         }
-      },
-      series: [{
-        name: '区域案件数量',
-        type: 'bar3D',
-        coordinateSystem: 'geo3D',
-        bevelSize: 0.2,
-        shading: 'lambert',
-        data: barData,
-        barSize: 1.0,
-        minHeight: 0.2,
-        itemStyle: {
-          color: '#22d3ee',
-          opacity: 0.96
-        }
-      }]
+      ]
     });
     return;
+  } catch (err) {
+    console.warn('3D地图渲染失败，回退2D模式', err);
   }
 
   shMapChart.setOption({
