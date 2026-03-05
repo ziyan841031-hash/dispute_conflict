@@ -1,5 +1,7 @@
 // 定义后端接口基础地址。
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = 'http://localhost:8288/dispute/api';
+
+// const API_BASE = 'https://demo.handydata.cn/dispute/api';
 
 // 定义文字案件解析状态。
 const parseStatus = {
@@ -2938,6 +2940,7 @@ async function renderShanghaiMap(data, ratedMap = {}) {
     };
   });
 
+  // 将行政区面数据转换为柱体中心点数据，供 PointLayer 使用
   const pointData = districtFeatures
     .map((f) => {
       const center = resolveFeatureCenter(f);
@@ -2960,6 +2963,7 @@ async function renderShanghaiMap(data, ratedMap = {}) {
     .filter(Boolean);
   const maxPointValue = pointData.length ? Math.max(...pointData.map((item) => Number(item.value || 0))) : 1;
 
+  // 每次重绘时重建场景，确保问答后地图状态与数据一致
   const scene = new L7.Scene({
     id: 'shMapChart',
     map: new MapCtor({
@@ -3004,6 +3008,7 @@ async function renderShanghaiMap(data, ratedMap = {}) {
       }
     })
     .shape('cylinder')
+    // 柱体高度按区县数值占比缩放，最低高度保底 16
     .size('value', (value) => {
       const normalized = maxPointValue > 0 ? Number(value || 0) / maxPointValue : 0;
       const height = 16 + (normalized * 72);
@@ -3012,6 +3017,7 @@ async function renderShanghaiMap(data, ratedMap = {}) {
     .color('risk_rating', ['#00ff85', '#a3ff12', '#ffe600', '#ff9f1a', '#ff3b30', '#ff0055'])
     .scale('risk_rating', {type: 'cat', domain: ['R0', 'R1', 'R2', 'R3', 'R4', 'R5']})
     .style({
+      // 按需求保持柱体不透明，并加白色描边增强可读性
       opacity: 1,
       stroke: '#ffffff',
       strokeWidth: 0.35
@@ -3070,6 +3076,7 @@ async function renderShanghaiMap(data, ratedMap = {}) {
     dom.title = `${name}｜数量:${value}｜等级:${risk}${reason ? `｜原因:${reason}` : ''}${brief ? `｜简述:${brief}` : ''}${display ? `｜${display}` : ''}`;
   };
 
+  // 地图悬浮时同步展示区县值与风险原因
   pillarLayer.on('mousemove', (e) => {
     const feature = e && e.feature ? e.feature : null;
     updateHoverTitle(feature);
@@ -3145,6 +3152,7 @@ function renderInsightMarkdown(content) {
     .replace(/\n/g, '<br/>');
 }
 
+// 创建‘分析中...’动态等待消息，接口返回后会被替换为最终答案
 function createInsightWaitingAnimation(log) {
   const node = document.createElement('div');
   node.className = 'msg bot';
@@ -3158,6 +3166,7 @@ function createInsightWaitingAnimation(log) {
   return node;
 }
 
+// 停止等待动画，避免计时器泄漏
 function stopInsightWaitingAnimation(node) {
   if (!node) return;
   if (node._timer) {
@@ -3173,6 +3182,7 @@ async function askDistrictInsight() {
   const q = String(input.value || '').trim();
   if (!q) return;
   log.innerHTML += `<div class=\"msg user\">${q}</div>`;
+  // 先渲染等待动画，提升问答交互反馈
   const waitingNode = createInsightWaitingAnimation(log);
   log.scrollTop = log.scrollHeight;
   input.value = '';
@@ -3194,6 +3204,7 @@ async function askDistrictInsight() {
     const analysisMarkdown = String(data.analysisMarkdown || '');
     const renderMap = Number(data.renderMap || 0);
     const ratedItems = Array.isArray(data.ratedItems) ? data.ratedItems : [];
+    // 当后端要求重绘地图时，用问答返回的 ratedItems 驱动地图与图表联动刷新
     if (ok && renderMap === 1 && ratedItems.length) {
       const nextCount = {};
       const nextRated = {};
@@ -3216,11 +3227,14 @@ async function askDistrictInsight() {
       drawDistrictPieChart(districtInsightData);
     }
     const answer = ok ? (analysisMarkdown || '已完成分析，但未返回文字结论。') : `问答失败：${String((json && (json.message || json.msg)) || '未知错误')}`;
+    // 用最终内容替换等待节点，而不是额外追加一条消息
     stopInsightWaitingAnimation(waitingNode);
     waitingNode.innerHTML = renderInsightMarkdown(answer);
   } catch (e) {
+    // 用最终内容替换等待节点，而不是额外追加一条消息
     stopInsightWaitingAnimation(waitingNode);
     waitingNode.textContent = `问答失败：${String((e && e.message) || '网络异常')}`;
   }
   log.scrollTop = log.scrollHeight;
 }
+

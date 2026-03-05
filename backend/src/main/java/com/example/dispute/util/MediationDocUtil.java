@@ -1,10 +1,6 @@
 package com.example.dispute.util;
 
-import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
-import org.apache.poi.xwpf.usermodel.UnderlinePatterns;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -13,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 /**
  * 调解协议书生成工具。
@@ -38,9 +33,7 @@ public final class MediationDocUtil {
                                                            String responsibilityDetail) throws IOException {
         Files.createDirectories(DEFAULT_BASE_DIR);
         String safeCaseNo = sanitizeFileName(defaultText(caseNo, "case"));
-        String fileName = safeCaseNo + "_mediation_agreement_"
-                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + "_" + UUID.randomUUID().toString().substring(0, 8) + ".docx";
+        String fileName = safeCaseNo + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + ".docx";
         Path output = DEFAULT_BASE_DIR.resolve(fileName);
 
         try (XWPFDocument doc = new XWPFDocument(); OutputStream os = Files.newOutputStream(output)) {
