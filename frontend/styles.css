@@ -1657,3 +1657,17 @@ table { width: 100%; border-collapse: collapse; }
 .ios-batch-source-wrap {
   margin-top: 0;
 }
+
+
+.stats-insight-layout{display:flex;gap:16px;min-height:760px}
+.insight-left{flex:0 0 70%;background:linear-gradient(180deg,#eff6ff,#dbeafe);border-radius:14px;padding:12px}
+.insight-right{flex:0 0 calc(30% - 8px);display:flex;flex-direction:column;gap:12px}
+.insight-chat{flex:0 0 30%;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:10px;display:flex;flex-direction:column}
+.insight-chat-log{flex:1;overflow:auto;background:#fff;border-radius:8px;padding:8px;margin-bottom:8px}
+.insight-chat-log .msg{margin:4px 0;padding:6px 8px;border-radius:8px;font-size:13px}
+.insight-chat-log .msg.user{background:#dbeafe;text-align:right}
+.insight-chat-log .msg.bot{background:#e2e8f0}
+.insight-chat-row{display:flex;gap:6px}
+.insight-chat-row input{flex:1;padding:6px}
+.insight-charts{flex:1;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:10px}
+.sh-map-svg{width:100%;height:640px;background:radial-gradient(circle at 30% 20%,#1e3a8a,#0f172a);border-radius:12px}

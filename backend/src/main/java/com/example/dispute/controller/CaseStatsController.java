@@ -265,6 +265,23 @@ public class CaseStatsController {
         return ApiResponse.success(result);
     }
 
+
+    @GetMapping("/district-insight")
+    public ApiResponse<Map<String, Object>> districtInsight() {
+        List<CaseStatsDetail> rows = detailMapper.selectList(new LambdaQueryWrapper<CaseStatsDetail>()
+                .orderByDesc(CaseStatsDetail::getId));
+        Map<String, Long> districtCount = rows.stream()
+                .collect(Collectors.groupingBy(item -> safe(item.getDistrict()), Collectors.counting()));
+        LinkedHashMap<String, Long> sorted = districtCount.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("districtCount", sorted);
+        result.put("total", rows.size());
+        return ApiResponse.success(result);
+    }
+
     /**
      * 下载指定批次生成的报告文件。
      */

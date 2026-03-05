@@ -2811,3 +2811,109 @@ function animateLawAgentTyping(node, text, onDone) {
   step();
   node._typingTimer = setInterval(step, 22);
 }
+
+
+let districtInsightData = {};
+
+async function loadDistrictInsight() {
+  const mapEl = document.getElementById('shMapSvg');
+  if (!mapEl) return;
+  try {
+    const res = await fetch(`${API_BASE}/case-stats/district-insight`);
+    const json = await res.json();
+    districtInsightData = (json && json.data && json.data.districtCount) ? json.data.districtCount : {};
+    renderShanghaiMap(districtInsightData);
+    drawDistrictBarChart(districtInsightData);
+    drawDistrictPieChart(districtInsightData);
+    const log = document.getElementById('insightChatLog');
+    if (log) log.innerHTML = '<div class="msg bot">已加载区域数据，可直接提问。</div>';
+  } catch (e) {
+    renderShanghaiMap({});
+  }
+}
+
+function renderShanghaiMap(data) {
+  const svg = document.getElementById('shMapSvg');
+  if (!svg) return;
+  const districts = [
+    ['浦东新区', 480, 180, 220, 220], ['闵行区', 280, 300, 190, 130], ['徐汇区', 220, 250, 90, 70],
+    ['长宁区', 180, 210, 80, 60], ['静安区', 250, 185, 70, 50], ['黄浦区', 290, 230, 60, 45],
+    ['普陀区', 140, 170, 95, 70], ['虹口区', 320, 160, 80, 55], ['杨浦区', 390, 150, 95, 70],
+    ['宝山区', 280, 70, 180, 100], ['嘉定区', 70, 80, 180, 120], ['青浦区', 30, 250, 170, 130],
+    ['松江区', 120, 340, 170, 130], ['金山区', 40, 430, 160, 80], ['奉贤区', 260, 420, 180, 80],
+    ['崇明区', 520, 20, 220, 120]
+  ];
+  const values = Object.values(data || {}).map(v => Number(v) || 0);
+  const max = values.length ? Math.max(...values) : 1;
+  const min = values.length ? Math.min(...values) : 0;
+  const colorFor = (n) => {
+    if (!n) return '#e2e8f0';
+    const t = (n - min) / Math.max(1, max - min);
+    const b = Math.round(140 + t * 90);
+    return `rgb(${20 + Math.round(t*30)}, ${80 + Math.round(t*80)}, ${b})`;
+  };
+  svg.innerHTML = districts.map(([name,x,y,w,h]) => {
+    const val = Number((data||{})[name] || 0);
+    const color = colorFor(val);
+    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" ry="12" fill="${color}" stroke="#38bdf8" stroke-width="2"></rect><text x="${x+w/2}" y="${y+h/2-8}" text-anchor="middle" fill="#fff" font-size="14">${name}</text><text x="${x+w/2}" y="${y+h/2+16}" text-anchor="middle" fill="#dbeafe" font-size="14">${val}</text></g>`;
+  }).join('');
+}
+
+function drawDistrictBarChart(data) {
+  const c = document.getElementById('districtBarCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const entries = Object.entries(data || {}).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const max = entries.length ? Math.max(...entries.map(x=>x[1])) : 1;
+  ctx.fillStyle = '#0f172a';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('区域案件Top8（柱状图）', 8, 16);
+  entries.forEach((e,i)=>{
+    const y = 30 + i*22;
+    const w = Math.round((e[1]/max)*220);
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(110, y, w, 14);
+    ctx.fillStyle = '#334155'; ctx.fillText(e[0], 8, y+12);
+    ctx.fillStyle = '#1e293b'; ctx.fillText(String(e[1]), 336, y+12);
+  });
+}
+
+function drawDistrictPieChart(data) {
+  const c = document.getElementById('districtPieCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const entries = Object.entries(data || {}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const total = entries.reduce((s,x)=>s+(Number(x[1])||0),0) || 1;
+  const colors = ['#2563eb','#0ea5e9','#22c55e','#f59e0b','#ef4444','#8b5cf6'];
+  let start = -Math.PI/2;
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = '#0f172a';
+  ctx.fillText('区域占比（饼状图）', 8, 16);
+  entries.forEach((e,i)=>{
+    const ang = (e[1]/total) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(110,125); ctx.arc(110,125,72,start,start+ang); ctx.closePath();
+    ctx.fillStyle = colors[i%colors.length]; ctx.fill();
+    const mid = start + ang/2;
+    const lx = 110 + Math.cos(mid)*90, ly = 125 + Math.sin(mid)*90;
+    ctx.fillStyle = '#1f2937'; ctx.fillText(e[0], lx, ly);
+    start += ang;
+  });
+}
+
+function askDistrictInsight() {
+  const input = document.getElementById('insightQuestion');
+  const log = document.getElementById('insightChatLog');
+  if (!input || !log) return;
+  const q = String(input.value || '').trim();
+  if (!q) return;
+  const entries = Object.entries(districtInsightData || {}).sort((a,b)=>b[1]-a[1]);
+  const top = entries[0] || ['-',0];
+  const total = entries.reduce((s,x)=>s+(Number(x[1])||0),0);
+  let ans = `共统计 ${total} 件，当前最高为${top[0]}（${top[1]}件）。`;
+  if (q.includes('最多')) ans = `${top[0]} 案件最多，共 ${top[1]} 件。`;
+  if (q.includes('总数')) ans = `当前统计总案件数为 ${total} 件。`;
+  log.innerHTML += `<div class="msg user">${q}</div><div class="msg bot">${ans}</div>`;
+  log.scrollTop = log.scrollHeight;
+  input.value = '';
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>统计洞察 - 上海区域案件分布</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷预防和化解<br>智能体应用系统</h1>
+    <a href="index.html">首页</a>
+    <a href="smart-tools.html">智能工具</a>
+    <a href="cases.html">案件管理</a>
+    <a href="stats.html">案件统计</a>
+    <a class="active" href="stats-insight.html">统计洞察</a>
+  </aside>
+  <main class="content">
+    <section class="card stats-insight-layout">
+      <div class="insight-left">
+        <h2>上海市各区域案件数量统计</h2>
+        <svg id="shMapSvg" viewBox="0 0 800 520" class="sh-map-svg"></svg>
+      </div>
+      <div class="insight-right">
+        <div class="insight-chat">
+          <h3>洞察问答</h3>
+          <div id="insightChatLog" class="insight-chat-log"></div>
+          <div class="insight-chat-row">
+            <input id="insightQuestion" placeholder="例如：哪个区案件最多？" />
+            <button onclick="askDistrictInsight()">提问</button>
+          </div>
+        </div>
+        <div class="insight-charts">
+          <canvas id="districtBarCanvas" width="360" height="220"></canvas>
+          <canvas id="districtPieCanvas" width="360" height="220"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="main.js"></script>
+<script>loadDistrictInsight();</script>
+</body>
+</html>
