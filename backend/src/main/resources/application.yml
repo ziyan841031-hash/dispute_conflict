@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dispute_conflict
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 预留Dify配置
+dify:
+  base-url: http://172.21.70.142/v1
+  api-key: replace-with-real-key
+
+  extract-workflow-endpoint: /workflows/run
+  extract-user: abc-123
+
+  classify-api-key: replace-with-classify-key
+  disposal-api-key: replace-with-disposal-key
+  mediator-suggestion-api-key: replace-with-mediator-suggestion-key
+
+oss:
+  endpoint: https://oss-cn-hangzhou.aliyuncs.com
+  bucket-name: replace-with-bucket
+  access-key-id: replace-with-access-key-id
+  access-key-secret: replace-with-access-key-secret
+  url-prefix: https://replace-with-bucket.oss-cn-hangzhou.aliyuncs.com
+
+dashscope:
+  sound-api-key: replace-with-sound-api-key

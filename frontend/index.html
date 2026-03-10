@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>矛盾纠纷系统管理 - 控台首页</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷系统管理</h1>
+    <a class="active" href="index.html">控台首页</a>
+    <a href="cases.html">案件管理</a>
+  </aside>
+  <main class="content">
+    <section class="card">
+      <h2>案件描述上传</h2>
+      <div class="upload">
+        <label>事件来源：</label>
+        <select id="eventSource">
+          <option value="来电求助">来电求助</option>
+          <option value="物业纠纷">物业纠纷</option>
+          <option value="其他线下接待">其他线下接待</option>
+        </select>
+      </div>
+      <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
+      <button onclick="submitText()">提交文字案件</button>
+      <div class="upload">
+        <label>上传Excel表格：</label>
+        <input type="file" id="excelFile" accept=".xlsx,.xls">
+        <button onclick="submitExcel()">提交Excel案件</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>音频上传</h2>
+      <input type="file" id="audioFile" accept="audio/*">
+      <button onclick="submitAudio()">提交音频转写</button>
+    </section>
+
+  </main>
+</div>
+
+<div id="parseModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>案件解析中...</h3>
+    <ul class="parse-list">
+      <li id="step-audio"><span id="icon-audio" class="status-icon">○</span> 语音识别中</li>
+      <li><span id="icon-text" class="status-icon">○</span> 智能体要素提取中</li>
+      <li><span id="icon-classify" class="status-icon">○</span> 智能分类中</li>
+    </ul>
+    <button onclick="closeParseModal()">关闭</button>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
