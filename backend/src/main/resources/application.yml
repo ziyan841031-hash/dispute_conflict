@@ -31,6 +31,7 @@ dify:
   case-stats-api-key: replace-with-case-stats-key
   summary-api-key: replace-with-summary-key
   correction-api-key: replace-with-correction-key
+  audio-analysis-api-key: replace-with-audio-analysis-key
 
 oss:
   endpoint: https://oss-cn-hangzhou.aliyuncs.com
