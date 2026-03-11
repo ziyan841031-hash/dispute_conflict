@@ -4,10 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.dispute.client.DifyClient;
 import com.example.dispute.dto.ApiResponse;
 import com.example.dispute.dto.DifyInvokeRequest;
+import com.example.dispute.dto.TextIngestRequest;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
 import com.example.dispute.entity.CaseRecord;
+import com.example.dispute.entity.GovConsultRecord;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
 import com.example.dispute.mapper.CaseRecordMapper;
+import com.example.dispute.mapper.GovConsultRecordMapper;
+import com.example.dispute.service.CaseRecordService;
 import com.example.dispute.util.MediationDocUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,7 +45,9 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
@@ -63,8 +69,13 @@ public class DifyController {
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
     // 定义案件Mapper。
     private final CaseRecordMapper caseRecordMapper;
+    private final CaseRecordService caseRecordService;
+    private final GovConsultRecordMapper govConsultRecordMapper;
     // 定义JSON工具。
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${dify.base-url:http://localhost:5001/v1}")
+    private String difyBaseUrl;
 
     // 纠纷处置工作流密钥。
     @Value("${dify.disposal-api-key:replace-with-disposal-key}")
@@ -92,19 +103,24 @@ public class DifyController {
     @Value("${xiaobaogong.base-url:https://api.xiaobaogong.com}")
     private String xbgBaseUrl;
 
+    @Value("${dify.acceptance-government-platform-api-key:replace-with-acceptance-government-platform-key}")
+    private String acceptanceGovernmentPlatformApiKey;
+
     // 聊天会话ID与token映射。
     private final Map<String, String> xbgChatTokenCache = new ConcurrentHashMap<>();
 
     /**
      * 构造函数。
      */
-    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper, CaseRecordMapper caseRecordMapper) {
+    public DifyController(DifyClient difyClient, CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper, CaseRecordMapper caseRecordMapper, GovConsultRecordMapper govConsultRecordMapper, CaseRecordService caseRecordService) {
         // 注入Dify客户端。
         this.difyClient = difyClient;
         // 注入流水Mapper。
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
         // 注入案件Mapper。
         this.caseRecordMapper = caseRecordMapper;
+        this.caseRecordService = caseRecordService;
+        this.govConsultRecordMapper = govConsultRecordMapper;
     }
 
     /**
@@ -523,6 +539,212 @@ public class DifyController {
         }
     }
 
+
+
+    @PostMapping("/gov-consult-message")
+    public ApiResponse<Object> govConsultMessage(@RequestBody(required = false) Map<String, Object> request) {
+        try {
+            String sessionId = request == null ? "" : String.valueOf(request.getOrDefault("sessionId", "")).trim();
+            String question = request == null ? "" : String.valueOf(request.getOrDefault("question", "")).trim();
+            if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(question)) {
+                return ApiResponse.fail("sessionId?question????");
+            }
+
+            GovConsultRecord latestRecord = findLatestGovConsultRecord(sessionId);
+            String historyQa = resolveGovConsultHistoryQa(latestRecord, question);
+            Map<String, Object> difyResult = callGovernmentPlatformConsult(question, historyQa, sessionId);
+            String answer = extractGovernmentPlatformAnswer(difyResult);
+            if (!StringUtils.hasText(answer)) {
+                throw new IllegalArgumentException("gov consult answer empty");
+            }
+
+            GovConsultRecord savedRecord = saveGovConsultRecord(sessionId, question, answer);
+            List<GovConsultRecord> records = listGovConsultRecords(sessionId);
+            triggerGovConsultAsyncProcessing(sessionId, question, answer);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("sessionId", sessionId);
+            data.put("answer", answer);
+            data.put("recordId", savedRecord == null ? null : savedRecord.getId());
+            data.put("historyQuestion", answer);
+            data.put("records", buildGovConsultResponseRecords(records));
+            return ApiResponse.success(data);
+        } catch (Exception ex) {
+            log.warn("gov consult failed: {}", ex.getMessage(), ex);
+            return ApiResponse.fail("异常");
+        }
+    }
+
+    private String resolveGovConsultHistoryQa(GovConsultRecord latestRecord, String question) {
+        if (latestRecord == null) {
+            return "";
+        }
+        if (StringUtils.hasText(question) && question.contains("身份证")) {
+            return "直接回复案件已受理，请安抚客户情绪";
+        }
+        return defaultText(latestRecord.getHistoryQuestion());
+    }
+
+    private void triggerGovConsultAsyncProcessing(String sessionId, String question, String answer) {
+        if (!shouldTriggerGovConsultAsync(question, answer)) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> processGovConsultAsync(sessionId));
+    }
+
+    private boolean shouldTriggerGovConsultAsync(String question, String answer) {
+        return StringUtils.hasText(question)
+                && question.contains("身份证")
+                && StringUtils.hasText(answer);
+    }
+
+    private void processGovConsultAsync(String sessionId) {
+        log.info("智能对话异步操作开始----------------");
+        try {
+            List<GovConsultRecord> records = listGovConsultRecords(sessionId);
+            String mergedText = buildGovConsultMergedText(records);
+            if (!StringUtils.hasText(mergedText)) {
+                return;
+            }
+
+//            String analyzedText = caseRecordService.runAudioRoleAnalysis(mergedText);
+//            if (!StringUtils.hasText(analyzedText)) {
+//                analyzedText = mergedText;
+//            }
+
+            TextIngestRequest ingestRequest = new TextIngestRequest();
+            ingestRequest.setCaseText(mergedText);
+            ingestRequest.setEventSource("网上反映");
+            CaseRecord caseRecord = caseRecordService.ingestText(ingestRequest);
+            if (caseRecord == null || caseRecord.getId() == null) {
+                return;
+            }
+
+            TextIngestRequest classifyRequest = new TextIngestRequest();
+            classifyRequest.setCaseId(caseRecord.getId());
+            classifyRequest.setCaseText(defaultText(caseRecord.getCaseText()));
+            caseRecordService.intelligentClassify(classifyRequest);
+        } catch (Exception ex) {
+            log.warn("gov consult async processing failed: sessionId={}, error={}", sessionId, ex.getMessage(), ex);
+        }
+        log.info("智能对话异步操作结束----------------");
+    }
+
+    private String buildGovConsultMergedText(List<GovConsultRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (GovConsultRecord record : records) {
+            if (record == null) {
+                continue;
+            }
+            if (StringUtils.hasText(record.getQuestion())) {
+                builder.append(record.getQuestion().trim()).append('\n');
+            }
+            if (StringUtils.hasText(record.getHistoryQuestion())) {
+                builder.append(record.getHistoryQuestion().trim()).append('\n');
+            }
+        }
+        return builder.toString().trim();
+    }
+
+    private GovConsultRecord findLatestGovConsultRecord(String sessionId) {
+        if (!StringUtils.hasText(sessionId)) {
+            return null;
+        }
+        return govConsultRecordMapper.selectOne(
+                new LambdaQueryWrapper<GovConsultRecord>()
+                        .eq(GovConsultRecord::getSessionId, sessionId)
+                        .orderByDesc(GovConsultRecord::getCreatedAt)
+                        .last("limit 1")
+        );
+    }
+
+    private List<GovConsultRecord> listGovConsultRecords(String sessionId) {
+        if (!StringUtils.hasText(sessionId)) {
+            return Collections.emptyList();
+        }
+        return govConsultRecordMapper.selectList(
+                new LambdaQueryWrapper<GovConsultRecord>()
+                        .eq(GovConsultRecord::getSessionId, sessionId)
+                        .orderByAsc(GovConsultRecord::getCreatedAt)
+        );
+    }
+
+    private GovConsultRecord saveGovConsultRecord(String sessionId, String question, String historyQuestion) {
+        GovConsultRecord record = new GovConsultRecord();
+        record.setSessionId(sessionId);
+        record.setQuestion(question);
+        record.setHistoryQuestion(historyQuestion);
+        record.setCreatedAt(LocalDateTime.now());
+        govConsultRecordMapper.insert(record);
+        return record;
+    }
+
+    private List<Map<String, Object>> buildGovConsultResponseRecords(List<GovConsultRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (GovConsultRecord record : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", record.getId());
+            item.put("sessionId", record.getSessionId());
+            item.put("question", defaultText(record.getQuestion()));
+            item.put("historyQuestion", defaultText(record.getHistoryQuestion()));
+            item.put("answer", defaultText(record.getHistoryQuestion()));
+            item.put("createdAt", record.getCreatedAt());
+            result.add(item);
+        }
+        return result;
+    }
+
+    private Map<String, Object> callGovernmentPlatformConsult(String question, String historyQa, String sessionId) throws Exception {
+        String url = difyBaseUrl + "/chat-messages";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(acceptanceGovernmentPlatformApiKey);
+
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("user_question", question);
+        inputs.put("history_qa", StringUtils.hasText(historyQa) ? historyQa : "");
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("inputs", inputs);
+        body.put("query", "1");
+        body.put("response_mode", "blocking");
+        body.put("conversation_id", "");
+        body.put("user", sessionId);
+        body.put("files", Collections.emptyList());
+        log.info("智能对话请求报文：{}",body);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = new RestTemplate().exchange(url, HttpMethod.POST, entity, String.class);
+        String raw = response.getBody();
+        if (!StringUtils.hasText(raw)) {
+            throw new IllegalArgumentException("gov consult empty response");
+        }
+        log.info("智能对话返回报文：{}",raw);
+        return objectMapper.readValue(raw, new TypeReference<Map<String, Object>>() {});
+    }
+
+    private String extractGovernmentPlatformAnswer(Map<String, Object> resultMap) {
+        if (resultMap == null || resultMap.isEmpty()) {
+            return "";
+        }
+        Object answer = firstNonNull(resultMap.get("answer"), resultMap.get("message"));
+        if (answer != null && StringUtils.hasText(String.valueOf(answer))) {
+            return String.valueOf(answer);
+        }
+        Object dataObj = resultMap.get("data");
+        if (dataObj instanceof Map) {
+            Object nested = firstNonNull(((Map<?, ?>) dataObj).get("answer"), ((Map<?, ?>) dataObj).get("message"));
+            if (nested != null && StringUtils.hasText(String.valueOf(nested))) {
+                return String.valueOf(nested);
+            }
+        }
+        return extractAnswerText(resultMap);
+    }
     private String buildSummaryByDify(String rawResponse) {
         try {
             Map<String, Object> inputs = new HashMap<>();

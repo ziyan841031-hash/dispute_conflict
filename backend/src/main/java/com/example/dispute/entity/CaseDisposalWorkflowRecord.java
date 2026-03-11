@@ -66,6 +66,12 @@ public class CaseDisposalWorkflowRecord {
     @TableField("mediation_advice")
     private String mediationAdvice;
 
+    @TableField("briefing")
+    private String briefing;
+
+    @TableField("briefing_document_path")
+    private String briefingDocumentPath;
+
     @TableField("archive_completed_at")
     private LocalDateTime archiveCompletedAt;
 
