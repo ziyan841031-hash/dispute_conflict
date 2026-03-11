@@ -460,7 +460,7 @@
             if (stepIndex === processState.activeStage) {
                 stepClasses.push('is-active');
             }
-            pieces.push('<div class="assistant-step ' + stepClasses.join(' ') + '">' + escapeHtml(processSteps[i]) + '</div>');
+            pieces.push('<div class="assistant-step ' + stepClasses.join(' ') + '"><span class="assistant-step-num">' + stepIndex + '</span><span class="assistant-step-label">' + escapeHtml(processSteps[i]) + '</span></div>');
             if (i < processSteps.length - 1) {
                 var lineIndex = i + 1;
                 var lineClasses = [];
@@ -712,6 +712,7 @@
         var rows = buildInfoRows(detail);
         var riskLevel = textValue(detail && detail.riskLevel, '\u5f85\u8bc4\u4f30');
         var caseCode = textValue(detail && (detail.caseNo || detail.caseId || detail.id));
+        var riskClass = riskLevel === '\u9ad8' ? 'risk-high' : riskLevel === '\u4e2d' ? 'risk-medium' : riskLevel === '\u4f4e' ? 'risk-low' : '';
         root.innerHTML = ''
             + '<section class="assistant-info-profile">'
             + '<div class="assistant-info-profile-top">'
@@ -723,7 +724,7 @@
             + '</div>'
             + '</div>'
             + '<div class="assistant-info-risk-wrap">'
-            + '<div class="assistant-info-risk-pill"><span class="assistant-info-risk-dot"></span><span>\u98ce\u9669\u7b49\u7ea7\uff1a' + escapeHtml(riskLevel) + '</span></div>'
+            + '<div class="assistant-info-risk-pill ' + riskClass + '"><span class="assistant-info-risk-dot"></span><span>\u98ce\u9669\u7b49\u7ea7\uff1a' + escapeHtml(riskLevel) + '</span></div>'
             + '</div>'
             + '</div>'
             + '<div class="assistant-info-divider"></div>'
