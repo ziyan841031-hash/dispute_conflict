@@ -1,15 +1,15 @@
 ﻿body, button, input, select, textarea { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
-body { margin: 0; background: #ffffff; }
+body { margin: 0; background: #f0f3f7; }
 .layout { display: flex; min-height: 100vh; overflow-x: hidden; }
-.sidebar { width: 184px; background: #ffffff; color: #000; padding: 20px; flex-shrink: 0; border-right: 1px solid #e2e8f0; }
-.sidebar h1 { font-size: 18px; margin-bottom: 20px; }
-.sidebar a { display: block; color: #000; padding: 10px; text-decoration: none; border-radius: 6px; }
-.sidebar a.active { background: #c8161e; color: #fff; }
-.content { flex: 1; min-width: 0; padding: 24px; overflow-x: hidden; background: #ffffff; }
-.card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.sidebar { width: 184px; background: #ffffff; color: #1a1f2e; padding: 20px; flex-shrink: 0; border-right: 1px solid #cdd5df; }
+.sidebar h1 { font-size: 18px; margin-bottom: 20px; font-weight: 700; color: #1a2d4a; }
+.sidebar a { display: block; color: #1a1f2e; padding: 10px; text-decoration: none; border-radius: 3px; }
+.sidebar a.active { background: #1a4080; color: #fff; }
+.content { flex: 1; min-width: 0; padding: 24px; overflow-x: hidden; background: #f0f3f7; }
+.card { background: #fff; border-radius: 4px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); border: 1px solid #cdd5df; }
 textarea { width: 100%; min-height: 120px; margin-bottom: 10px; }
-button { background: #c8161e; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
-button:hover { background: #a01017; }
+button { background: #1a4080; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; cursor: pointer; }
+button:hover { background: #0d2f5e; }
 .upload { margin-top: 12px; }
 pre { white-space: pre-wrap; word-wrap: break-word; }
 .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -17,7 +17,7 @@ pre { white-space: pre-wrap; word-wrap: break-word; }
 table { width: 100%; border-collapse: collapse; }
 .cases-table { min-width: 1360px; }
 .cases-table th, .cases-table td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: middle; white-space: nowrap; }
-.cases-table th { background: #fee77f; font-weight: 600; color: #000; }
+.cases-table th { background: #e8edf5; font-weight: 600; color: #1a2d4a; letter-spacing: 0.02em; }
 
 .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); display: flex; align-items: center; justify-content: center; z-index: 999; }
 .modal.hidden { display: none; }
@@ -102,35 +102,35 @@ table { width: 100%; border-collapse: collapse; }
 }
 .cases-table th.action-col {
   z-index: 3;
-  background: #fee77f;
+  background: #e8edf5;
 }
 
 .rf-node-card {
   background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  border: 1px solid #b8c5d6;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   padding: 8px 12px;
   min-width: 108px;
   text-align: center;
-  transition: all .2s ease;
+  transition: box-shadow .15s ease;
 }
 .rf-node-card:hover {
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
 }
 .rf-node-card.is-selected {
-  border-color: #16a34a;
-  box-shadow: 0 0 0 2px #dcfce7;
+  border-color: #1a7a3c;
+  box-shadow: 0 0 0 2px #d1fae5;
 }
 .rf-node-card.is-history {
-  background: #ecfdf3;
-  border-color: #15803d;
-  box-shadow: 0 0 0 2px #bbf7d0;
+  background: #f0faf4;
+  border-color: #1a7a3c;
+  box-shadow: 0 0 0 2px #a7f3d0;
 }
 .rf-node-card.is-active {
-  background: #eff6ff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px #bfdbfe;
+  background: #edf2fa;
+  border-color: #1a4080;
+  box-shadow: 0 0 0 2px #c8d8ec;
 }
 .rf-node-title {
   font-size: 14px;
@@ -143,7 +143,7 @@ table { width: 100%; border-collapse: collapse; }
   margin-top: 4px;
 }
 .assistant-top-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.assistant-info-row { border: none; border-radius: 10px; background: #ffffff; padding: 10px 12px; font-size: 14px; line-height: 1.6; color: #1e293b; }
+.assistant-info-row { border: 1px solid #cdd5df; border-radius: 4px; background: #ffffff; padding: 10px 12px; font-size: 14px; line-height: 1.6; color: #1a1f2e; }
 .assistant-info-row strong { font-size: 14px; font-weight: 600; }
 .assistant-info-title { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
 .assistant-info-meta { display: grid; grid-template-columns: 1.2fr 1fr 2fr; gap: 10px; font-size: 14px; }
@@ -190,7 +190,7 @@ table { width: 100%; border-collapse: collapse; }
   padding: 8px 12px;
   font-size: 12px;
 }
-.bookmark-tab.active { background: #c8161e; color: #fff; }
+.bookmark-tab.active { background: #1a4080; color: #fff; }
 
 .guide-panel,.timeline-panel {
   border: none;
@@ -266,8 +266,8 @@ table { width: 100%; border-collapse: collapse; }
   flex: 1;
   min-height: 220px;
   overflow-y: auto;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #f8fbff 0%, #f2f6fb 100%);
+  border-radius: 4px;
+  background: #f5f7fa;
 }
 .timeline-vertical::before {
   content: '';
@@ -276,7 +276,7 @@ table { width: 100%; border-collapse: collapse; }
   top: 18px;
   bottom: 18px;
   width: 2px;
-  background: linear-gradient(180deg, #bfdbfe 0%, #c7d2fe 100%);
+  background: #c8d8ec;
 }
 
 .timeline-ios-head {
@@ -318,11 +318,10 @@ table { width: 100%; border-collapse: collapse; }
   position: relative;
   margin: 0 0 14px 14px;
   padding: 10px 10px 10px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  border: 1px solid #d0daea;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
   font-size: 12px;
 }
 .timeline-row::before {
@@ -333,8 +332,8 @@ table { width: 100%; border-collapse: collapse; }
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #3b82f6 0%, #6366f1 100%);
-  border: 2px solid #eef2ff;
+  background: #1a4080;
+  border: 2px solid #e8edf5;
 }
 
 .timeline-stage-title {
