@@ -17,6 +17,8 @@ public interface CaseRecordService {
 
     java.util.Map<String, String> ingestAudio(MultipartFile file);
 
+    String runAudioRoleAnalysis(String text);
+
     IPage<CaseRecord> queryCases(CaseQueryRequest request);
 
     Object intelligentClassify(TextIngestRequest request);

@@ -184,11 +184,15 @@ CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
     diversion_completed_at TIMESTAMP,
     mediation_completed_at TIMESTAMP,
     mediation_advice TEXT,
+    briefing TEXT,
+    briefing_document_path VARCHAR(512),
     archive_completed_at TIMESTAMP,
     archive_summary TEXT,
     archive_document_path VARCHAR(512),
+    archive_report_path VARCHAR(512),
     facts_process TEXT,
     responsibility_split TEXT,
+    expedite_supervise_status INTEGER NOT NULL DEFAULT 0,
     raw_response TEXT,
     created_at TIMESTAMP NOT NULL
 );
@@ -211,11 +215,13 @@ COMMENT ON COLUMN case_disposal_workflow_record.diversion_completed_at IS '分�
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_completed_at IS '调解完成时间';
 COMMENT ON COLUMN case_disposal_workflow_record.mediation_advice IS '调解建议';
 COMMENT ON COLUMN case_disposal_workflow_record.archive_completed_at IS '案件归档时间';
-COMMENT ON COLUMN case_disposal_workflow_record.archive_summary IS '案件归档总结';
-COMMENT ON COLUMN case_disposal_workflow_record.archive_document_path IS '案件文档路径';
+COMMENT ON COLUMN case_disposal_workflow_record.archive_summary IS '妗堜欢褰掓。鎬荤粨';
+COMMENT ON COLUMN case_disposal_workflow_record.archive_document_path IS '妗堜欢鏂囨。璺緞';
+COMMENT ON COLUMN case_disposal_workflow_record.archive_report_path IS '妗堜欢褰掓。鎶ュ憡璺緞';
 COMMENT ON COLUMN case_disposal_workflow_record.facts_process IS '事实经过';
 COMMENT ON COLUMN case_disposal_workflow_record.responsibility_split IS '责任分担';
 COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '原始响应报文(JSON字符串)';
+COMMENT ON COLUMN case_disposal_workflow_record.raw_response IS '简报';
 COMMENT ON COLUMN case_disposal_workflow_record.created_at IS '创建时间';
 
 CREATE INDEX IF NOT EXISTS idx_case_disposal_workflow_record_case_id ON case_disposal_workflow_record(case_id);
@@ -229,15 +235,44 @@ ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_com
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_advice TEXT;
 
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS briefing TEXT;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS briefing_document_path VARCHAR(512);
+
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_completed_at TIMESTAMP;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_summary TEXT;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_document_path VARCHAR(512);
 
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_report_path VARCHAR(512);
+
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS facts_process TEXT;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS responsibility_split TEXT;
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS expedite_supervise_status INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS case_dynamic_tracking_record (
+    id BIGSERIAL PRIMARY KEY,
+    case_id BIGINT NOT NULL,
+    question TEXT,
+    answer TEXT,
+    summary TEXT,
+    event_time TIMESTAMP NOT NULL,
+    event_source VARCHAR(50) NOT NULL
+);
+
+COMMENT ON TABLE case_dynamic_tracking_record IS '案件动态追踪表';
+COMMENT ON COLUMN case_dynamic_tracking_record.case_id IS '案件ID';
+COMMENT ON COLUMN case_dynamic_tracking_record.question IS '问题';
+COMMENT ON COLUMN case_dynamic_tracking_record.answer IS '回答';
+COMMENT ON COLUMN case_dynamic_tracking_record.summary IS '摘要';
+COMMENT ON COLUMN case_dynamic_tracking_record.event_time IS '时间';
+COMMENT ON COLUMN case_dynamic_tracking_record.event_source IS '事件来源';
+
+CREATE INDEX IF NOT EXISTS idx_case_dynamic_tracking_record_case_id ON case_dynamic_tracking_record(case_id);
+CREATE INDEX IF NOT EXISTS idx_case_dynamic_tracking_record_case_source ON case_dynamic_tracking_record(case_id, event_source);
+CREATE INDEX IF NOT EXISTS idx_case_dynamic_tracking_record_event_time ON case_dynamic_tracking_record(event_time DESC);
 
 CREATE TABLE IF NOT EXISTS case_stats_batch (
     id BIGSERIAL PRIMARY KEY,
@@ -322,3 +357,46 @@ CREATE INDEX IF NOT EXISTS idx_case_optimization_feedback_created_at ON case_opt
 ALTER TABLE case_optimization_feedback ADD COLUMN IF NOT EXISTS case_text TEXT;
 ALTER TABLE case_optimization_feedback ADD COLUMN IF NOT EXISTS dify_response TEXT;
 ALTER TABLE case_optimization_feedback ADD COLUMN IF NOT EXISTS parsed_response TEXT;
+
+CREATE TABLE IF NOT EXISTS clue_info (
+    id BIGSERIAL PRIMARY KEY,
+    district VARCHAR(64) NOT NULL,
+    street_town VARCHAR(128) NOT NULL,
+    clue TEXT NOT NULL,
+    clue_interpretation TEXT,
+    clue_source VARCHAR(128),
+    clue_time TIMESTAMP NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE clue_info IS '线索表';
+COMMENT ON COLUMN clue_info.district IS '区';
+COMMENT ON COLUMN clue_info.street_town IS '街道';
+COMMENT ON COLUMN clue_info.clue IS '线索';
+COMMENT ON COLUMN clue_info.clue_interpretation IS '线索解读';
+COMMENT ON COLUMN clue_info.clue_source IS '线索来源';
+COMMENT ON COLUMN clue_info.clue_time IS '时间';
+COMMENT ON COLUMN clue_info.status IS '状态';
+COMMENT ON COLUMN clue_info.created_at IS '创建时间';
+COMMENT ON COLUMN clue_info.updated_at IS '更新时间';
+
+CREATE INDEX IF NOT EXISTS idx_clue_info_district ON clue_info(district);
+CREATE INDEX IF NOT EXISTS idx_clue_info_street_town ON clue_info(street_town);
+CREATE INDEX IF NOT EXISTS idx_clue_info_status ON clue_info(status);
+CREATE INDEX IF NOT EXISTS idx_clue_info_clue_time ON clue_info(clue_time DESC);
+
+
+
+CREATE TABLE IF NOT EXISTS gov_consult_record (
+    id BIGSERIAL PRIMARY KEY,
+    session_id VARCHAR(128) NOT NULL,
+    question TEXT NOT NULL,
+    history_question TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_gov_consult_record_session_id ON gov_consult_record(session_id);
+CREATE INDEX IF NOT EXISTS idx_gov_consult_record_created_at ON gov_consult_record(created_at DESC);
+

@@ -466,11 +466,14 @@ public class CaseController {
             result.put("recommendedDepartment", workflowRecord.getRecommendedDepartment());
             result.put("recommendedMediationType", workflowRecord.getRecommendedMediationType());
             result.put("mediationAdvice", workflowRecord.getMediationAdvice());
+            result.put("briefingDocumentPath", workflowRecord.getBriefingDocumentPath());
             result.put("archiveCompletedAt", workflowRecord.getArchiveCompletedAt());
             result.put("archiveSummary", workflowRecord.getArchiveSummary());
             result.put("archiveDocumentPath", workflowRecord.getArchiveDocumentPath());
+            result.put("archiveReportPath", workflowRecord.getArchiveReportPath());
             result.put("factsProcess", workflowRecord.getFactsProcess());
             result.put("responsibilitySplit", workflowRecord.getResponsibilitySplit());
+            result.put("expediteSuperviseStatus", workflowRecord.getExpediteSuperviseStatus());
         }
 
         if (classifyRecord != null) {

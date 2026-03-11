@@ -69,9 +69,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * 案件统计控制器。
- * 提供Excel导入、批次查询、明细查询、统计分析与PPT报告下载能力。
- */
+ * 妗堜欢缁熻鎺у埗鍣ㄣ€? * 鎻愪緵Excel瀵煎叆銆佹壒娆℃煡璇€佹槑缁嗘煡璇€佺粺璁″垎鏋愪笌PPT鎶ュ憡涓嬭浇鑳藉姏銆? */
 @Slf4j
 @RestController
 @RequestMapping("/api/case-stats")
@@ -303,7 +301,16 @@ public class CaseStatsController {
         }
         try {
             Map<String, Object> inputs = new HashMap<>();
+            Object rawInputs = request == null ? null : request.get("inputs");
+            if (rawInputs instanceof Map) {
+                ((Map<?, ?>) rawInputs).forEach((key, value) -> {
+                    if (key != null) {
+                        inputs.put(String.valueOf(key), value);
+                    }
+                });
+            }
             inputs.put("user_request", question);
+            inputs.putIfAbsent("default_limit", 20);
             String sqlApiKey = (caseStatsSqlGeneratorApiKey == null || caseStatsSqlGeneratorApiKey.trim().isEmpty()
                     || caseStatsSqlGeneratorApiKey.startsWith("replace-with"))
                     ? caseStatsSqlRunnerApiKey : caseStatsSqlGeneratorApiKey;
@@ -315,15 +322,26 @@ public class CaseStatsController {
             String normalizedSql = normalizeSelectSql(sql);
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(normalizedSql);
             String jsonResult = OBJECT_MAPPER.writeValueAsString(rows);
+            String clueJson = "[]";
+            String clueSql = extractOutputFieldFromDifyResponse(difyResponse, "clue_sql");
+            if (clueSql != null && !clueSql.trim().isEmpty()) {
+                String normalizedClueSql = normalizeSelectSql(clueSql);
+                List<Map<String, Object>> clueRows = jdbcTemplate.queryForList(normalizedClueSql);
+                clueJson = OBJECT_MAPPER.writeValueAsString(clueRows);
+            }
             Map<String, Object> analysisInputs = new HashMap<>();
             analysisInputs.put("question", question);
             analysisInputs.put("stats_json", jsonResult);
+            analysisInputs.put("clue_json", clueJson);
+//            analysisInputs.put("default_limit", inputs.getOrDefault("default_limit", 20));
             String analysisApiKey = (caseStatsAnalysisApiKey == null || caseStatsAnalysisApiKey.trim().isEmpty()
                     || caseStatsAnalysisApiKey.startsWith("replace-with"))
                     ? caseStatsSqlRunnerApiKey : caseStatsAnalysisApiKey;
             Object analysisResponse = difyClient.runWorkflowWithInputs(analysisInputs, analysisApiKey, "统计结果分析与逐条风险评级");
 
             Map<String, Object> parsedAnalysis = extractAnalysisPayload(analysisResponse);
+            log.info("分析返回报文：{}",analysisResponse);
+            log.info("分析返回map报文：{}",parsedAnalysis);
             return ApiResponse.success(parsedAnalysis);
         } catch (IllegalArgumentException ex) {
             return ApiResponse.fail(ex.getMessage());
@@ -444,34 +462,37 @@ public class CaseStatsController {
     }
 
     private String extractSqlFromDifyResponse(Object difyResponse) {
+        return extractOutputFieldFromDifyResponse(difyResponse, "sql");
+    }
+
+    private String extractOutputFieldFromDifyResponse(Object difyResponse, String fieldName) {
         if (!(difyResponse instanceof Map)) {
             return null;
         }
         Map<?, ?> root = (Map<?, ?>) difyResponse;
-        Object directSql = root.get("sql");
-        if (directSql != null && !directSql.toString().trim().isEmpty()) {
-            return directSql.toString().trim();
+        Object directValue = root.get(fieldName);
+        if (directValue != null && !directValue.toString().trim().isEmpty()) {
+            return directValue.toString().trim();
         }
         Object outputs = root.get("outputs");
         if (outputs instanceof Map) {
-            Object sqlObj = ((Map<?, ?>) outputs).get("sql");
-            if (sqlObj != null && !sqlObj.toString().trim().isEmpty()) {
-                return sqlObj.toString().trim();
+            Object outputValue = ((Map<?, ?>) outputs).get(fieldName);
+            if (outputValue != null && !outputValue.toString().trim().isEmpty()) {
+                return outputValue.toString().trim();
             }
         }
         Object data = root.get("data");
         if (data instanceof Map) {
             Object outputs2 = ((Map<?, ?>) data).get("outputs");
             if (outputs2 instanceof Map) {
-                Object sqlObj2 = ((Map<?, ?>) outputs2).get("sql");
-                if (sqlObj2 != null && !sqlObj2.toString().trim().isEmpty()) {
-                    return sqlObj2.toString().trim();
+                Object outputValue2 = ((Map<?, ?>) outputs2).get(fieldName);
+                if (outputValue2 != null && !outputValue2.toString().trim().isEmpty()) {
+                    return outputValue2.toString().trim();
                 }
             }
         }
         return null;
     }
-
     private String normalizeSelectSql(String sql) {
         String normalized = sql == null ? "" : sql.trim();
         if (normalized.endsWith(";")) {
@@ -482,14 +503,13 @@ public class CaseStatsController {
             throw new IllegalArgumentException("仅允许执行查询SQL");
         }
         if (normalized.contains(";")) {
-            throw new IllegalArgumentException("不允许执行多条SQL");
+            throw new IllegalArgumentException("涓嶅厑璁告墽琛屽鏉QL");
         }
         return normalized;
     }
 
     /**
-     * 基于明细列表构建五个维度统计分析数据。
-     */
+     * 鍩轰簬鏄庣粏鍒楄〃鏋勫缓浜斾釜缁村害缁熻鍒嗘瀽鏁版嵁銆?     */
     private Map<String, Object> buildAnalysis(List<CaseStatsDetail> details) {
         Map<String, Object> result = new LinkedHashMap<>();
 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.dispute.mapper.ClueInfoMapper">
+
+    <resultMap id="ClueInfoResultMap" type="com.example.dispute.entity.ClueInfo">
+        <id column="id" property="id"/>
+        <result column="district" property="district"/>
+        <result column="street_town" property="streetTown"/>
+        <result column="clue" property="clue"/>
+        <result column="clue_interpretation" property="clueInterpretation"/>
+        <result column="clue_source" property="clueSource"/>
+        <result column="clue_time" property="clueTime"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,
+        district,
+        street_town,
+        clue,
+        clue_interpretation,
+        clue_source,
+        clue_time,
+        status,
+        created_at,
+        updated_at
+    </sql>
+
+</mapper>

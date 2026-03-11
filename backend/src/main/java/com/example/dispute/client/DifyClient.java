@@ -17,8 +17,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -210,6 +212,91 @@ public class DifyClient {
     /**
      * 解析Dify工作流SSE响应，提取最终outputs。
      */
+    public Object invokeChatMessagesStreaming(DifyInvokeRequest request, String currentApiKey) {
+        String url = difyBaseUrl + "/chat-messages";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(currentApiKey);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("inputs", request == null || request.getVariables() == null ? new HashMap<String, Object>() : request.getVariables());
+        body.put("query", request == null ? "" : request.getQuery());
+        body.put("response_mode", "streaming");
+        body.put("conversation_id", "");
+        body.put("user", extractUser);
+
+        List<Map<String, Object>> files = new ArrayList<>();
+        Map<String, Object> file = new HashMap<>();
+        file.put("type", "image");
+        file.put("transfer_method", "remote_url");
+        file.put("url", "https://cloud.dify.ai/logo/logo-site.png");
+        files.add(file);
+        body.put("files", files);
+
+        log.info("Dify chat-messages streaming request: url={}, caseId={}", url, request == null ? null : request.getCaseId());
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        log.info("Dify chat-messages streaming response: status={}", response.getStatusCodeValue());
+        return parseChatMessageSseResponse(response.getBody());
+    }
+
+    private Map<String, Object> parseChatMessageSseResponse(String sseBody) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("raw", sseBody);
+        if (!StringUtils.hasText(sseBody)) {
+            result.put("answer", "");
+            return result;
+        }
+
+        StringBuilder answerBuilder = new StringBuilder();
+        String conversationId = "";
+        String messageId = "";
+        String taskId = "";
+        int eventCount = 0;
+
+        String[] blocks = sseBody.split("\n\n");
+        for (String block : blocks) {
+            String[] lines = block.split("\n");
+            for (String line : lines) {
+                if (!line.startsWith("data:")) {
+                    continue;
+                }
+                String json = line.substring(5).trim();
+                if (!StringUtils.hasText(json) || "[DONE]".equalsIgnoreCase(json)) {
+                    continue;
+                }
+                try {
+                    Map<String, Object> eventMap = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+                    eventCount++;
+                    Object event = eventMap.get("event");
+                    if ("message".equals(event)) {
+                        String chunk = String.valueOf(eventMap.getOrDefault("answer", ""));
+                        answerBuilder.append(chunk);
+                    }
+                    if (!StringUtils.hasText(conversationId) && eventMap.get("conversation_id") != null) {
+                        conversationId = String.valueOf(eventMap.get("conversation_id"));
+                    }
+                    if (!StringUtils.hasText(messageId) && eventMap.get("message_id") != null) {
+                        messageId = String.valueOf(eventMap.get("message_id"));
+                    }
+                    if (!StringUtils.hasText(taskId) && eventMap.get("task_id") != null) {
+                        taskId = String.valueOf(eventMap.get("task_id"));
+                    }
+                } catch (IOException ex) {
+                    result.put("parse_error", ex.getMessage());
+                    log.warn("parse chat message sse failed: line={}", line, ex);
+                }
+            }
+        }
+
+        result.put("answer", answerBuilder.toString());
+        result.put("conversation_id", conversationId);
+        result.put("message_id", messageId);
+        result.put("task_id", taskId);
+        result.put("event_count", eventCount);
+        return result;
+    }
+
     private Map<String, Object> parseWorkflowSseResponse(String sseBody) {
         // 创建返回对象。
         Map<String, Object> result = new HashMap<>();

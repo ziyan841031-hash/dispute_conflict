@@ -1,0 +1,122 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>区域施工与活动记录</title>
+  <script src="tailwind-bridge.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body class="clue-page">
+<div class="clue-page-shell">
+  <section class="card clue-page-card">
+    <div class="clue-page-header">
+      <div>
+        <h2>区域施工与活动记录</h2>
+        <p>记录区域施工、活动线索，支持查询、新增、编辑与删除。</p>
+      </div>
+      <button type="button" class="clue-primary-btn" onclick="openClueForm()">新增记录</button>
+    </div>
+
+    <div class="clue-filter-bar">
+      <input id="clueKeyword" type="text" placeholder="搜索线索 / 解读 / 来源">
+      <input id="clueDistrict" type="text" placeholder="区">
+      <input id="clueStreetTown" type="text" placeholder="街道">
+      <select id="clueStatus">
+        <option value="">全部状态</option>
+        <option value="待核实">待核实</option>
+        <option value="处理中">处理中</option>
+        <option value="已完成">已完成</option>
+      </select>
+      <button type="button" class="clue-primary-btn" onclick="loadClueRecords()">查询</button>
+      <button type="button" class="clue-secondary-btn" onclick="resetClueFilters()">重置</button>
+    </div>
+
+    <div class="table-wrap clue-table-wrap">
+      <table class="clue-table">
+        <thead>
+        <tr>
+          <th>区</th>
+          <th>街道</th>
+          <th>线索</th>
+          <th>线索解读</th>
+          <th>线索来源</th>
+          <th>时间</th>
+          <th>状态</th>
+          <th class="action-col">操作</th>
+        </tr>
+        </thead>
+        <tbody id="clueTableBody">
+        <tr><td colspan="8" class="cases-empty">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div id="clueFormModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="clueFormTitle">
+  <div class="modal-content clue-form-modal-content">
+    <div class="case-material-header">
+      <h3 id="clueFormTitle">新增记录</h3>
+      <button type="button" onclick="closeClueForm()">关闭</button>
+    </div>
+    <div class="clue-form-grid">
+      <label>
+        <span>区</span>
+        <input id="clueFormDistrict" type="text" placeholder="请输入区">
+      </label>
+      <label>
+        <span>街道</span>
+        <input id="clueFormStreetTown" type="text" placeholder="请输入街道">
+      </label>
+      <label>
+        <span>线索来源</span>
+        <input id="clueFormSource" type="text" placeholder="请输入线索来源">
+      </label>
+      <label>
+        <span>时间</span>
+        <input id="clueFormTime" type="datetime-local">
+      </label>
+      <label>
+        <span>状态</span>
+        <select id="clueFormStatus">
+          <option value="待核实">待核实</option>
+          <option value="处理中">处理中</option>
+          <option value="已完成">已完成</option>
+        </select>
+      </label>
+      <label class="clue-form-span-2">
+        <span>线索</span>
+        <textarea id="clueFormClue" rows="4" placeholder="请输入线索内容"></textarea>
+      </label>
+      <label class="clue-form-span-2">
+        <span>线索解读</span>
+        <textarea id="clueFormInterpretation" rows="4" placeholder="请输入线索解读"></textarea>
+      </label>
+    </div>
+    <div class="clue-form-actions">
+      <button type="button" class="clue-secondary-btn" onclick="closeClueForm()">取消</button>
+      <button type="button" class="clue-primary-btn" onclick="saveClueRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!--<script src="main.js"></script>-->
+<script src="./javascript/config.js"></script>
+<script src="./javascript/utils.js"></script>
+<script src="./javascript/file-upload.js"></script>
+<script src="./javascript/ingestion.js"></script>
+<script src="./javascript/assistant.js"></script>
+<script src="./javascript/cases.js"></script>
+<script src="./javascript/law-chat.js"></script>
+<script src="./javascript/insight.js"></script>
+<script src="./javascript/clues.js"></script>
+<script src="main.js"></script>
+<script>
+  loadClueRecords();
+</script>
+</body>
+</html>
+

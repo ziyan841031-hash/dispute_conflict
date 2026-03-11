@@ -459,7 +459,8 @@ public class CaseRecordServiceImpl implements CaseRecordService {
     /**
      * 调用千问录音文件识别并返回识别文本。
      */
-    private String runAudioRoleAnalysis(String text) {
+    @Override
+    public String runAudioRoleAnalysis(String text) {
         if (!StringUtils.hasText(text)) {
             return "";
         }
