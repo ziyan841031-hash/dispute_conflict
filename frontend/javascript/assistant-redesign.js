@@ -625,7 +625,8 @@
 
     function renderDetailGrid(items) {
         return '<div class="case-detail-grid">' + items.map(function (item) {
-            return '<div class="case-detail-item"><span class="case-detail-label">' + escapeHtml(item.label) + '</span><span class="case-detail-value">' + escapeHtml(formatDetailValue(item.value)) + '</span></div>';
+            var extraClass = item.wide ? ' case-detail-item-wide' : '';
+            return '<div class="case-detail-item' + extraClass + '"><span class="case-detail-label">' + escapeHtml(item.label) + '</span><span class="case-detail-value">' + escapeHtml(formatDetailValue(item.value)) + '</span></div>';
         }).join('') + '</div>';
     }
 
@@ -641,15 +642,10 @@
         var normalizedAudioUrl = normalizeAudioUrl(safeData.audioFileUrl);
         var hasAudio = Boolean(normalizedAudioUrl);
         var basicItems = [
-            { label: '\u6848\u4ef6\u7f16\u53f7', value: safeData.caseNo },
-            { label: '\u767b\u8bb0\u65f6\u95f4', value: safeData.registerTime },
-            { label: '\u4e8b\u4ef6\u6765\u6e90', value: safeData.eventSource },
+            { label: '\u4e8b\u4ef6\u6765\u6e90', value: safeData.eventSource || safeData.caseSource || safeData.event_source },
             { label: '\u529e\u7406\u8fdb\u5ea6', value: safeData.handlingProgress || safeData.mediationStatus },
-            { label: '\u7ea0\u7eb7\u7c7b\u578b', value: safeData.disputeType },
-            { label: '\u7ea0\u7eb7\u5b50\u7c7b', value: safeData.disputeSubType },
-            { label: '\u7ea0\u7eb7\u5730\u70b9', value: safeData.disputeLocation },
-            { label: '\u98ce\u9669\u7b49\u7ea7', value: safeData.riskLevel },
-            { label: '\u63a5\u5f85\u4eba', value: safeData.receiver }
+            { label: '\u7ea0\u7eb7\u5730\u70b9', value: safeData.disputeLocation, wide: true },
+            { label: '\u767b\u8bb0\u65f6\u95f4', value: safeData.registerTime, wide: true }
         ];
         var partyItems = [
             { label: '\u59d3\u540d', value: safeData.partyName },
