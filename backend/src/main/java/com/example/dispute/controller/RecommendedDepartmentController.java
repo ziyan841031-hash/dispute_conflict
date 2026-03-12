@@ -47,21 +47,21 @@ import java.util.concurrent.CompletableFuture;
 public class RecommendedDepartmentController {
 
     private static final Logger log = LoggerFactory.getLogger(RecommendedDepartmentController.class);
-    private static final String STATUS_ACCEPTED = "\u6848\u4ef6\u5df2\u53d7\u7406";
-    private static final String STATUS_MEDIATING = "\u6848\u4ef6\u8c03\u89e3\u4e2d";
-    private static final String STATUS_MEDIATION_SUCCESS = "\u6848\u4ef6\u8c03\u89e3\u6210\u529f";
-    private static final String STATUS_MEDIATION_FAILURE = "\u6848\u4ef6\u8c03\u89e3\u5931\u8d25";
-    private static final String CONFIRM_TEXT = "\u786e\u8ba4";
-    private static final String EVENT_ACCEPT = "\u6848\u4ef6\u53d7\u7406";
-    private static final String EVENT_RECOMMEND = "\u90e8\u95e8\u63a8\u8350";
-    private static final String EVENT_PUSH = "\u6848\u4ef6\u63a8\u9001";
-    private static final String EVENT_QA = "\u667a\u80fd\u95ee\u7b54";
-    private static final String EVENT_SUPERVISE = "\u6848\u4ef6\u76d1\u7763";
-    private static final String EXPEDITE_TEXT = "\u50ac\u529e";
-    private static final String SUPERVISE_TEXT = "\u7763\u529e";
-    private static final String RESULT_SUCCESS_TEXT = "\u6210\u529f";
-    private static final String RESULT_FAILURE_TEXT = "\u5931\u8d25";
-    private static final DateTimeFormatter CN_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy\u5e74MM\u6708dd\u65e5 HH:mm:ss");
+    private static final String STATUS_ACCEPTED = "案件已受理";
+    private static final String STATUS_MEDIATING = "案件调解中";
+    private static final String STATUS_MEDIATION_SUCCESS = "案件调解成功";
+    private static final String STATUS_MEDIATION_FAILURE = "案件调解失败";
+    private static final String CONFIRM_TEXT = "确认";
+    private static final String EVENT_ACCEPT = "案件受理";
+    private static final String EVENT_RECOMMEND = "部门推荐";
+    private static final String EVENT_PUSH = "案件推送";
+    private static final String EVENT_QA = "智能问答";
+    private static final String EVENT_SUPERVISE = "案件监督";
+    private static final String EXPEDITE_TEXT = "催办";
+    private static final String SUPERVISE_TEXT = "督办";
+    private static final String RESULT_SUCCESS_TEXT = "成功";
+    private static final String RESULT_FAILURE_TEXT = "失败";
+    private static final DateTimeFormatter CN_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss");
     private static final DateTimeFormatter DISPLAY_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final DifyClient difyClient;
@@ -98,7 +98,7 @@ public class RecommendedDepartmentController {
     @PostMapping("/run")
     public ApiResponse<Object> run(@RequestBody DifyInvokeRequest request) {
         if (request == null || request.getCaseId() == null) {
-            throw new IllegalArgumentException("caseId娑撳秷鍏樻稉铏光敄");
+            throw new IllegalArgumentException("caseId参数不能为空");
         }
         log.info("recommended department request: caseId={}, query={}", request.getCaseId(), request.getQuery());
 
@@ -125,7 +125,7 @@ public class RecommendedDepartmentController {
     @PostMapping("/push")
     public ApiResponse<Object> push(@RequestBody DepartmentPushRequest request) {
         if (request == null || request.getCaseId() == null) {
-            throw new IllegalArgumentException("caseId娑撳秷鍏樻稉铏光敄");
+            throw new IllegalArgumentException("caseId参数不能为空");
         }
 
         boolean confirmed = isConfirmQuery(request.getQuery());
@@ -146,7 +146,7 @@ public class RecommendedDepartmentController {
             return ApiResponse.success(responseData);
         }
 
-                if (mediationResult) {
+        if (mediationResult) {
             String mediationStatus = resolveDisputeMediationStatus(request.getQuery());
             Map<String, Object> responseData = invokeDisputeMediationWorkflow(request, mediationStatus);
             CaseDisposalWorkflowRecord record = saveDisputeMediationRecord(request, latestRecord, responseData, mediationStatus);
@@ -166,7 +166,7 @@ public class RecommendedDepartmentController {
             return ApiResponse.success(buildExpediteSuperviseResponseRecord(request, record != null ? record : latestRecord, responseData));
         }
 
-        Map<String, Object> responseData = invokeReservedDialogueWorkflow(request);
+        Map<String, Object> responseData = invokeReservedDialogueWorkflow(request, latestRecord);
         CaseDisposalWorkflowRecord responseRecord = buildDialogueResponseRecord(request, latestRecord, responseData);
         insertDialogueTrace(request.getCaseId(), request.getQuery(), responseRecord == null ? "" : responseRecord.getBriefing());
         return ApiResponse.success(responseRecord == null ? responseData : responseRecord);
@@ -175,13 +175,13 @@ public class RecommendedDepartmentController {
     @GetMapping("/tracking")
     public ApiResponse<List<Map<String, Object>>> listTracking(@RequestParam("caseId") Long caseId) {
         if (caseId == null) {
-            throw new IllegalArgumentException("caseId娑撳秷鍏樻稉铏光敄");
+            throw new IllegalArgumentException("caseId参数不能为空");
         }
         List<CaseDynamicTrackingRecord> records = caseDynamicTrackingRecordMapper.selectList(
                 new LambdaQueryWrapper<CaseDynamicTrackingRecord>()
                         .eq(CaseDynamicTrackingRecord::getCaseId, caseId)
-                        .orderByAsc(CaseDynamicTrackingRecord::getEventTime)
-                        .orderByAsc(CaseDynamicTrackingRecord::getId)
+                        .orderByDesc(CaseDynamicTrackingRecord::getEventTime)
+//                        .orderByAsc(CaseDynamicTrackingRecord::getId)
         );
         List<Map<String, Object>> result = new ArrayList<>();
         for (CaseDynamicTrackingRecord record : records) {
@@ -198,11 +198,19 @@ public class RecommendedDepartmentController {
         return ApiResponse.success(result);
     }
 
+    @GetMapping("/files")
+    public ApiResponse<List<Map<String, Object>>> listFiles(@RequestParam("caseId") Long caseId) {
+        if (caseId == null) {
+            throw new IllegalArgumentException("caseId is required");
+        }
+        return ApiResponse.success(buildCaseFileItems(findLatestRecordByCaseId(caseId)));
+    }
+
     @GetMapping("/briefing-document/download")
     public ResponseEntity<Resource> downloadBriefingDocument(@RequestParam("path") String rawPath) {
         String value = rawPath == null ? "" : rawPath.trim();
         if (!StringUtils.hasText(value)) {
-            throw new IllegalArgumentException("path娑撳秷鍏樻稉铏光敄");
+            throw new IllegalArgumentException("path参数不能为空");
         }
         try {
             Path base = Paths.get("generated-docs", "briefings").toAbsolutePath().normalize();
@@ -232,18 +240,136 @@ public class RecommendedDepartmentController {
         }
     }
 
+    private List<Map<String, Object>> buildCaseFileItems(CaseDisposalWorkflowRecord record) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        if (record == null) {
+            return items;
+        }
+        addCaseFileItem(items, "briefing", "\u6848\u4ef6\u7b80\u62a5", record.getBriefingDocumentPath(), "/recommended-department/briefing-document/download");
+        addCaseFileItem(items, "archive-report", "\u5f52\u6863\u62a5\u544a", record.getArchiveReportPath(), "/dify/archive-report/download");
+        addCaseFileItem(items, "archive-document", "\u8c03\u89e3\u534f\u8bae\u4e66", record.getArchiveDocumentPath(), "/dify/archive-document/download");
+        return items;
+    }
+
+    private void addCaseFileItem(List<Map<String, Object>> items,
+                                 String id,
+                                 String title,
+                                 String pathValue,
+                                 String endpoint) {
+        String path = safeText(pathValue);
+        if (!StringUtils.hasText(path)) {
+            return;
+        }
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", id);
+        item.put("title", title);
+        item.put("fileName", fileNameFromPath(path));
+        item.put("path", path);
+        item.put("endpoint", endpoint);
+        items.add(item);
+    }
+
+    private String fileNameFromPath(String pathValue) {
+        String value = safeText(pathValue);
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String normalized = value.replace('\\', '/');
+        int lastSlashIndex = normalized.lastIndexOf('/');
+        return lastSlashIndex >= 0 ? normalized.substring(lastSlashIndex + 1) : normalized;
+    }
+
     private Object invokeBriefingWorkflow(DepartmentPushRequest request) {
         return difyClient.runWorkflowWithInputs(buildBriefingInputs(request), briefingApiKey, "\u7b80\u62a5\u751f\u6210");
     }
 
-    private Map<String, Object> invokeReservedDialogueWorkflow(DepartmentPushRequest request) {
+    private Map<String, Object> invokeReservedDialogueWorkflow(DepartmentPushRequest request, CaseDisposalWorkflowRecord latestRecord) {
         if (!StringUtils.hasText(departmentPushReservedApiKey)
                 || departmentPushReservedApiKey.startsWith("replace-with")) {
-            log.info("department push reserved workflow not configured, skip remote invocation");
-            return Collections.emptyMap();
+            log.info("department push reserved workflow not configured, use backend fallback reply");
+            return buildLocalDialogueResponse(request, latestRecord);
         }
         Object response = difyClient.runWorkflowWithInputs(buildDialogueInputs(request), departmentPushReservedApiKey, "部门推送预留对话");
-        return asMap(response);
+        Map<String, Object> responseMap = asMap(response);
+        if (StringUtils.hasText(extractDialogueReplyMarkdown(responseMap))) {
+            return responseMap;
+        }
+        log.info("department push reserved workflow returned empty reply, use backend fallback reply");
+        return buildLocalDialogueResponse(request, latestRecord);
+    }
+
+    private Map<String, Object> buildLocalDialogueResponse(DepartmentPushRequest request, CaseDisposalWorkflowRecord latestRecord) {
+        String replyMarkdown = buildLocalDialogueReply(request, latestRecord);
+        Map<String, Object> outputs = new HashMap<>();
+        outputs.put("reply_markdown", replyMarkdown);
+        Map<String, Object> response = new HashMap<>();
+        response.put("outputs", outputs);
+        response.put("answer", replyMarkdown);
+        response.put("source", "backend-fallback");
+        return response;
+    }
+
+    private String buildLocalDialogueReply(DepartmentPushRequest request, CaseDisposalWorkflowRecord latestRecord) {
+        String question = safeText(request == null ? null : request.getQuery());
+        String category = safeText(request == null ? null : request.getCaseCategory());
+        String riskLevel = safeText(request == null ? null : request.getCaseLevel());
+        String currentStage = safeText(request == null ? null : request.getCurrentStage());
+        String department = firstText(
+                request == null ? null : request.getRecommendedDepartment(),
+                latestRecord == null ? null : latestRecord.getRecommendedDepartment(),
+                "相关部门"
+        );
+        String status = firstText(
+                latestRecord == null ? null : latestRecord.getMediationStatus(),
+                currentStage,
+                STATUS_ACCEPTED
+        );
+        String caseSummary = abbreviateText(safeText(request == null ? null : request.getCaseRawInfo()), 120);
+        StringBuilder builder = new StringBuilder();
+        builder.append("已通过案件助手接口收到你的问题“").append(question).append("”。\n\n");
+
+        if (question.contains("风险")) {
+            builder.append("建议优先关注以下风险点：\n")
+                    .append("1. 当前风险等级为“").append(StringUtils.hasText(riskLevel) ? riskLevel : "待核实").append("”，需要持续核验情绪变化和矛盾升级迹象。\n")
+                    .append("2. 当前办理阶段为“").append(StringUtils.hasText(currentStage) ? currentStage : status).append("”，建议同步复核最近动态记录和处置节点。\n")
+                    .append("3. 若出现催办、冲突升级或脆弱群体权益受影响，应及时发起联动处置。");
+        } else if (question.contains("类似案例")) {
+            builder.append("可优先从同类纠纷中比对三项内容：\n")
+                    .append("1. 纠纷类型“").append(StringUtils.hasText(category) ? category : "当前案件分类").append("”的受理路径和处理时长。\n")
+                    .append("2. 相同风险等级案件的调解节奏、沟通话术和留痕方式。\n")
+                    .append("3. 是否存在相近争议焦点、相近部门协同路径和类似结果处置经验。");
+        } else if (question.contains("法律") || question.contains("依据")) {
+            builder.append("建议围绕当前案件先核对以下法律依据方向：\n")
+                    .append("1. 纠纷事实是否完整，权利义务关系是否已经明确。\n")
+                    .append("2. 与“").append(StringUtils.hasText(category) ? category : "当前纠纷类型").append("”直接相关的法律条文、调解规范和程序要求。\n")
+                    .append("3. 当前由“").append(department).append("”跟进时，注意同步保留沟通记录、受理记录和处置依据。");
+        } else if (question.contains("时间线") || question.contains("梳理")) {
+            builder.append("当前案件可先按以下时间线梳理：\n")
+                    .append("1. 案件受理并完成基础信息确认。\n")
+                    .append("2. 系统完成部门推荐，当前协同部门为“").append(department).append("”。\n")
+                    .append("3. 当前办理状态为“").append(status).append("”，建议结合动态跟踪继续补充最新进展。");
+        } else if (question.contains("调解") || question.contains("建议")) {
+            builder.append("当前建议优先由“").append(department).append("”跟进，并重点做好以下动作：\n")
+                    .append("1. 先确认双方核心争议点和最新诉求变化。\n")
+                    .append("2. 结合风险等级安排沟通频次，必要时邀请相关单位协同。\n")
+                    .append("3. 形成阶段性记录，便于后续督办、复盘和归档。");
+        } else {
+            builder.append("结合当前案件信息，建议你优先关注纠纷分类、风险等级、协同部门和最新办理状态，再决定下一步沟通或处置动作。\n")
+                    .append("当前协同部门：").append(department).append("；当前状态：").append(status).append("。");
+        }
+
+        if (StringUtils.hasText(caseSummary)) {
+            builder.append("\n\n案件摘要：").append(caseSummary);
+        }
+        return builder.toString();
+    }
+
+    private String abbreviateText(String text, int maxLength) {
+        String value = safeText(text);
+        if (!StringUtils.hasText(value) || maxLength <= 0 || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength) + "...";
     }
 
     private Map<String, Object> invokeExpediteSuperviseWorkflow(DepartmentPushRequest request) {
@@ -461,7 +587,9 @@ public class RecommendedDepartmentController {
             }
             if (StringUtils.hasText(briefingRaw)) {
                 record.setBriefing(briefingRaw);
-                record.setBriefingDocumentPath(generateBriefingDocument(record.getCaseId(), record.getRecommendedDepartment(), briefingRaw));
+                String s = generateBriefingDocument(record.getCaseId(), record.getRecommendedDepartment(), briefingRaw);
+                log.info("简报文件生成返回：{}",s);
+                record.setBriefingDocumentPath(s);
             }
             if (confirmed) {
                 record.setMediationStatus(STATUS_MEDIATING);
@@ -563,8 +691,8 @@ public class RecommendedDepartmentController {
     }
 
     private CaseDisposalWorkflowRecord buildExpediteSuperviseResponseRecord(DepartmentPushRequest request,
-                                                                             CaseDisposalWorkflowRecord latestRecord,
-                                                                             Map<String, Object> responseData) {
+                                                                            CaseDisposalWorkflowRecord latestRecord,
+                                                                            Map<String, Object> responseData) {
         CaseDisposalWorkflowRecord responseRecord = new CaseDisposalWorkflowRecord();
         if (latestRecord != null) {
             BeanUtils.copyProperties(latestRecord, responseRecord);
@@ -649,6 +777,7 @@ public class RecommendedDepartmentController {
         try {
             return BriefingPdfUtil.generateBriefingPdfPath(caseId, recommendedDepartment, briefingRaw);
         } catch (Exception ex) {
+            log.info("简报异常："+ ex);
             log.warn("generate briefing pdf failed: {}", ex.getMessage(), ex);
             return "";
         }

@@ -164,7 +164,7 @@
         if (list) {
             list.innerHTML = '';
         }
-        appendGovConsultMessage('assistant', '你好，这里是政务平台咨询服务助手。请输入你的问题，我会基于当前会话的最新记录继续解答。');
+        appendGovConsultMessage('assistant', '你好，这里是市民咨询服务助手。请输入你的问题，我会基于当前会话的最新记录继续解答。');
     };
 
     window.onGovConsultInputKeydown = function (event) {

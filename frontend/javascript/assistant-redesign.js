@@ -3,7 +3,7 @@
         eyebrow: '\u6848\u4ef6\u52a9\u624b',
         back: '\u8fd4\u56de\u6848\u4ef6\u5217\u8868',
         pageTitle: '\u6848\u4ef6\u534f\u540c\u63a8\u8fdb',
-        chatTitle: '\u667a\u80fd\u5bf9\u8bdd',
+        chatTitle: '\u8f85\u52a9\u529e\u6848\u52a9\u624b',
         chatDesc: '\u56f4\u7ed5\u6848\u4ef6\u8981\u70b9\u3001\u90e8\u95e8\u63a8\u8fdb\u548c\u98ce\u9669\u8fdb\u884c\u8f85\u52a9\u4ea4\u6d41',
         infoTitle: '\u6848\u4ef6\u4fe1\u606f',
         infoDesc: '\u6848\u4ef6\u57fa\u7840\u4fe1\u606f\u3001\u6848\u4ef6\u8be6\u60c5\u3001\u6848\u4ef6\u8ffd\u8e2a\u4e0e\u6587\u4ef6\u7ba1\u7406',
@@ -58,6 +58,8 @@
         feedbackSubmit: '\u63d0\u4ea4',
         feedbackCancel: '\u53d6\u6d88',
         fileEmpty: '\u5f53\u524d\u6682\u65e0\u53ef\u4e0b\u8f7d\u7684\u6848\u4ef6\u6587\u4ef6\uff0c\u5f85\u6848\u4ef6\u63a8\u8fdb\u5230\u5bf9\u5e94\u9636\u6bb5\u540e\u4f1a\u5728\u8fd9\u91cc\u751f\u6210\u3002',
+        fileLoading: '\u6b63\u5728\u52a0\u8f7d\u6587\u4ef6...',
+        fileLoadFail: '\u6587\u4ef6\u5217\u8868\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
         copy: '\u590d\u5236',
         copied: '\u5df2\u590d\u5236',
         like: '\u70b9\u8d5e',
@@ -75,6 +77,10 @@
         trackingEvents: [],
         trackingLoaded: false,
         trackingLoading: false,
+        fileItems: [],
+        filesLoaded: false,
+        filesLoading: false,
+        fileLoadError: '',
         expandedEventIds: {},
         chatMessages: [],
         isSending: false,
@@ -84,6 +90,13 @@
 
     var assistantMarkdownRenderer = null;
     var PROCESS_STEPS = ['\u90e8\u95e8\u63a8\u8350', '\u6848\u4ef6\u63a8\u9001', '\u6848\u4ef6\u76d1\u7763', '\u6848\u4ef6\u5f52\u6863'];
+    var QUICK_PROMPTS = [
+        { label: '\u98ce\u9669\u70b9\u5206\u6790', prompt: '\u98ce\u9669\u70b9\u5206\u6790' },
+        { label: '\u7c7b\u4f3c\u6848\u4f8b', prompt: '\u7c7b\u4f3c\u6848\u4f8b' },
+        { label: '\u6cd5\u5f8b\u4f9d\u636e', prompt: '\u6cd5\u5f8b\u4f9d\u636e' },
+        { label: '\u8c03\u89e3\u5efa\u8bae', prompt: '\u8c03\u89e3\u5efa\u8bae' },
+        { label: '\u65f6\u95f4\u7ebf\u68b3\u7406', prompt: '\u65f6\u95f4\u7ebf\u68b3\u7406' }
+    ];
     var STATUS = {
         accepted: '\u6848\u4ef6\u5df2\u53d7\u7406',
         mediating: '\u6848\u4ef6\u8c03\u89e3\u4e2d',
@@ -121,6 +134,39 @@
         return String(value == null ? '' : value).trim();
     }
 
+    function getAssistantPrefill(caseId) {
+        if (!caseId || typeof sessionStorage === 'undefined') {
+            return null;
+        }
+        try {
+            var raw = sessionStorage.getItem('assistantPrefill');
+            if (!raw) {
+                return null;
+            }
+            var parsed = JSON.parse(raw);
+            if (!parsed || String(parsed.id || '').trim() !== String(caseId).trim()) {
+                return null;
+            }
+            return parsed;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function applyAssistantPrefill(detail, prefill) {
+        var merged = detail && typeof detail === 'object' ? Object.assign({}, detail) : {};
+        var safePrefill = prefill && typeof prefill === 'object' ? prefill : null;
+        if (!safePrefill) {
+            return merged;
+        }
+        var prefillEventSource = plainText(safePrefill.eventSource || safePrefill.caseSource || safePrefill.event_source);
+        if (prefillEventSource) {
+            merged.eventSource = prefillEventSource;
+            merged.caseSource = prefillEventSource;
+            merged.event_source = prefillEventSource;
+        }
+        return merged;
+    }
     function isAcceptedStatus(status) {
         return plainText(status) === STATUS.accepted;
     }
@@ -246,6 +292,19 @@
         return Array.isArray(json.data) ? json.data : [];
     }
 
+    async function requestCaseFiles(caseId) {
+        if (!caseId) {
+            return [];
+        }
+        var response = await fetch(API_BASE + '/recommended-department/files?caseId=' + encodeURIComponent(caseId));
+        var json = await response.json();
+        var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
+        if (!response.ok || !json || !successCode) {
+            throw new Error((json && json.message) || 'file request failed');
+        }
+        return Array.isArray(json.data) ? json.data : [];
+    }
+
     function normalizeTrackingEvents(items) {
         if (!Array.isArray(items)) {
             return [];
@@ -294,6 +353,68 @@
         }
     }
 
+    function normalizeFileItems(items) {
+        if (!Array.isArray(items)) {
+            return [];
+        }
+        return items.map(function (item, index) {
+            var path = plainText(item && item.path);
+            var endpoint = plainText(item && item.endpoint);
+            var fileName = plainText(item && (item.fileName || item.file_name));
+            var id = plainText(item && item.id) || ('file-' + index);
+            var title = plainText(item && item.title) || fileName || ('\u6587\u4ef6' + (index + 1));
+            if (id === 'archive-document') {
+                title = '\u8c03\u89e3\u534f\u8bae\u4e66';
+            }
+            if (!path || !endpoint) {
+                return null;
+            }
+            return {
+                id: id,
+                title: title,
+                fileName: fileName || title,
+                path: path,
+                endpoint: endpoint
+            };
+        }).filter(function (item) {
+            return !!item;
+        });
+    }
+
+    async function loadFileItems(forceRefresh) {
+        if (!assistantState.caseId) {
+            assistantState.fileItems = [];
+            assistantState.filesLoaded = true;
+            assistantState.fileLoadError = '';
+            renderFileList();
+            return [];
+        }
+        if (assistantState.filesLoading) {
+            return assistantState.fileItems;
+        }
+        if (assistantState.filesLoaded && !forceRefresh) {
+            renderFileList();
+            return assistantState.fileItems;
+        }
+        assistantState.filesLoading = true;
+        assistantState.fileLoadError = '';
+        renderFileList();
+        try {
+            assistantState.fileItems = normalizeFileItems(await requestCaseFiles(assistantState.caseId));
+            assistantState.filesLoaded = true;
+            return assistantState.fileItems;
+        } catch (error) {
+            console.warn('load file items failed', error);
+            assistantState.fileItems = [];
+            assistantState.filesLoaded = true;
+            assistantState.fileLoadError = TEXT.fileLoadFail;
+            return assistantState.fileItems;
+        } finally {
+            assistantState.filesLoading = false;
+            renderFileList();
+        }
+    }
+
     function resolveCurrentStageName(detail) {
         var status = plainText(detail && detail.mediationStatus);
         var steps = resolveProcessSteps(detail);
@@ -323,7 +444,7 @@
 
     function isDisputeMediationQuestion(question) {
         var text = plainText(question);
-        return text.indexOf('\u6210\u529f') >= 0 || text.indexOf('\u5931\u8d25') >= 0;
+        return text === '\u8c03\u89e3\u6210\u529f' || text === '\u8c03\u89e3\u5931\u8d25' || text === '\u6848\u4ef6\u8c03\u89e3\u6210\u529f' || text === '\u6848\u4ef6\u8c03\u89e3\u5931\u8d25';
     }
 
     function updateAssistantSendingState(isSending) {
@@ -848,7 +969,7 @@
         if (archiveDocumentPath) {
             items.push({
                 id: 'archive-document',
-                title: '\u8c03\u89e3\u4e66',
+                title: '\u8c03\u89e3\u534f\u8bae\u4e66',
                 fileName: fileNameFromPath(archiveDocumentPath),
                 path: archiveDocumentPath,
                 endpoint: '/dify/archive-document/download',
@@ -860,9 +981,9 @@
 
     function iconSvg(name) {
         var icons = {
-            copy: '<img src="./img/copy.png" alt="??">',
-            like: '<img src="./img/zan.png" alt="??">',
-            dislike: '<img src="./img/nozan.png" alt="???">',
+            copy: '<img src="./img/copy.png" alt="">',
+            like: '<img src="./img/zan.png" alt="">',
+            dislike: '<img src="./img/nozan.png" alt="">',
             time: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>',
             file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>',
             download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"></path><path d="m8 10 4 4 4-4"></path><path d="M5 20h14"></path></svg>'
@@ -870,23 +991,67 @@
         return icons[name] || '';
     }
 
-    function renderFileList(detail) {
+    function getFileType(name) {
+        var lowerName = String(name || '').toLowerCase();
+        if (/\.pdf$/.test(lowerName)) {
+            return 'pdf';
+        }
+        if (/\.(doc|docx)$/.test(lowerName)) {
+            return 'doc';
+        }
+        if (/\.(jpg|jpeg|png|gif|bmp|webp)$/.test(lowerName)) {
+            return 'image';
+        }
+        return 'file';
+    }
+
+    function fileIconSvg(fileName) {
+        var type = getFileType(fileName);
+        if (type === 'pdf') {
+            return '<span class="assistant-file-type-icon is-pdf" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="2.5" width="18" height="23" rx="2.5" fill="#ffffff" stroke="#111827" stroke-width="1.8"></rect><path d="M6 5.5h12v17H6z" fill="#ef233c"></path><path d="M21 8.5l4-4v17.5a2.5 2.5 0 0 1-2.5 2.5H21z" fill="#ffffff" opacity="0.95"></path><path d="M21 8.5h4" stroke="#111827" stroke-width="1.6" stroke-linecap="round"></path><path d="M6.5 22.5H18" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path></svg></span>';
+        }
+        if (type === 'doc') {
+            return '<span class="assistant-file-type-icon is-doc" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="2.5" width="18" height="23" rx="2.5" fill="#ffffff" stroke="#111827" stroke-width="1.8"></rect><path d="M6 5.5h12v17H6z" fill="#4ea8de"></path><path d="M21 8.5l4-4v17.5a2.5 2.5 0 0 1-2.5 2.5H21z" fill="#ffffff" opacity="0.95"></path><path d="M21 8.5h4" stroke="#111827" stroke-width="1.6" stroke-linecap="round"></path><path d="M8.4 10.2h7.2M8.4 13.4h7.2M8.4 16.6h5.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path></svg></span>';
+        }
+        if (type === 'image') {
+            return '<span class="assistant-file-type-icon is-image" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="4" width="22" height="18" rx="2.5" fill="#fff7cc" stroke="#111827" stroke-width="1.8"></rect><circle cx="20" cy="9" r="2.2" fill="#ffb703"></circle><path d="M7 18l4.2-4.5 3.2 3 2.8-2.6L22 18" stroke="#38b000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M7 18h15" stroke="#38b000" stroke-width="2" stroke-linecap="round"></path></svg></span>';
+        }
+        return '<span class="assistant-file-type-icon is-file" aria-hidden="true">' + iconSvg('file') + '</span>';
+    }
+
+    function fileIconMarkup() {
+        return '<img src="./img/pdf.png" alt="" class="assistant-file-icon-image">';
+    }
+
+    function renderFileList() {
         var root = document.getElementById('assistantFileList');
         var count = document.getElementById('assistantFileCount');
+        var files = assistantState.fileItems || [];
         if (!root) {
             return;
         }
-        var files = buildFileItems(detail);
         if (count) {
             count.textContent = String(files.length);
         }
+        if (assistantState.filesLoading) {
+            root.innerHTML = '<div class="assistant-trace-empty assistant-trace-loading">' + TEXT.fileLoading + '</div>';
+            return;
+        }
+        if (assistantState.fileLoadError) {
+            root.innerHTML = '<div class="assistant-trace-empty">' + escapeHtml(assistantState.fileLoadError) + '</div>';
+            return;
+        }
         if (!files.length) {
-            root.innerHTML = '<div class="assistant-file-empty"><div class="assistant-file-icon">' + iconSvg('file') + '</div><div class="assistant-file-empty-title">\u6682\u65e0\u53ef\u4e0b\u8f7d\u6587\u4ef6</div><div class="assistant-file-empty-text">' + TEXT.fileEmpty + '</div></div>';
+            root.innerHTML = '<div class="assistant-file-empty"><div class="assistant-file-icon-wrap">' + fileIconMarkup() + '</div><div class="assistant-file-empty-title">\u6682\u65e0\u53ef\u4e0b\u8f7d\u6587\u4ef6</div><div class="assistant-file-empty-text">' + TEXT.fileEmpty + '</div></div>';
             return;
         }
         root.innerHTML = files.map(function (item) {
-            return '<button type="button" class="assistant-file-card" data-file-download="' + escapeHtml(item.path) + '" data-file-endpoint="' + escapeHtml(item.endpoint) + '" title="' + escapeHtml(item.fileName) + '">'
-                + '<div class="assistant-file-title">' + escapeHtml(item.title) + '</div>'
+            var displayName = item.title || item.fileName;
+            return '<button type="button" class="assistant-file-card" data-file-download="' + escapeHtml(item.path) + '" data-file-endpoint="' + escapeHtml(item.endpoint) + '" title="\u4e0b\u8f7d ' + escapeHtml(displayName) + '">'
+                + '<span class="assistant-file-icon-wrap">' + fileIconMarkup() + '</span>'
+                + '<span class="assistant-file-main">'
+                + '<span class="assistant-file-title">' + escapeHtml(displayName) + '</span>'
+                + '</span>'
                 + '</button>';
         }).join('');
     }
@@ -894,7 +1059,7 @@
     function renderSideModules(detail) {
         renderCaseDetailPanel(detail);
         renderTrackingList();
-        renderFileList(detail);
+        renderFileList();
         var sideRoot = document.getElementById('assistantSideModules');
         var detailPanel = document.getElementById('assistantDetailPanel');
         var tracePanel = document.getElementById('assistantTracePanel');
@@ -943,6 +1108,32 @@
         return null;
     }
 
+    function removeChatMessage(messageId) {
+        for (var i = 0; i < assistantState.chatMessages.length; i += 1) {
+            if (assistantState.chatMessages[i].id === messageId) {
+                assistantState.chatMessages.splice(i, 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function pushAssistantWaitingMessage() {
+        var id = 'assistant-msg-' + (++assistantState.messageSeq);
+        assistantState.chatMessages.push({
+            id: id,
+            role: 'assistant',
+            content: '',
+            loading: true
+        });
+        renderChat();
+        return id;
+    }
+
+    function renderAssistantWaitingMessage() {
+        return '<span class="assistant-waiting-label"></span>'
+            + '<span class="assistant-waiting-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
+    }
     function formatAssistantMessageTime(value) {
         if (!value) {
             return '';
@@ -963,12 +1154,15 @@
             ? '<div class="assistant-msg-feedback"><div class="assistant-msg-feedback-title">' + TEXT.feedbackTitle + '</div><textarea data-feedback-input="' + escapeHtml(message.id) + '" placeholder="' + escapeHtml(TEXT.feedbackPlaceholder) + '">' + escapeHtml(message.dislikeDraft || '') + '</textarea><div class="assistant-msg-feedback-actions"><button type="button" class="ui-btn ui-btn-secondary" data-feedback-cancel="' + escapeHtml(message.id) + '">' + TEXT.feedbackCancel + '</button><button type="button" class="ui-btn ui-btn-primary" data-feedback-submit="' + escapeHtml(message.id) + '">' + TEXT.feedbackSubmit + '</button></div></div>'
             : '';
         return '<div class="assistant-msg-toolbar">'
-            + '<div class="assistant-msg-actions">'
-            + '<button type="button" class="assistant-msg-action' + (message.copied ? ' is-active' : '') + '" data-msg-action="copy" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(message.copied ? TEXT.copied : TEXT.copy) + '">' + iconSvg('copy') + '</button>'
-            + '<button type="button" class="assistant-msg-action' + (message.liked ? ' is-active' : '') + '" data-msg-action="like" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.like) + '">' + iconSvg('like') + '</button>'
-            + '<button type="button" class="assistant-msg-action' + (dislikeActive ? ' is-active' : '') + '" data-msg-action="dislike" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.dislike) + '">' + iconSvg('dislike') + '</button>'
+            + '<div class="assistant-msg-actions" role="group" aria-label="message actions">'
+            + '<button type="button" class="assistant-msg-action' + (message.copied ? ' is-active' : '') + '" data-msg-action="copy" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(message.copied ? TEXT.copied : TEXT.copy) + '"><span class="assistant-msg-action-icon" aria-hidden="true">' + iconSvg('copy') + '</span></button>'
+            + '<button type="button" class="assistant-msg-action' + (message.liked ? ' is-active' : '') + '" data-msg-action="like" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.like) + '"><span class="assistant-msg-action-icon" aria-hidden="true">' + iconSvg('like') + '</span></button>'
+            + '<button type="button" class="assistant-msg-action' + (dislikeActive ? ' is-active' : '') + '" data-msg-action="dislike" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.dislike) + '"><span class="assistant-msg-action-icon" aria-hidden="true">' + iconSvg('dislike') + '</span></button>'
             + '</div>'
-            + '<span class="assistant-msg-time" title="' + escapeHtml(TEXT.responseTime) + '">' + iconSvg('time') + '<span>' + escapeHtml(formatAssistantMessageTime(message.finishedAt)) + '</span></span>'
+            + '<div class="assistant-msg-time" title="' + escapeHtml(TEXT.responseTime) + '">'
+            + '<span class="assistant-msg-time-icon" aria-hidden="true">' + iconSvg('time') + '</span>'
+            + '<span class="assistant-msg-time-value">' + escapeHtml(formatAssistantMessageTime(message.finishedAt)) + '</span>'
+            + '</div>'
             + '</div>'
             + feedbackHtml;
     }
@@ -1079,14 +1273,7 @@
     }
 
     function shouldTriggerDepartmentPush(detail, question) {
-        var status = plainText(detail && detail.mediationStatus);
-        if (isExpediteSuperviseQuestion(question)) {
-            return true;
-        }
-        if (isDisputeMediationQuestion(question)) {
-            return true;
-        }
-        return !status || isAcceptedStatus(status);
+        return true;
     }
 
     function normalizeAssistantMarkdown(content) {
@@ -1190,15 +1377,18 @@
             return;
         }
         root.innerHTML = assistantState.chatMessages.map(function (message) {
-            var bodyHtml = message.role === 'assistant'
-                ? renderAssistantMarkdown(message.content)
-                : renderUserMessage(message.content);
+            var isWaiting = !!(message && message.loading);
+            var bodyHtml = isWaiting
+                ? renderAssistantWaitingMessage()
+                : (message.role === 'assistant'
+                    ? renderAssistantMarkdown(message.content)
+                    : renderUserMessage(message.content));
             var toolbarHtml = message.role === 'assistant' ? renderAssistantMessageToolbar(message) : '';
-            return '<article class="assistant-msg ' + message.role + '" data-message-id="' + escapeHtml(message.id) + '"><div class="assistant-msg-content">' + bodyHtml + '</div>' + toolbarHtml + '</article>';
+            var contentClass = 'assistant-msg-content' + (isWaiting ? ' is-waiting' : '');
+            return '<article class="assistant-msg ' + message.role + '" data-message-id="' + escapeHtml(message.id) + '"><div class="' + contentClass + '">' + bodyHtml + '</div>' + toolbarHtml + '</article>';
         }).join('');
         scrollAssistantChatToBottom();
     }
-
     function renderQuickActions() {
         var root = document.getElementById('assistantQuickActions');
         if (!root) {
@@ -1212,6 +1402,16 @@
         }
         root.style.display = 'flex';
         root.innerHTML = '<button type="button" class="assistant-status-chip" disabled>' + escapeHtml(statusText) + '</button>';
+    }
+
+    function renderPromptActions() {
+        var root = document.getElementById('assistantPromptActions');
+        if (!root) {
+            return;
+        }
+        root.innerHTML = QUICK_PROMPTS.map(function (item) {
+            return '<button type="button" class="assistant-prompt-chip" data-assistant-prompt="' + escapeHtml(item.prompt) + '">' + escapeHtml(item.label) + '</button>';
+        }).join('');
     }
 
     function openModal(title, bodyHtml) {
@@ -1271,6 +1471,7 @@
     async function sendChatQuestion(questionText) {
         var input = document.getElementById('assistantChatInput');
         var question = plainText(questionText || (input && input.value));
+        var waitingMessageId = '';
         if (!question || assistantState.isSending) {
             return;
         }
@@ -1284,50 +1485,53 @@
             input.value = '';
         }
 
-        if (shouldTriggerDepartmentPush(assistantState.detail, question)) {
-            updateAssistantSendingState(true);
-            try {
-                var confirmed = isConfirmText(question);
-                var pushData = await requestDepartmentPush(assistantState.detail || {}, question);
-                var responseBriefing = plainText(pushData && pushData.briefing);
-                if (pushData && typeof pushData === 'object') {
-                    assistantState.detail = Object.assign({}, assistantState.detail || {}, pushData || {});
-                }
-                assistantState.detail.recommendReason = resolveAssistantRecommendReason(assistantState.detail || {});
-                assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail || {});
-                await loadTrackingEvents(true);
-                renderPage(assistantState.detail || {}, { preserveChat: true });
-                var pushedMessage = !confirmed && responseBriefing
-                    ? responseBriefing
-                    : resolveAssistantInitialMessage(assistantState.detail || {});
-                if (pushedMessage) {
-                    await typeAssistantMessage(pushedMessage, { mode: resolveAssistantTypingMode(assistantState.detail || {}) });
-                }
-            } catch (error) {
-                assistantState.chatMessages.push({
-                    id: 'assistant-msg-' + (++assistantState.messageSeq),
-                    role: 'assistant',
-                    content: TEXT.pushFail,
-                    finishedAt: new Date().toISOString(),
-                    liked: false,
-                    feedbackSubmitted: false,
-                    dislikeOpen: false,
-                    dislikeDraft: '',
-                    copied: false
-                });
-                renderChat();
-            } finally {
-                updateAssistantSendingState(false);
-                if (input) {
-                    input.focus();
-                }
-            }
-            return;
-        }
-
+        waitingMessageId = pushAssistantWaitingMessage();
         updateAssistantSendingState(true);
         try {
-            await typeAssistantMessage(buildAssistantReply(question), { mode: 'char' });
+            var confirmed = isConfirmText(question);
+            var pushData = await requestDepartmentPush(assistantState.detail || {}, question);
+            var responseBriefing = plainText(pushData && pushData.briefing);
+            if (pushData && typeof pushData === 'object') {
+                assistantState.detail = Object.assign({}, assistantState.detail || {}, pushData || {});
+            }
+            assistantState.detail.recommendReason = resolveAssistantRecommendReason(assistantState.detail || {});
+            assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail || {});
+            await loadTrackingEvents(true);
+            renderPage(assistantState.detail || {}, { preserveChat: true });
+            if (assistantState.sideTab === 'files') {
+                await loadFileItems(true);
+            }
+
+            var pushedMessage = !confirmed && responseBriefing
+                ? responseBriefing
+                : (resolveAssistantBriefing(assistantState.detail || {})
+                    || resolveAssistantRecommendReason(assistantState.detail || {})
+                    || resolveAssistantInitialMessage(assistantState.detail || {}));
+
+            if (!pushedMessage) {
+                throw new Error('assistant response empty');
+            }
+
+            if (waitingMessageId && removeChatMessage(waitingMessageId)) {
+                renderChat();
+            }
+            await typeAssistantMessage(pushedMessage, { mode: resolveAssistantTypingMode(assistantState.detail || {}) });
+        } catch (error) {
+            if (waitingMessageId && removeChatMessage(waitingMessageId)) {
+                renderChat();
+            }
+            assistantState.chatMessages.push({
+                id: 'assistant-msg-' + (++assistantState.messageSeq),
+                role: 'assistant',
+                content: TEXT.pushFail,
+                finishedAt: new Date().toISOString(),
+                liked: false,
+                feedbackSubmitted: false,
+                dislikeOpen: false,
+                dislikeDraft: '',
+                copied: false
+            });
+            renderChat();
         } finally {
             updateAssistantSendingState(false);
             if (input) {
@@ -1335,7 +1539,6 @@
             }
         }
     }
-
     function renderPage(detail, options) {
         var title = document.getElementById('assistantPageTitle');
         if (title) {
@@ -1349,33 +1552,42 @@
         renderSideModules(detail);
         renderChat();
         renderQuickActions();
+        renderPromptActions();
     }
 
     async function loadAssistantDetail() {
         var params = new URLSearchParams(window.location.search);
+        var assistantPrefill = null;
         assistantState.caseId = String(params.get('caseId') || '').trim();
         assistantState.trackingLoaded = false;
+        assistantState.fileItems = [];
+        assistantState.filesLoaded = false;
+        assistantState.filesLoading = false;
+        assistantState.fileLoadError = '';
         if (!assistantState.caseId) {
             assistantState.trackingEvents = [];
             assistantState.trackingLoaded = true;
+            assistantState.fileItems = [];
+            assistantState.filesLoaded = true;
             renderPage({ caseId: '-', caseNo: '-', caseText: TEXT.noCase });
             return;
         }
+        assistantPrefill = getAssistantPrefill(assistantState.caseId);
         showAssistantInitLoading(TEXT.initLoading);
         try {
             var response = await fetch(API_BASE + '/cases/assistant-detail?caseId=' + encodeURIComponent(assistantState.caseId));
             var json = await response.json();
-            assistantState.detail = json && json.data ? json.data : { caseId: assistantState.caseId };
+            assistantState.detail = applyAssistantPrefill(json && json.data ? json.data : { caseId: assistantState.caseId }, assistantPrefill);
             try {
                 var workflowData = await requestRecommendedDepartment(assistantState.detail || {});
                 if (workflowData && typeof workflowData === 'object') {
-                    assistantState.detail = Object.assign({}, assistantState.detail || {}, workflowData || {});
+                    assistantState.detail = applyAssistantPrefill(Object.assign({}, assistantState.detail || {}, workflowData || {}), assistantPrefill);
                 }
             } catch (workflowError) {
                 console.warn('request recommended department failed', workflowError);
             }
         } catch (error) {
-            assistantState.detail = { caseId: assistantState.caseId, caseNo: assistantState.caseId, caseText: TEXT.loadFail, factsSummary: TEXT.loadFail };
+            assistantState.detail = applyAssistantPrefill({ caseId: assistantState.caseId, caseNo: assistantState.caseId, caseText: TEXT.loadFail, factsSummary: TEXT.loadFail }, assistantPrefill);
         } finally {
             hideAssistantInitLoading();
         }
@@ -1384,8 +1596,7 @@
         assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail);
         await loadTrackingEvents(true);
         renderPage(assistantState.detail);
-        var initialMessage = resolveAssistantInitialMessage(assistantState.detail);
-        if (initialMessage) {
+        var initialMessage = resolveAssistantInitialMessage(assistantState.detail);        if (initialMessage) {
             await typeAssistantMessage(initialMessage, { mode: resolveAssistantTypingMode(assistantState.detail) });
         }
     }
@@ -1398,6 +1609,7 @@
         var traceRoot = document.getElementById('assistantTraceList');
         var sideRoot = document.getElementById('assistantSideModules');
         var chatRoot = document.getElementById('assistantChatList');
+        var promptRoot = document.getElementById('assistantPromptActions');
 
         if (sendBtn) {
             sendBtn.onclick = function () { sendChatQuestion(); };
@@ -1407,6 +1619,19 @@
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
                     sendChatQuestion();
+                }
+            });
+        }
+        if (promptRoot) {
+            promptRoot.addEventListener('click', function (event) {
+                var target = event.target.closest('[data-assistant-prompt]');
+                if (!target || !input || input.disabled) {
+                    return;
+                }
+                input.value = target.getAttribute('data-assistant-prompt') || '';
+                input.focus();
+                if (typeof input.setSelectionRange === 'function') {
+                    input.setSelectionRange(input.value.length, input.value.length);
                 }
             });
         }
@@ -1435,7 +1660,7 @@
             });
         }
         if (sideRoot) {
-            sideRoot.addEventListener('click', function (event) {
+            sideRoot.addEventListener('click', async function (event) {
                 var tabTarget = event.target.closest('[data-side-tab]');
                 var audioTarget = event.target.closest('[data-case-audio-toggle]');
                 var fileTarget = event.target.closest('[data-file-download]');
@@ -1444,7 +1669,10 @@
                     assistantState.sideTab = nextTab === 'trace' || nextTab === 'files' || nextTab === 'detail' ? nextTab : 'detail';
                     renderSideModules(assistantState.detail || {});
                     if (assistantState.sideTab === 'trace') {
-                        loadTrackingEvents(true);
+                        await loadTrackingEvents(true);
+                    }
+                    if (assistantState.sideTab === 'files') {
+                        await loadFileItems(true);
                     }
                     return;
                 }
@@ -1453,7 +1681,7 @@
                     return;
                 }
                 if (fileTarget) {
-                                        downloadCaseFile(
+                    downloadCaseFile(
                         fileTarget.getAttribute('data-file-download'),
                         fileTarget.getAttribute('data-file-endpoint')
                     );

@@ -1,16 +1,348 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>洞察统计 - 上海区域案件热力</title>
+  <title>洞察统计 - 上海各区案件热力</title>
   <script src="tailwind-bridge.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme.css">
+  <style>
+    html,
+    body.insight-bubble-page {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page {
+      --insight-gap: 16px;
+      --insight-shell-bg: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+      --insight-card-bg: linear-gradient(180deg, #fbfdff 0%, #eff6ff 100%);
+      --insight-border: #dbe6f4;
+      --insight-border-strong: #d1dbe9;
+      --insight-head-height: 76px;
+      --insight-shell-radius: 16px;
+      --insight-card-radius: 14px;
+      --insight-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    body.insight-bubble-page .layout {
+      height: 100vh;
+      height: 100dvh;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page .content {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      padding: 16px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page .insight-bubble-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(410px, 0.98fr);
+      align-items: stretch;
+      gap: var(--insight-gap);
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page .insight-bubble-left,
+    body.insight-bubble-page .insight-bubble-right {
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      padding: 18px;
+      border: 1px solid var(--insight-border-strong);
+      border-radius: var(--insight-shell-radius);
+      background: var(--insight-shell-bg);
+      box-shadow: var(--insight-shadow);
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page .insight-bubble-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.insight-bubble-page .insight-bubble-right {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    body.insight-bubble-page .insight-bubble-head,
+    body.insight-bubble-page .insight-chat-head-card {
+      flex: 0 0 var(--insight-head-height);
+      min-height: var(--insight-head-height);
+      height: var(--insight-head-height);
+      box-sizing: border-box;
+      padding: 14px 18px;
+      border: 1px solid var(--insight-border);
+      border-radius: var(--insight-card-radius);
+      background: var(--insight-card-bg);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+    }
+
+    body.insight-bubble-page .insight-bubble-head {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin: 0 0 14px;
+    }
+
+    body.insight-bubble-page .insight-chat-head-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin: 0;
+    }
+
+    body.insight-bubble-page .insight-bubble-head h2,
+    body.insight-bubble-page .insight-chat-head h3 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+      color: #17385f;
+    }
+
+    body.insight-bubble-page .insight-bubble-head p {
+      margin: 6px 0 0;
+      max-width: 85%;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #5f728c;
+    }
+
+    body.insight-bubble-page .insight-chat-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 999px;
+      background: rgba(15, 91, 168, 0.12);
+      color: #1358a5;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    body.insight-bubble-page .sh-bubble-map-chart {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--insight-border);
+      border-radius: var(--insight-card-radius);
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page .insight-chat-body-card,
+    body.insight-bubble-page .insight-bubble-chat,
+    body.insight-bubble-page .insight-chat-panel-fixed {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      margin: 0;
+      padding: 16px;
+      border: 1px solid var(--insight-border);
+      border-radius: var(--insight-card-radius);
+      background: linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%);
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    body.insight-bubble-page .insight-chat-body-top {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    body.insight-bubble-page .insight-current-query {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+    }
+
+    body.insight-bubble-page .insight-current-query-text {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      max-width: 100%;
+      padding: 0 16px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2c66ee 0%, #0f4fdd 100%);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 12px 26px rgba(44, 102, 238, 0.2);
+    }
+
+    body.insight-bubble-page .insight-chat-log,
+    body.insight-bubble-page .insight-chat-log-modern,
+    body.insight-bubble-page #insightChatLog {
+      flex: 1 1 auto;
+      min-height: 0;
+      margin: 0;
+      padding: 0 10px 0 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      overflow: auto;
+    }
+
+    body.insight-bubble-page .insight-chat-empty {
+      min-height: 100%;
+      border: 1px dashed var(--insight-border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      color: #7a8aa1;
+      font-size: 15px;
+      text-align: center;
+    }
+
+    body.insight-bubble-page .insight-chat-row-docked {
+      flex: 0 0 auto;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--insight-border);
+    }
+
+    body.insight-bubble-page .insight-chat-row-modern {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    body.insight-bubble-page .insight-chat-row-modern input {
+      flex: 1 1 auto;
+      height: 48px;
+      padding: 0 16px;
+      border: 1px solid #cfdced;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      font-size: 15px;
+      color: #40546f;
+    }
+
+    body.insight-bubble-page .insight-chat-row-modern .ui-btn {
+      flex: 0 0 auto;
+      min-width: 120px;
+      height: 48px;
+      border-radius: 14px;
+      padding: 0 20px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1280px) {
+      body.insight-bubble-page .insight-bubble-layout {
+        grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr);
+      }
+    }
+
+    @media (max-width: 1200px) {
+      html,
+      body.insight-bubble-page {
+        height: auto;
+        overflow: auto;
+      }
+
+      body.insight-bubble-page .layout {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+      }
+
+      body.insight-bubble-page .content {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+      }
+
+      body.insight-bubble-page .insight-bubble-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: auto;
+        overflow: visible;
+      }
+
+      body.insight-bubble-page .insight-bubble-left,
+      body.insight-bubble-page .insight-bubble-right {
+        height: auto;
+        min-height: auto;
+        overflow: visible;
+      }
+
+      body.insight-bubble-page .insight-bubble-head,
+      body.insight-bubble-page .insight-chat-head-card {
+        flex-basis: auto;
+        min-height: 96px;
+        height: auto;
+      }
+
+      body.insight-bubble-page .sh-bubble-map-chart {
+        height: 520px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body.insight-bubble-page .content {
+        padding: 12px;
+      }
+
+      body.insight-bubble-page .insight-bubble-left,
+      body.insight-bubble-page .insight-bubble-right {
+        padding: 14px;
+      }
+
+      body.insight-bubble-page .insight-chat-row-modern {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      body.insight-bubble-page .insight-chat-row-modern .ui-btn {
+        width: 100%;
+      }
+
+      body.insight-bubble-page .insight-chat-body-top {
+        justify-content: flex-start;
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="insight-bubble-page">
 <div class="layout">
   <aside class="sidebar">
     <h1>矛盾纠纷预防和化解<br>智能体应用系统</h1>
@@ -19,25 +351,29 @@
     <a href="gov-consult.html">咨询服务</a>
     <a href="cases.html">案件管理</a>
     <a href="stats.html">案件统计</a>
-        <a class="active" href="insight-bubble.html">洞察统计</a>
+    <a class="active" href="insight-bubble.html">洞察统计</a>
   </aside>
   <main class="content">
-    <section class="card insight-bubble-layout">
+    <section class="insight-bubble-layout">
       <div class="insight-bubble-left">
         <div class="insight-bubble-head">
           <h2>上海各区案件数量</h2>
-          <p>基于区域分布与洞察结果联动展示重点区域态势。</p>
+          <p>基于区域分布与洞察结果联动展示重点区域动态趋势。</p>
         </div>
         <div id="shBubbleMapChart" class="sh-bubble-map-chart" aria-label="上海各区案件数量气泡地图"></div>
       </div>
       <div class="insight-bubble-right">
-        <div class="insight-bubble-chat insight-chat-panel insight-chat-panel-fixed">
-          <div class="insight-chat-head insight-chat-head-compact">
-            <div>
-              <h3>洞察分析</h3>
-<!--              <p>结合区域统计与风险分布，持续展示最新分析结果。</p>-->
-            </div>
-            <div class="insight-chat-badge">实时分析</div>
+        <div class="insight-chat-head insight-chat-head-compact insight-chat-head-card">
+          <div>
+            <h3>洞察分析</h3>
+          </div>
+          <div class="insight-chat-badge">实时分析</div>
+        </div>
+        <div class="insight-bubble-chat insight-chat-panel insight-chat-panel-fixed insight-chat-body-card">
+          <div class="insight-chat-body-top">
+<!--            <div class="insight-current-query">-->
+<!--              <span id="insightCurrentQuestion" class="insight-current-query-text">统计各区域案件数量</span>-->
+<!--            </div>-->
           </div>
           <div id="insightChatLog" class="insight-chat-log insight-chat-log-modern"></div>
           <div class="insight-chat-row insight-chat-row-modern insight-chat-row-docked">
@@ -52,8 +388,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@antv/l7@2/dist/l7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@antv/l7-maps@2/dist/l7-maps.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<!--<script charset="utf-8" src="main.js"></script>-->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="./javascript/config.js"></script>
 <script src="./javascript/utils.js"></script>
 <script src="./javascript/file-upload.js"></script>
@@ -67,11 +402,4 @@
 <script>loadDistrictInsightBubble();</script>
 </body>
 </html>
-
-
-
-
-
-
-
 

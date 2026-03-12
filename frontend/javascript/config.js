@@ -1,6 +1,6 @@
 // 基础配置和全局变量
-const API_BASE = 'http://localhost:8288/dispute/api';
-// const API_BASE = 'https://demo.handydata.cn/dispute/api';
+// const API_BASE = 'http://localhost:8288/dispute/api';
+const API_BASE = 'https://demo.handydata.cn/dispute/api';
 
 // 解析状态
 const parseStatus = {

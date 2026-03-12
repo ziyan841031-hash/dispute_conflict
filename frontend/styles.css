@@ -1,4 +1,4 @@
-﻿body, button, input, select, textarea { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+body, button, input, select, textarea { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
 body { margin: 0; background: #f0f3f7; }
 .layout { display: flex; min-height: 100vh; overflow-x: hidden; }
 .sidebar { width: 184px; background: #ffffff; color: #1a1f2e; padding: 20px; flex-shrink: 0; border-right: 1px solid #cdd5df; }
@@ -2980,3 +2980,275 @@ h3,
 
 
 
+
+/* stats insight viewport fit */
+.stats-insight-page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.stats-insight-page .layout {
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.stats-insight-page .content {
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.stats-insight-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-insight-head {
+  flex: 0 0 auto;
+  padding: 0 2px;
+}
+
+.stats-insight-head h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  color: #17385f;
+}
+
+.stats-insight-page .stats-insight-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.stats-insight-page .insight-left {
+  flex: 0 0 68%;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+
+.stats-insight-page .insight-right {
+  flex: 1 1 32%;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.stats-insight-page .sh-map-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+.stats-insight-page .insight-chat-panel {
+  flex: 1 1 60%;
+  min-height: 0;
+  margin-top: 0;
+}
+
+.stats-insight-page .insight-charts {
+  flex: 1 1 40%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.stats-insight-page .insight-charts canvas {
+  display: block;
+  width: 100%;
+}
+
+.stats-insight-page .insight-chat-log,
+.stats-insight-page .insight-chat-log-modern,
+.stats-insight-page .insight-chat-panel,
+.stats-insight-page .insight-charts {
+  min-height: 0;
+}
+
+@media (max-width: 1200px) {
+  .stats-insight-page {
+    height: auto;
+    overflow: auto;
+  }
+
+  .stats-insight-page .layout,
+  .stats-insight-page .content {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .stats-insight-shell {
+    gap: 10px;
+  }
+
+  .stats-insight-page .stats-insight-layout {
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+    flex-direction: column;
+  }
+
+  .stats-insight-page .insight-left,
+  .stats-insight-page .insight-right {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .stats-insight-page .sh-map-chart {
+    height: 520px;
+  }
+}
+/* insight bubble viewport fit */
+.insight-bubble-page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.insight-bubble-page .layout {
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.insight-bubble-page .content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  padding: 18px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.insight-bubble-page .insight-bubble-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(380px, 1fr);
+  align-items: stretch;
+  gap: 18px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.insight-bubble-page .insight-bubble-left,
+.insight-bubble-page .insight-bubble-right {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  align-self: stretch;
+}
+
+.insight-bubble-page .insight-bubble-left {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.insight-bubble-page .insight-bubble-head {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+}
+
+.insight-bubble-page .sh-bubble-map-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+.insight-bubble-page .insight-bubble-right {
+  display: flex;
+  overflow: hidden;
+}
+
+.insight-bubble-page .insight-bubble-chat,
+.insight-bubble-page .insight-chat-panel-fixed {
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.insight-bubble-page .insight-chat-log,
+.insight-bubble-page .insight-chat-log-modern,
+.insight-bubble-page #insightChatLog {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.insight-bubble-page .insight-chat-row-docked {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1200px) {
+  .insight-bubble-page {
+    height: auto;
+    overflow: auto;
+  }
+
+  .insight-bubble-page .layout {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .insight-bubble-page .content {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    padding: 16px;
+  }
+
+  .insight-bubble-page .insight-bubble-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .insight-bubble-page .insight-bubble-left,
+  .insight-bubble-page .insight-bubble-right {
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .insight-bubble-page .sh-bubble-map-chart {
+    height: 520px;
+  }
+}
+/* end insight bubble viewport fit */
