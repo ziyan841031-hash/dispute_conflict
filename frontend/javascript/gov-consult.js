@@ -200,11 +200,11 @@
             const answer = String((data && data.answer) || '').trim();
             clearGovConsultWaitingState(waitingNode);
             const waitingBody = waitingNode && waitingNode.querySelector('.law-agent-msg-body');
-            await typeGovConsultAssistantContent(waitingBody, answer || '????????????????');
+            await typeGovConsultAssistantContent(waitingBody, answer || '暂未获取到有效回复，请稍后再试。');
         } catch (error) {
             clearGovConsultWaitingState(waitingNode);
             const waitingBody = waitingNode && waitingNode.querySelector('.law-agent-msg-body');
-            renderGovConsultAssistantContent(waitingBody, `?????${(error && error.message) || '?????'}`);
+            renderGovConsultAssistantContent(waitingBody, `请求失败：${(error && error.message) || '请稍后重试'}`);
         } finally {
             setGovConsultSendingState(false);
             const list = document.getElementById('govConsultChatList');

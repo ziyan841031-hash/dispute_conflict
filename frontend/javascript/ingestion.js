@@ -1,4 +1,4 @@
-// 案件录入相关函数（文本、Excel、音频）
+﻿// 案件录入相关函数（文本、Excel、音频）
 
 async function requestAudioIngest(formData) {
     const res = await fetchWithTimeout(`${API_BASE}/cases/ingest/audio`, {method: 'POST', body: formData}, AUDIO_INGEST_WAIT_MS);
@@ -278,7 +278,7 @@ function setLoading(type) {
     if (!icon) {
         return;
     }
-    icon.textContent = '?';
+    icon.textContent = '●';
     icon.classList.add('loading');
     icon.classList.remove('done');
 }
@@ -289,7 +289,7 @@ function markDone(type) {
     if (!icon) {
         return;
     }
-    icon.textContent = '?';
+    icon.textContent = '✓';
     icon.classList.add('done');
     icon.classList.remove('loading');
 }
@@ -306,7 +306,7 @@ function refreshOneIcon(type) {
         return;
     }
     if (parseStatus[type]) {
-        icon.textContent = '?';
+        icon.textContent = '✓';
         icon.classList.add('done');
         icon.classList.remove('loading');
     } else {

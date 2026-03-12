@@ -245,9 +245,9 @@ public class RecommendedDepartmentController {
         if (record == null) {
             return items;
         }
-        addCaseFileItem(items, "briefing", "\u6848\u4ef6\u7b80\u62a5", record.getBriefingDocumentPath(), "/recommended-department/briefing-document/download");
-        addCaseFileItem(items, "archive-report", "\u5f52\u6863\u62a5\u544a", record.getArchiveReportPath(), "/dify/archive-report/download");
-        addCaseFileItem(items, "archive-document", "\u8c03\u89e3\u534f\u8bae\u4e66", record.getArchiveDocumentPath(), "/dify/archive-document/download");
+        addCaseFileItem(items, "briefing", "\u6848\u4ef6\u7b80\u62a5", record.getBriefingDocumentPath(), "/recommended-department/briefing-document/download", resolveCaseFileTime(record.getBriefingGeneratedAt(), record.getDiversionCompletedAt(), record.getCreatedAt()));
+        addCaseFileItem(items, "archive-report", "\u5f52\u6863\u62a5\u544a", record.getArchiveReportPath(), "/dify/archive-report/download", resolveCaseFileTime(record.getArchiveReportGeneratedAt(), record.getArchiveCompletedAt(), record.getCreatedAt()));
+        addCaseFileItem(items, "archive-document", "\u8c03\u89e3\u534f\u8bae\u4e66", record.getArchiveDocumentPath(), "/dify/archive-document/download", resolveCaseFileTime(record.getMediationDocumentGeneratedAt(), record.getArchiveCompletedAt(), record.getMediationCompletedAt(), record.getCreatedAt()));
         return items;
     }
 
@@ -255,7 +255,8 @@ public class RecommendedDepartmentController {
                                  String id,
                                  String title,
                                  String pathValue,
-                                 String endpoint) {
+                                 String endpoint,
+                                 LocalDateTime generatedAt) {
         String path = safeText(pathValue);
         if (!StringUtils.hasText(path)) {
             return;
@@ -266,7 +267,21 @@ public class RecommendedDepartmentController {
         item.put("fileName", fileNameFromPath(path));
         item.put("path", path);
         item.put("endpoint", endpoint);
+        item.put("time", generatedAt);
+        item.put("generatedAt", generatedAt);
         items.add(item);
+    }
+
+    private LocalDateTime resolveCaseFileTime(LocalDateTime... candidates) {
+        if (candidates == null) {
+            return null;
+        }
+        for (LocalDateTime candidate : candidates) {
+            if (candidate != null) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private String fileNameFromPath(String pathValue) {
@@ -590,6 +605,9 @@ public class RecommendedDepartmentController {
                 String s = generateBriefingDocument(record.getCaseId(), record.getRecommendedDepartment(), briefingRaw);
                 log.info("简报文件生成返回：{}",s);
                 record.setBriefingDocumentPath(s);
+                if (StringUtils.hasText(s)) {
+                    record.setBriefingGeneratedAt(LocalDateTime.now());
+                }
             }
             if (confirmed) {
                 record.setMediationStatus(STATUS_MEDIATING);

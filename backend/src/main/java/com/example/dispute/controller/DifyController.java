@@ -256,8 +256,16 @@ public class DifyController {
             record.setArchiveSummary(archiveSummary);
             record.setFactsProcess(factsProcess);
             record.setResponsibilitySplit(responsibilitySplit);
-            record.setArchiveReportPath(buildArchiveReportDoc(caseId, archiveSummary, factsProcess, responsibilitySplit));
-            record.setArchiveDocumentPath(buildMediationAgreementDoc(caseRecord, factsProcess, responsibilitySplit));
+            String archiveReportPath = buildArchiveReportDoc(caseId, archiveSummary, factsProcess, responsibilitySplit);
+            String mediationDocumentPath = buildMediationAgreementDoc(caseRecord, factsProcess, responsibilitySplit);
+            record.setArchiveReportPath(archiveReportPath);
+            record.setArchiveDocumentPath(mediationDocumentPath);
+            if (StringUtils.hasText(archiveReportPath)) {
+                record.setArchiveReportGeneratedAt(archiveTime);
+            }
+            if (StringUtils.hasText(mediationDocumentPath)) {
+                record.setMediationDocumentGeneratedAt(archiveTime);
+            }
             record.setArchiveCompletedAt(archiveTime);
             caseDisposalWorkflowRecordMapper.updateById(record);
             ensureArchiveTraceIfAbsent(caseId, buildArchiveTrackingSummary(archiveSummary, factsProcess, responsibilitySplit), archiveTime);

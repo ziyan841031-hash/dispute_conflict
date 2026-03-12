@@ -1,74 +1,74 @@
 ﻿(function () {
     var TEXT = {
-        eyebrow: '\u6848\u4ef6\u52a9\u624b',
-        back: '\u8fd4\u56de\u6848\u4ef6\u5217\u8868',
-        pageTitle: '\u6848\u4ef6\u534f\u540c\u63a8\u8fdb',
-        chatTitle: '\u8f85\u52a9\u529e\u6848\u52a9\u624b',
-        chatDesc: '\u56f4\u7ed5\u6848\u4ef6\u8981\u70b9\u3001\u90e8\u95e8\u63a8\u8fdb\u548c\u98ce\u9669\u8fdb\u884c\u8f85\u52a9\u4ea4\u6d41',
-        infoTitle: '\u6848\u4ef6\u4fe1\u606f',
-        infoDesc: '\u6848\u4ef6\u57fa\u7840\u4fe1\u606f\u3001\u6848\u4ef6\u8be6\u60c5\u3001\u6848\u4ef6\u8ffd\u8e2a\u4e0e\u6587\u4ef6\u7ba1\u7406',
-        send: '\u53d1\u9001',
-        sending: '\u53d1\u9001\u4e2d...',
-        inputPlaceholder: '\u8bf7\u8f93\u5165\u4f60\u60f3\u4e86\u89e3\u7684\u95ee\u9898\uff0c\u4f8b\u5982\uff1a\u5f53\u524d\u98ce\u9669\u70b9\u6709\u54ea\u4e9b\uff1f',
-        detailBtn: '\u6848\u4ef6\u8be6\u60c5',
-        analysisBtn: '\u6848\u4ef6\u7814\u5224',
-        traceTitle: '\u6848\u4ef6\u8ffd\u8e2a',
-        filesTitle: '\u6587\u4ef6\u7ba1\u7406',
-        modalClose: '\u5173\u95ed',
-        noCase: '\u7f3a\u5c11\u6848\u4ef6ID\uff0c\u65e0\u6cd5\u52a0\u8f7d\u8be6\u60c5\u3002',
-        loadFail: '\u6848\u4ef6\u8be6\u60c5\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-        noSummary: '\u6682\u65e0\u6848\u4ef6\u6458\u8981',
-        noText: '\u6682\u65e0\u53ef\u5c55\u793a\u8be6\u60c5',
-        noEmotion: '\u5f85\u8865\u5145',
-        processing: '\u5904\u7406\u4e2d',
-        success: '\u6210\u529f',
-        failed: '\u5931\u8d25',
-        caseOverview: '\u6848\u4ef6\u6982\u8ff0',
-        riskHint: '\u98ce\u9669\u63d0\u793a',
-        deptReason: '\u63a8\u8350\u90e8\u95e8\u4f9d\u636e',
-        nextStep: '\u4e0b\u4e00\u6b65\u52a8\u4f5c',
-        expand: '\u5168\u90e8',
-        collapse: '\u6536\u8d77',
-        traceDetail: '\u8be6\u60c5',
-        currentQuestion: '\u5f53\u524d\u95ee\u9898',
-        assistantMeta: '\u667a\u80fd\u52a9\u624b',
-        summaryMeta: '\u6848\u4ef6\u6458\u8981',
-        detailTitle: '\u6848\u4ef6\u8be6\u60c5',
-        analysisTitle: '\u6848\u4ef6\u7814\u5224',
-        traceDetailTitle: '\u52a8\u6001\u8be6\u60c5',
-        baseInfo: '\u57fa\u7840\u4fe1\u606f',
-        partyInfo: '\u5f53\u4e8b\u4eba\u4fe1\u606f',
-        caseType: '\u6848\u4ef6\u5206\u7c7b',
-        caseRaw: '\u6848\u4ef6\u539f\u6587',
-        emotion: '\u5ba2\u6237\u60c5\u611f\u5206\u6790',
-        factSummary: '\u4e8b\u5b9e\u6458\u8981',
-        judgement: '\u88c1\u91cf\u4f9d\u636e',
-        mediationAdvice: '\u8c03\u89e3\u5efa\u8bae',
-        sidebarTitle: '\u77db\u76fe\u7ea0\u7eb7\u9884\u9632\u548c\u5316\u89e3\n\u667a\u80fd\u4f53\u5e94\u7528\u7cfb\u7edf',
-        navHome: '\u9996\u9875',
-        navTools: '\u667a\u80fd\u4f53\u96c6',
-        navConsult: '\u54a8\u8be2\u670d\u52a1',
-        navCases: '\u6848\u4ef6\u7ba1\u7406',
-        navStats: '\u6848\u4ef6\u7edf\u8ba1',
-        navInsight: '\u6d1e\u5bdf\u7edf\u8ba1',
-        caseMaterialTitle: '\u6848\u4ef6\u8be6\u60c5',
-        initLoading: '\u6b63\u5728\u751f\u6210\u90e8\u95e8\u63a8\u8350...',
-        feedbackTitle: '\u8bf7\u8f93\u5165\u672c\u6b21\u53cd\u9988\u5185\u5bb9',
-        feedbackPlaceholder: '\u4f8b\u5982\uff1a\u8fd9\u6761\u56de\u590d\u8fd8\u9700\u8981\u8865\u5145\u54ea\u4e9b\u4fe1\u606f\uff1f',
-        feedbackSubmit: '\u63d0\u4ea4',
-        feedbackCancel: '\u53d6\u6d88',
-        fileEmpty: '\u5f53\u524d\u6682\u65e0\u53ef\u4e0b\u8f7d\u7684\u6848\u4ef6\u6587\u4ef6\uff0c\u5f85\u6848\u4ef6\u63a8\u8fdb\u5230\u5bf9\u5e94\u9636\u6bb5\u540e\u4f1a\u5728\u8fd9\u91cc\u751f\u6210\u3002',
-        fileLoading: '\u6b63\u5728\u52a0\u8f7d\u6587\u4ef6...',
-        fileLoadFail: '\u6587\u4ef6\u5217\u8868\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-        copy: '\u590d\u5236',
-        copied: '\u5df2\u590d\u5236',
-        like: '\u70b9\u8d5e',
-        dislike: '\u4e0d\u8d5e',
-        responseTime: '\u54cd\u5e94\u5b8c\u6210\u65f6\u95f4',
-        pushFail: '\u90e8\u95e8\u63a8\u9001\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-        traceLoading: '\u6b63\u5728\u52a0\u8f7d\u6848\u4ef6\u52a8\u6001...',
-        traceEmpty: '\u6682\u65e0\u6848\u4ef6\u52a8\u6001',
-        traceSummaryLabel: '\u8be6\u60c5'
+        eyebrow: '案件助手',
+        back: '返回案件列表',
+        pageTitle: '案件协同推进',
+        chatTitle: '辅助办案助手',
+        chatDesc: '围绕案件要点、部门推进和风险进行辅助交流',
+        infoTitle: '案件信息',
+        infoDesc: '案件基础信息、案件详情、案件跟踪与文件管理',
+        send: '发送',
+        sending: '发送中...',
+        inputPlaceholder: '请输入你想了解的问题，例如：当前风险点有哪些？',
+        detailBtn: '案件详情',
+        analysisBtn: '案件研判',
+        traceTitle: '案件跟踪',
+        filesTitle: '文件管理',
+        modalClose: '关闭',
+        noCase: '缺少案件ID，无法加载详情。',
+        loadFail: '案件详情加载失败，请稍后重试。',
+        noSummary: '暂无案件摘要',
+        noText: '暂无不可展示详情',
+        noEmotion: '待补充',
+        processing: '处理中',
+        success: '成功',
+        failed: '失败',
+        caseOverview: '案件概述',
+        riskHint: '风险提示',
+        deptReason: '推荐部门依据',
+        nextStep: '下一步动作',
+        expand: '全部',
+        collapse: '收起',
+        traceDetail: '详情',
+        currentQuestion: '当前问题',
+        assistantMeta: '智能助手',
+        summaryMeta: '案件摘要',
+        detailTitle: '案件详情',
+        analysisTitle: '案件研判',
+        traceDetailTitle: '动态详情',
+        baseInfo: '基础信息',
+        partyInfo: '当事人信息',
+        caseType: '案件分类',
+        caseRaw: '案件原文',
+        emotion: '客户情感分析',
+        factSummary: '事实摘要',
+        judgement: '裁量依据',
+        mediationAdvice: '调解建议',
+        sidebarTitle: '矛盾纠纷预防和化解\n智能体应用系统',
+        navHome: '首页',
+        navTools: '智能工具',
+        navConsult: '咨询服务',
+        navCases: '案件管理',
+        navImport: '案件导入',
+        navInsight: '数据洞察',
+        caseMaterialTitle: '案件详情',
+        initLoading: '正在生成部门推荐...',
+        feedbackTitle: '请输入本次反馈内容',
+        feedbackPlaceholder: '例如：这条回复还需要补充哪些信息？',
+        feedbackSubmit: '提交',
+        feedbackCancel: '取消',
+        fileEmpty: '当前暂无可下载的案件文件，待案件推进到对应阶段后会在这里生成。',
+        fileLoading: '正在加载文件...',
+        fileLoadFail: '文件列表加载失败，请稍后重试。',
+        copy: '复制',
+        copied: '已复制',
+        like: '点赞',
+        dislike: '不赞',
+        responseTime: '响应完成时间',
+        pushFail: '部门推送失败，请稍后重试。',
+        traceLoading: '正在加载案件动态...',
+        traceEmpty: '暂无案件动态',
+        traceSummaryLabel: '详情'
     };
 
     var assistantState = {
@@ -89,26 +89,25 @@
     };
 
     var assistantMarkdownRenderer = null;
-    var PROCESS_STEPS = ['\u90e8\u95e8\u63a8\u8350', '\u6848\u4ef6\u63a8\u9001', '\u6848\u4ef6\u76d1\u7763', '\u6848\u4ef6\u5f52\u6863'];
+    var PROCESS_STEPS = ['部门推荐', '案件派送', '催办/督办', '调解结果', '案件归档'];
     var QUICK_PROMPTS = [
-        { label: '\u98ce\u9669\u70b9\u5206\u6790', prompt: '\u98ce\u9669\u70b9\u5206\u6790' },
-        { label: '\u7c7b\u4f3c\u6848\u4f8b', prompt: '\u7c7b\u4f3c\u6848\u4f8b' },
-        { label: '\u6cd5\u5f8b\u4f9d\u636e', prompt: '\u6cd5\u5f8b\u4f9d\u636e' },
-        { label: '\u8c03\u89e3\u5efa\u8bae', prompt: '\u8c03\u89e3\u5efa\u8bae' },
-        { label: '\u65f6\u95f4\u7ebf\u68b3\u7406', prompt: '\u65f6\u95f4\u7ebf\u68b3\u7406' }
+        { label: '风险点分析', prompt: '风险点分析' },
+        { label: '类似案例', prompt: '类似案例' },
+        { label: '法律依据', prompt: '法律依据' },
+        { label: '调解建议', prompt: '调解建议' },
+        { label: '时间线梳理', prompt: '时间线梳理' }
     ];
     var STATUS = {
-        accepted: '\u6848\u4ef6\u5df2\u53d7\u7406',
-        mediating: '\u6848\u4ef6\u8c03\u89e3\u4e2d',
-        mediatingShort: '\u8c03\u89e3\u4e2d',
-        success: '\u6848\u4ef6\u8c03\u89e3\u6210\u529f',
-        successShort: '\u8c03\u89e3\u6210\u529f',
-        failed: '\u6848\u4ef6\u8c03\u89e3\u5931\u8d25',
-        failedShort: '\u8c03\u89e3\u5931\u8d25',
-        archived: '\u5df2\u5f52\u6863',
-        litigation: '\u8bc9\u8bbc'
+        accepted: '案件已受理',
+        mediating: '案件调解中',
+        mediatingShort: '调解中',
+        success: '案件调解成功',
+        successShort: '调解成功',
+        failed: '案件调解失败',
+        failedShort: '调解失败',
+        archived: '已归档',
+        litigation: '诉讼'
     };
-
     function getMarkdownRenderer() {
         if (!assistantMarkdownRenderer && window.markdownit && typeof window.markdownit === 'function') {
             assistantMarkdownRenderer = window.markdownit({ breaks: true, linkify: true, html: false });
@@ -193,7 +192,7 @@
     function resolveProcessSteps(detail) {
         var steps = PROCESS_STEPS.slice();
         if (isMediationFailureStatus(detail && detail.mediationStatus)) {
-            steps[3] = STATUS.litigation;
+            steps[4] = STATUS.litigation;
         }
         return steps;
     }
@@ -363,6 +362,7 @@
             var fileName = plainText(item && (item.fileName || item.file_name));
             var id = plainText(item && item.id) || ('file-' + index);
             var title = plainText(item && item.title) || fileName || ('\u6587\u4ef6' + (index + 1));
+            var generatedAt = item && (item.generatedAt || item.generated_at || item.time);
             if (id === 'archive-document') {
                 title = '\u8c03\u89e3\u534f\u8bae\u4e66';
             }
@@ -374,7 +374,8 @@
                 title: title,
                 fileName: fileName || title,
                 path: path,
-                endpoint: endpoint
+                endpoint: endpoint,
+                time: generatedAt || ''
             };
         }).filter(function (item) {
             return !!item;
@@ -418,11 +419,17 @@
     function resolveCurrentStageName(detail) {
         var status = plainText(detail && detail.mediationStatus);
         var steps = resolveProcessSteps(detail);
-        if (status === STATUS.archived) {
-            return steps[3];
+        if (detail && detail.archiveCompletedAt) {
+            return steps[4];
         }
-        if (isMediationCompletedStatus(status)) {
-            return steps[3];
+        if (status === STATUS.archived) {
+            return steps[4];
+        }
+        if (isMediationSuccessStatus(status)) {
+            return STATUS.successShort;
+        }
+        if (isMediationFailureStatus(status)) {
+            return steps[4];
         }
         if (Number(detail && detail.expediteSuperviseStatus) === 1) {
             return steps[2];
@@ -464,11 +471,11 @@
         var mapping = {
             assistantSidebarTitle: TEXT.sidebarTitle,
             assistantNavHome: TEXT.navHome,
-            assistantNavTools: TEXT.navTools,
             assistantNavConsult: TEXT.navConsult,
+            assistantNavImport: TEXT.navImport,
             assistantNavCases: TEXT.navCases,
-            assistantNavStats: TEXT.navStats,
             assistantNavInsight: TEXT.navInsight,
+            assistantNavTools: TEXT.navTools,
             assistantEyebrow: TEXT.eyebrow,
             assistantBackLink: TEXT.back,
             assistantPageTitle: TEXT.pageTitle,
@@ -544,10 +551,13 @@
             return { activeStage: 1, completedStage: 1, animatedLine: 1 };
         }
         if (detail.archiveCompletedAt || status === STATUS.archived) {
-            return { activeStage: 4, completedStage: 4, animatedLine: 0 };
+            return { activeStage: 5, completedStage: 5, animatedLine: 0 };
         }
-        if (isMediationCompletedStatus(status)) {
-            return { activeStage: 4, completedStage: 4, animatedLine: 0 };
+        if (isMediationSuccessStatus(status)) {
+            return { activeStage: 5, completedStage: 5, animatedLine: 0 };
+        }
+        if (isMediationFailureStatus(status)) {
+            return { activeStage: 5, completedStage: 5, animatedLine: 0 };
         }
         if (Number(detail && detail.expediteSuperviseStatus) === 1) {
             return { activeStage: 3, completedStage: 3, animatedLine: 3 };
@@ -571,17 +581,34 @@
         }
         var processState = resolveProcessState(detail);
         var processSteps = resolveProcessSteps(detail);
+        var status = plainText(detail && detail.mediationStatus);
+        var highlightResultStages = !!detail && (
+            detail.archiveCompletedAt
+            || status === STATUS.archived
+            || isMediationCompletedStatus(status)
+        );
         var pieces = [];
         for (var i = 0; i < processSteps.length; i += 1) {
             var stepIndex = i + 1;
             var stepClasses = [];
+            var stepLabel = processSteps[i];
             if (stepIndex <= processState.completedStage) {
                 stepClasses.push('is-complete');
             }
             if (stepIndex === processState.activeStage) {
                 stepClasses.push('is-active');
             }
-            pieces.push('<div class="assistant-step ' + stepClasses.join(' ') + '"><span class="assistant-step-num">' + stepIndex + '</span><span class="assistant-step-label">' + escapeHtml(processSteps[i]) + '</span></div>');
+            if (highlightResultStages && (stepIndex === 4 || stepIndex === 5) && stepClasses.indexOf('is-active') === -1) {
+                stepClasses.push('is-active');
+            }
+            if (stepIndex === 4 && stepIndex <= processState.completedStage) {
+                if (isMediationSuccessStatus(status)) {
+                    stepLabel = STATUS.successShort;
+                } else if (isMediationFailureStatus(status)) {
+                    stepLabel = STATUS.failedShort;
+                }
+            }
+            pieces.push('<div class="assistant-step ' + stepClasses.join(' ') + '"><span class="assistant-step-num">' + stepIndex + '</span><span class="assistant-step-label">' + escapeHtml(stepLabel) + '</span></div>');
             if (i < processSteps.length - 1) {
                 var lineIndex = i + 1;
                 var lineClasses = [];
@@ -941,6 +968,21 @@
         return parts[parts.length - 1] || '\u6848\u4ef6\u7b80\u62a5.pdf';
     }
 
+    function formatFileDisplayTime(value) {
+        if (!value) {
+            return '--';
+        }
+        var date = new Date(value);
+        if (isNaN(date.getTime())) {
+            return plainText(value, '--');
+        }
+        return date.getFullYear()
+            + '-' + String(date.getMonth() + 1).padStart(2, '0')
+            + '-' + String(date.getDate()).padStart(2, '0')
+            + ' ' + String(date.getHours()).padStart(2, '0')
+            + ':' + String(date.getMinutes()).padStart(2, '0');
+    }
+
     function buildFileItems(detail) {
         var items = [];
         var briefingPath = plainText(detail && (detail.briefingDocumentPath || detail.briefing_document_path));
@@ -953,7 +995,7 @@
                 fileName: fileNameFromPath(briefingPath),
                 path: briefingPath,
                 endpoint: '/recommended-department/briefing-document/download',
-                time: detail && (detail.diversionCompletedAt || detail.updatedAt || detail.createdAt)
+                time: detail && (detail.briefingGeneratedAt || detail.diversionCompletedAt || detail.updatedAt || detail.createdAt)
             });
         }
         if (archiveReportPath) {
@@ -963,7 +1005,7 @@
                 fileName: fileNameFromPath(archiveReportPath),
                 path: archiveReportPath,
                 endpoint: '/dify/archive-report/download',
-                time: detail && (detail.archiveCompletedAt || detail.updatedAt || detail.createdAt)
+                time: detail && (detail.archiveReportGeneratedAt || detail.archiveCompletedAt || detail.updatedAt || detail.createdAt)
             });
         }
         if (archiveDocumentPath) {
@@ -973,7 +1015,7 @@
                 fileName: fileNameFromPath(archiveDocumentPath),
                 path: archiveDocumentPath,
                 endpoint: '/dify/archive-document/download',
-                time: detail && (detail.archiveCompletedAt || detail.mediationCompletedAt || detail.updatedAt || detail.createdAt)
+                time: detail && (detail.mediationDocumentGeneratedAt || detail.archiveCompletedAt || detail.mediationCompletedAt || detail.updatedAt || detail.createdAt)
             });
         }
         return items;
@@ -1051,6 +1093,7 @@
                 + '<span class="assistant-file-icon-wrap">' + fileIconMarkup() + '</span>'
                 + '<span class="assistant-file-main">'
                 + '<span class="assistant-file-title">' + escapeHtml(displayName) + '</span>'
+                + '<span class="assistant-file-time">生成时间：' + escapeHtml(formatFileDisplayTime(item.time)) + '</span>'
                 + '</span>'
                 + '</button>';
         }).join('');

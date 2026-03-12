@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -19,11 +19,11 @@
       <aside class="sidebar">
         <h1>矛盾纠纷预防和化解<br>智能体应用系统</h1>
         <a href="index.html">首页</a>
-        <a href="smart-tools.html">智能体集</a>
-    <a href="gov-consult.html">咨询服务</a>
+        <a href="gov-consult.html">咨询服务</a>
+        <a href="case-import.html">案件导入</a>
         <a class="active" href="cases.html">案件管理</a>
-        <a href="stats.html">案件统计</a>
-        <a href="insight-bubble.html">洞察统计</a>
+        <a href="insight-bubble.html">数据洞察</a>
+        <a href="smart-tools.html">智能工具</a>
       </aside>
     `;
   }
@@ -238,6 +238,9 @@
       const root = document.getElementById('casesPageRoot');
       if (!root) return;
       root.innerHTML = renderPageShell();
+      if (typeof window.normalizeSidebarNavigation === 'function') {
+        window.normalizeSidebarNavigation();
+      }
       document.addEventListener('click', window.closeCaseActionMenus);
     },
     renderCaseRow,
@@ -245,4 +248,3 @@
     renderPagination
   };
 })();
-

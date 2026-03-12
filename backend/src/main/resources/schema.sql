@@ -186,10 +186,13 @@ CREATE TABLE IF NOT EXISTS case_disposal_workflow_record (
     mediation_advice TEXT,
     briefing TEXT,
     briefing_document_path VARCHAR(512),
+    briefing_generated_at TIMESTAMP,
     archive_completed_at TIMESTAMP,
     archive_summary TEXT,
     archive_document_path VARCHAR(512),
+    mediation_document_generated_at TIMESTAMP,
     archive_report_path VARCHAR(512),
+    archive_report_generated_at TIMESTAMP,
     facts_process TEXT,
     responsibility_split TEXT,
     expedite_supervise_status INTEGER NOT NULL DEFAULT 0,
@@ -239,13 +242,19 @@ ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS briefing TEXT
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS briefing_document_path VARCHAR(512);
 
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS briefing_generated_at TIMESTAMP;
+
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_completed_at TIMESTAMP;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_summary TEXT;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_document_path VARCHAR(512);
 
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS mediation_document_generated_at TIMESTAMP;
+
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_report_path VARCHAR(512);
+
+ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS archive_report_generated_at TIMESTAMP;
 
 ALTER TABLE case_disposal_workflow_record ADD COLUMN IF NOT EXISTS facts_process TEXT;
 
