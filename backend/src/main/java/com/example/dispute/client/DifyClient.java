@@ -219,7 +219,13 @@ public class DifyClient {
         headers.setBearerAuth(currentApiKey);
 
         Map<String, Object> body = new HashMap<>();
-        body.put("inputs", request == null || request.getVariables() == null ? new HashMap<String, Object>() : request.getVariables());
+        Map<String, Object> inputs = request == null || request.getVariables() == null
+                ? new HashMap<String, Object>()
+                : new HashMap<>(request.getVariables());
+        if (request != null && StringUtils.hasText(request.getChangeDepartment())) {
+            inputs.put("change_department", request.getChangeDepartment().trim());
+        }
+        body.put("inputs", inputs);
         body.put("query", request == null ? "" : request.getQuery());
         body.put("response_mode", "streaming");
         body.put("conversation_id", "");

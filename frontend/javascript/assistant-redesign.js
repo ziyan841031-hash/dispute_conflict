@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     var TEXT = {
         eyebrow: '案件助手',
         back: '返回案件列表',
@@ -9,7 +9,7 @@
         infoDesc: '案件基础信息、案件详情、案件跟踪与文件管理',
         send: '发送',
         sending: '发送中...',
-        inputPlaceholder: '请输入你想了解的问题，例如：当前风险点有哪些？',
+        inputPlaceholder: '\u8bf7\u8f93\u5165 \u4f60\u60f3\u4e86\u89e3\u7684\u95ee\u9898...',
         detailBtn: '案件详情',
         analysisBtn: '案件研判',
         traceTitle: '案件跟踪',
@@ -68,7 +68,10 @@
         pushFail: '部门推送失败，请稍后重试。',
         traceLoading: '正在加载案件动态...',
         traceEmpty: '暂无案件动态',
-        traceSummaryLabel: '详情'
+        traceSummaryLabel: '详情',
+        quickActionsTitle: '快捷操作',
+        quickActionsAria: '快捷操作',
+        traceShortcut: '\u6848\u4ef6\u8fdb\u5ea6\u8ffd\u8e2a'
     };
 
     var assistantState = {
@@ -85,17 +88,21 @@
         chatMessages: [],
         isSending: false,
         sideTab: 'detail',
-        messageSeq: 0
+        messageSeq: 0,
+        quickActionsOpen: false,
+        departmentMenuOpen: false,
+        departmentMenuMessageId: '',
+        departmentActionMessageId: ''
     };
 
     var assistantMarkdownRenderer = null;
     var PROCESS_STEPS = ['部门推荐', '案件派送', '催办/督办', '调解结果', '案件归档'];
     var QUICK_PROMPTS = [
-        { label: '风险点分析', prompt: '风险点分析' },
-        { label: '类似案例', prompt: '类似案例' },
-        { label: '法律依据', prompt: '法律依据' },
-        { label: '调解建议', prompt: '调解建议' },
-        { label: '时间线梳理', prompt: '时间线梳理' }
+        { label: '风险点分析', prompt: '风险点分析', description: '识别当前案件潜在风险', icon: 'risk', tone: 'risk' },
+        { label: '类似案例', prompt: '类似案例', description: '检索相似案件供参考', icon: 'case', tone: 'case' },
+        { label: '法律依据', prompt: '法律依据', description: '查找相关法律法规条文', icon: 'law', tone: 'law' },
+        { label: '调解建议', prompt: '调解建议', description: '生成调解方案与话术', icon: 'mediation', tone: 'mediation' },
+        { label: '时间线梳理', prompt: '时间线梳理', description: '整理案件关键时间节点', icon: 'timeline', tone: 'timeline' }
     ];
     var STATUS = {
         accepted: '案件已受理',
@@ -133,6 +140,106 @@
         return String(value == null ? '' : value).trim();
     }
 
+    function renderPromptToggleIcon() {
+        var iconSrc = assistantState.quickActionsOpen ? './img/selected.png' : './img/selectedBefore.png';
+        return '<img class="assistant-prompt-toggle-image" src="' + iconSrc + '" alt="" aria-hidden="true">';
+    }
+
+    function renderSendButtonIcon(isSending) {
+        if (isSending) {
+            return '<span class="assistant-send-icon assistant-send-icon-spinner" aria-hidden="true"></span>';
+        }
+        return ''
+            + '<span class="assistant-send-icon" aria-hidden="true">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+            + '<path d="M4.75 11.5 19 5.25l-4.95 13.5-2.55-4.75L4.75 11.5Z"></path>'
+            + '<path d="M11.5 14 19 5.25"></path>'
+            + '</svg>'
+            + '</span>';
+    }
+
+    function renderPromptCardArrow() {
+        return ''
+            + '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            + '<path d="m7 4 6 6-6 6"></path>'
+            + '</svg>';
+    }
+
+    function renderPromptCardIcon(type) {
+        if (type === 'risk') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M12 3.5 20.25 18a1.5 1.5 0 0 1-1.31 2.25H5.06A1.5 1.5 0 0 1 3.75 18L12 3.5Z"></path>'
+                + '<path d="M12 9v4.2"></path>'
+                + '<circle cx="12" cy="17" r="1"></circle>'
+                + '</svg>';
+        }
+        if (type === 'case') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M3.75 8.25A2.25 2.25 0 0 1 6 6h4.4l1.85 2.1H18A2.25 2.25 0 0 1 20.25 10.35v6.9A2.25 2.25 0 0 1 18 19.5H6a2.25 2.25 0 0 1-2.25-2.25Z"></path>'
+                + '</svg>';
+        }
+        if (type === 'law') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M12 4v14.5"></path>'
+                + '<path d="M7 7h10"></path>'
+                + '<path d="M7.4 7 5 11.25h4.8L7.4 7Z"></path>'
+                + '<path d="M16.6 7 14.2 11.25H19L16.6 7Z"></path>'
+                + '<path d="M8.75 19.5h6.5"></path>'
+                + '</svg>';
+        }
+        if (type === 'mediation') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M7.25 6.25h5.5A3.25 3.25 0 0 1 16 9.5v1A3.25 3.25 0 0 1 12.75 13.75H10l-3 2v-2H7.25A3.25 3.25 0 0 1 4 10.5v-1a3.25 3.25 0 0 1 3.25-3.25Z"></path>'
+                + '<path d="M14.5 11.25h2.25A3.25 3.25 0 0 1 20 14.5v1A3.25 3.25 0 0 1 16.75 18.75H15.5l-2.5 1.75v-1.75"></path>'
+                + '</svg>';
+        }
+        return ''
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            + '<rect x="4" y="5.5" width="16" height="14" rx="2.6"></rect>'
+            + '<path d="M8 3.75v3.5"></path>'
+            + '<path d="M16 3.75v3.5"></path>'
+            + '<path d="M4 9.5h16"></path>'
+            + '<path d="M8 13h2"></path>'
+            + '<path d="M12 13h2"></path>'
+            + '<path d="M8 16.5h2"></path>'
+            + '<path d="M12 16.5h2"></path>'
+            + '</svg>';
+    }
+
+    function syncComposerControls() {
+        var sendBtn = document.getElementById('assistantChatSendBtn');
+        var input = document.getElementById('assistantChatInput');
+        var promptToggleBtn = document.getElementById('assistantPromptToggleBtn');
+        var traceShortcutBtn = document.getElementById('assistantTraceShortcutBtn');
+        var promptRoot = document.getElementById('assistantPromptActions');
+        var hasInputValue = !!(input && plainText(input.value));
+        if (sendBtn) {
+            sendBtn.innerHTML = renderSendButtonIcon(assistantState.isSending);
+            sendBtn.setAttribute('aria-label', assistantState.isSending ? TEXT.sending : TEXT.send);
+            sendBtn.disabled = !!assistantState.isSending;
+            sendBtn.classList.toggle('is-ready', hasInputValue && !assistantState.isSending);
+        }
+        if (promptToggleBtn) {
+            promptToggleBtn.innerHTML = renderPromptToggleIcon();
+            promptToggleBtn.classList.toggle('is-open', !!assistantState.quickActionsOpen);
+            promptToggleBtn.setAttribute('aria-expanded', assistantState.quickActionsOpen ? 'true' : 'false');
+            promptToggleBtn.setAttribute('aria-label', TEXT.quickActionsAria);
+            promptToggleBtn.disabled = !!assistantState.isSending;
+        }
+        if (promptRoot) {
+            promptRoot.classList.toggle('is-open', !!assistantState.quickActionsOpen);
+            promptRoot.setAttribute('aria-hidden', assistantState.quickActionsOpen ? 'false' : 'true');
+        }
+    }
+
+    function setPromptActionsOpen(isOpen) {
+        assistantState.quickActionsOpen = !!isOpen && !assistantState.isSending;
+        syncComposerControls();
+    }
     function getAssistantPrefill(caseId) {
         if (!caseId || typeof sessionStorage === 'undefined') {
             return null;
@@ -455,16 +562,15 @@
     }
 
     function updateAssistantSendingState(isSending) {
-        var sendBtn = document.getElementById('assistantChatSendBtn');
         var input = document.getElementById('assistantChatInput');
         assistantState.isSending = !!isSending;
-        if (sendBtn) {
-            sendBtn.disabled = !!isSending;
-            sendBtn.textContent = isSending ? TEXT.sending : TEXT.send;
+        if (assistantState.isSending) {
+            assistantState.quickActionsOpen = false;
         }
         if (input) {
             input.disabled = !!isSending;
         }
+        syncComposerControls();
     }
 
     function applyStaticText() {
@@ -483,7 +589,7 @@
             assistantChatDesc: TEXT.chatDesc,
             assistantInfoTitle: TEXT.infoTitle,
             assistantInfoDesc: TEXT.infoDesc,
-            assistantChatSendBtn: TEXT.send,
+            assistantTraceShortcutBtn: TEXT.traceShortcut,
             assistantDetailTitle: TEXT.detailTitle,
             assistantTraceTitle: TEXT.traceTitle,
             assistantFilesTitle: TEXT.filesTitle,
@@ -504,9 +610,15 @@
             node.textContent = mapping[id];
         });
         var input = document.getElementById('assistantChatInput');
+        var promptToggleBtn = document.getElementById('assistantPromptToggleBtn');
         if (input) {
             input.placeholder = TEXT.inputPlaceholder;
         }
+        if (promptToggleBtn) {
+            promptToggleBtn.setAttribute('aria-label', TEXT.quickActionsAria);
+        }
+        renderPromptActions();
+        syncComposerControls();
         document.title = TEXT.eyebrow;
     }
 
@@ -1124,9 +1236,22 @@
         filePanel.classList.toggle('is-active', activeTab === 'files');
     }
 
+    async function openAssistantTraceShortcut() {
+        assistantState.sideTab = 'trace';
+        renderSideModules(assistantState.detail || {});
+        await loadTrackingEvents(true);
+        var tracePanel = document.getElementById('assistantTracePanel');
+        if (tracePanel && typeof tracePanel.scrollIntoView === 'function') {
+            tracePanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+
     function seedChat() {
         assistantState.chatMessages = [];
         assistantState.messageSeq = 0;
+        assistantState.departmentMenuOpen = false;
+        assistantState.departmentMenuMessageId = '';
+        assistantState.departmentActionMessageId = '';
     }
 
     function scrollAssistantChatToBottom() {
@@ -1341,12 +1466,14 @@
 
     async function typeAssistantMessage(content, options) {
         var root = document.getElementById('assistantChatList');
+        var messageMeta = options && options.messageMeta && typeof options.messageMeta === 'object' ? options.messageMeta : null;
+        var message = null;
         if (!root) {
-            return;
+            return '';
         }
         var safeContent = normalizeAssistantMarkdown(content);
         if (!safeContent) {
-            return;
+            return '';
         }
         var mode = options && options.mode === 'line' ? 'line' : 'char';
         var wrapper = document.createElement('article');
@@ -1379,7 +1506,7 @@
 
         body.classList.remove('is-typing');
         body.innerHTML = renderAssistantMarkdown(safeContent);
-        assistantState.chatMessages.push({
+        message = Object.assign({
             id: 'assistant-msg-' + (++assistantState.messageSeq),
             role: 'assistant',
             content: safeContent,
@@ -1389,8 +1516,10 @@
             dislikeOpen: false,
             dislikeDraft: '',
             copied: false
-        });
+        }, messageMeta || {});
+        assistantState.chatMessages.push(message);
         renderChat();
+        return message.id;
     }
 
     function buildAssistantReply(question) {
@@ -1452,9 +1581,19 @@
         if (!root) {
             return;
         }
-        root.innerHTML = QUICK_PROMPTS.map(function (item) {
-            return '<button type="button" class="assistant-prompt-chip" data-assistant-prompt="' + escapeHtml(item.prompt) + '">' + escapeHtml(item.label) + '</button>';
-        }).join('');
+        root.innerHTML = '<div class="assistant-prompt-actions-head">' + escapeHtml(TEXT.quickActionsTitle) + '</div>'
+            + QUICK_PROMPTS.map(function (item) {
+                return ''
+                    + '<button type="button" class="assistant-prompt-card is-tone-' + escapeHtml(item.tone || 'default') + '" data-assistant-prompt="' + escapeHtml(item.prompt) + '">'
+                    + '<span class="assistant-prompt-card-icon" aria-hidden="true">' + renderPromptCardIcon(item.icon) + '</span>'
+                    + '<span class="assistant-prompt-card-body">'
+                    + '<span class="assistant-prompt-card-title">' + escapeHtml(item.label) + '</span>'
+                    + '<span class="assistant-prompt-card-desc">' + escapeHtml(item.description || '') + '</span>'
+                    + '</span>'
+                    + '<span class="assistant-prompt-card-arrow" aria-hidden="true">' + renderPromptCardArrow() + '</span>'
+                    + '</button>';
+            }).join('');
+        syncComposerControls();
     }
 
     function openModal(title, bodyHtml) {
@@ -1527,6 +1666,7 @@
         if (input) {
             input.value = '';
         }
+        setPromptActionsOpen(false);
 
         waitingMessageId = pushAssistantWaitingMessage();
         updateAssistantSendingState(true);
@@ -1630,6 +1770,7 @@
                 console.warn('request recommended department failed', workflowError);
             }
         } catch (error) {
+            console.warn('load assistant detail failed', error);
             assistantState.detail = applyAssistantPrefill({ caseId: assistantState.caseId, caseNo: assistantState.caseId, caseText: TEXT.loadFail, factsSummary: TEXT.loadFail }, assistantPrefill);
         } finally {
             hideAssistantInitLoading();
@@ -1639,8 +1780,13 @@
         assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail);
         await loadTrackingEvents(true);
         renderPage(assistantState.detail);
-        var initialMessage = resolveAssistantInitialMessage(assistantState.detail);        if (initialMessage) {
-            await typeAssistantMessage(initialMessage, { mode: resolveAssistantTypingMode(assistantState.detail) });
+        var initialMessage = resolveAssistantInitialMessage(assistantState.detail);
+        if (initialMessage) {
+            await typeAssistantMessage(initialMessage, {
+                mode: resolveAssistantTypingMode(assistantState.detail),
+                attachDepartmentActions: shouldShowAssistantDepartmentActions(assistantState.detail || {}),
+                departmentActionDetail: assistantState.detail || {}
+            });
         }
     }
 
@@ -1653,15 +1799,38 @@
         var sideRoot = document.getElementById('assistantSideModules');
         var chatRoot = document.getElementById('assistantChatList');
         var promptRoot = document.getElementById('assistantPromptActions');
+        var promptToggleBtn = document.getElementById('assistantPromptToggleBtn');
+        var traceShortcutBtn = document.getElementById('assistantTraceShortcutBtn');
 
         if (sendBtn) {
             sendBtn.onclick = function () { sendChatQuestion(); };
         }
+        if (traceShortcutBtn) {
+            traceShortcutBtn.addEventListener('click', function () {
+                openAssistantTraceShortcut();
+            });
+        }
+        if (promptToggleBtn) {
+            promptToggleBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (assistantState.isSending) {
+                    return;
+                }
+                setPromptActionsOpen(!assistantState.quickActionsOpen);
+            });
+        }
         if (input) {
+            input.addEventListener('input', function () {
+                syncComposerControls();
+            });
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
                     sendChatQuestion();
+                }
+                if (event.key === 'Escape' && assistantState.quickActionsOpen) {
+                    setPromptActionsOpen(false);
                 }
             });
         }
@@ -1672,12 +1841,28 @@
                     return;
                 }
                 input.value = target.getAttribute('data-assistant-prompt') || '';
+                setPromptActionsOpen(false);
                 input.focus();
                 if (typeof input.setSelectionRange === 'function') {
                     input.setSelectionRange(input.value.length, input.value.length);
                 }
             });
         }
+        document.addEventListener('click', function (event) {
+            if (!assistantState.quickActionsOpen) {
+                return;
+            }
+            var target = event.target;
+            if ((promptRoot && promptRoot.contains(target)) || (promptToggleBtn && promptToggleBtn.contains(target))) {
+                return;
+            }
+            setPromptActionsOpen(false);
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && assistantState.quickActionsOpen) {
+                setPromptActionsOpen(false);
+            }
+        });
         if (modalClose) {
             modalClose.onclick = closeModal;
         }
@@ -1822,6 +2007,493 @@
             });
         }
     }
+
+    /* assistant department push actions */
+    TEXT.confirmPushPrefix = '\u786e\u8ba4\u63a8\u9001\u81f3';
+    TEXT.switchDepartment = '\u66f4\u6362\u90e8\u95e8';
+    TEXT.switchDepartmentAria = '\u66f4\u6362\u63a8\u9001\u90e8\u95e8';
+    TEXT.departmentMenuAria = '\u53ef\u9009\u63a8\u9001\u90e8\u95e8';
+    TEXT.switchDepartmentLoading = '\u6b63\u5728\u91cd\u65b0\u751f\u6210\u90e8\u95e8\u63a8\u8350...';
+    TEXT.switchDepartmentFail = '\u66f4\u6362\u90e8\u95e8\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002';
+    TEXT.committeeDepartment = '\u4eba\u6c11\u8c03\u89e3\u59d4\u5458\u4f1a/\u884c\u4e1a\u4e13\u4e1a\u8c03\u89e3\u59d4\u5458\u4f1a';
+    TEXT.hrssDepartment = '\u4eba\u793e\u90e8\u95e8';
+    TEXT.housingDepartment = '\u4f4f\u5efa\u90e8\u95e8';
+    TEXT.policeDepartment = '\u516c\u5b89\u90e8\u95e8';
+    TEXT.environmentDepartment = '\u751f\u6001\u73af\u5883\u90e8\u95e8';
+
+    assistantState.departmentMenuOpen = false;
+    assistantState.selectedDepartment = plainText(assistantState.selectedDepartment || '');
+    assistantState.activeQuickPrompt = plainText(assistantState.activeQuickPrompt || '');
+    assistantState.departmentActionClickBound = false;
+    assistantState.departmentActionOutsideBound = false;
+    assistantState.promptSelectionClickBound = false;
+    assistantState.promptSelectionInputBound = false;
+
+    buildRecommendedDepartmentPayload = function (detail, options) {
+        var safeOptions = options && typeof options === "object" ? options : {};
+        var changeDepartment = plainText(safeOptions.changeDepartment || safeOptions.change_department);
+        var payload = {
+            caseId: assistantState.caseId ? Number(assistantState.caseId) : null,
+            query: '1',
+            caseSummary: plainText(detail && (detail.factsSummary || detail.caseSummary || detail.caseSmartSummary || detail.summaryText || detail.caseText)),
+            variables: {
+                dispute_text: detail && detail.factsSummary ? detail.factsSummary : '',
+                category_level_1: detail && detail.disputeType ? detail.disputeType : '',
+                category_level_2: detail && detail.disputeSubType ? detail.disputeSubType : '',
+                change_department: changeDepartment
+            }
+        };
+        if (changeDepartment) {
+            payload.changeDepartment = changeDepartment;
+        }
+        return payload;
+    };
+
+    requestRecommendedDepartment = async function (detail, options) {
+        var payload = buildRecommendedDepartmentPayload(detail, options);
+        if (!payload.caseId) {
+            return null;
+        }
+        var response = await fetch(API_BASE + '/recommended-department/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        var json = await response.json();
+        var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
+        if (!response.ok || !json || !successCode) {
+            throw new Error((json && json.message) || 'recommended department request failed');
+        }
+        return json.data || null;
+    };
+
+    function resolveQuickPromptSelection(value) {
+        var text = plainText(value);
+        for (var i = 0; i < QUICK_PROMPTS.length; i += 1) {
+            if (plainText(QUICK_PROMPTS[i].prompt) === text) {
+                return QUICK_PROMPTS[i].prompt;
+            }
+        }
+        return '';
+    }
+
+    function syncPromptActionSelection() {
+        var root = document.getElementById("assistantPromptActions");
+        if (!root) {
+            return;
+        }
+        var cards = root.querySelectorAll("[data-assistant-prompt]");
+        for (var i = 0; i < cards.length; i += 1) {
+            var promptValue = plainText(cards[i].getAttribute("data-assistant-prompt"));
+            cards[i].classList.toggle("is-selected", !!assistantState.activeQuickPrompt && promptValue === assistantState.activeQuickPrompt);
+        }
+    }
+
+    function setAssistantActiveQuickPrompt(promptValue) {
+        assistantState.activeQuickPrompt = resolveQuickPromptSelection(promptValue);
+        syncPromptActionSelection();
+    }
+
+    function renderDepartmentActionIcon(type) {
+        if (type === "confirm") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4.5\" y=\"4.5\" width=\"15\" height=\"15\" rx=\"3.2\"></rect><path d=\"m8.4 12.3 2.35 2.35 4.95-5.25\"></path></svg>";
+        }
+        if (type === "switch") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 7h9.5\"></path><path d=\"m14.5 4 3-4-3-4\" transform=\"translate(0 8)\"></path><path d=\"M16 17H6.5\"></path><path d=\"m9.5 4-3 4 3 4\" transform=\"translate(0 8)\"></path></svg>";
+        }
+        if (type === "caretUp") {
+            return "<svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m4 12 6-6 6 6\"></path></svg>";
+        }
+        if (type === "caretDown") {
+            return "<svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m4 8 6 6 6-6\"></path></svg>";
+        }
+        if (type === "optionArrow") {
+            return "<svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 4 6 6-6 6\"></path></svg>";
+        }
+        if (type === "committee") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"8\" cy=\"9\" r=\"2.3\"></circle><circle cx=\"16\" cy=\"9\" r=\"2.3\"></circle><path d=\"M4.5 18a3.8 3.8 0 0 1 7 0\"></path><path d=\"M12.5 18a3.8 3.8 0 0 1 7 0\"></path></svg>";
+        }
+        if (type === "hrss") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"7\" width=\"14\" height=\"11\" rx=\"2.4\"></rect><path d=\"M9 7V5.5h6V7\"></path><path d=\"M5 11.5h14\"></path></svg>";
+        }
+        if (type === "housing") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.75 19.25h14.5\"></path><path d=\"M7.5 19.25V9.5l4.5-3.5v13.25\"></path><path d=\"M12 8.25h4.5v11\"></path><path d=\"M8.9 12h1.2\"></path><path d=\"M13.9 12h1.2\"></path><path d=\"M13.9 15h1.2\"></path></svg>";
+        }
+        if (type === "police") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 14.5 8.75 10h6.5L17 14.5\"></path><path d=\"M5 14.5h14v2.25A1.75 1.75 0 0 1 17.25 18.5H6.75A1.75 1.75 0 0 1 5 16.75Z\"></path><circle cx=\"8.2\" cy=\"17.25\" r=\"1\"></circle><circle cx=\"15.8\" cy=\"17.25\" r=\"1\"></circle><path d=\"M9.5 10V8.75h5V10\"></path></svg>";
+        }
+        if (type === "environment") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 19.5c0-5.2 2.4-9.45 6.5-12.5 0 6.25-2.25 10.55-6.5 12.5Z\"></path><path d=\"M12 19.5C7.75 17.55 5.5 13.25 5.5 7c4.1 3.05 6.5 7.3 6.5 12.5Z\"></path><path d=\"M12 19.5V8.5\"></path></svg>";
+        }
+        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"3\"></rect><path d=\"M9 12h6\"></path><path d=\"M12 9v6\"></path></svg>";
+    }
+
+    function resolveAssistantDepartmentKey(name) {
+        var text = plainText(name);
+        if (!text) { return 'generic'; }
+        if (text.indexOf('\u8c03\u89e3\u59d4\u5458\u4f1a') >= 0) { return 'committee'; }
+        if (text.indexOf('\u4eba\u793e') >= 0) { return 'hrss'; }
+        if (text.indexOf('\u4f4f\u5efa') >= 0) { return 'housing'; }
+        if (text.indexOf('\u516c\u5b89') >= 0) { return 'police'; }
+        if (text.indexOf('\u751f\u6001\u73af\u5883') >= 0) { return 'environment'; }
+        return 'generic';
+    }
+
+    function syncAssistantSelectedDepartment(detail) {
+        var nextDepartment = plainText(detail && (detail.recommendedDepartment || detail.recommended_department));
+        assistantState.selectedDepartment = nextDepartment;
+        if (!nextDepartment) {
+            assistantState.departmentMenuOpen = false;
+        }
+    }
+
+    function resolveAssistantSelectedDepartment(detail) {
+        return plainText(assistantState.selectedDepartment || (detail && (detail.recommendedDepartment || detail.recommended_department)) || '');
+    }
+
+    function resolveAssistantDepartmentOptions(detail) {
+        var currentDepartment = resolveAssistantSelectedDepartment(detail);
+        var fixedDepartments = [
+            TEXT.committeeDepartment,
+            TEXT.hrssDepartment,
+            TEXT.housingDepartment,
+            TEXT.policeDepartment,
+            TEXT.environmentDepartment
+        ];
+        var names = [];
+        var seen = {};
+        function appendDepartment(name) {
+            var safeName = plainText(name);
+            if (!safeName || seen[safeName]) {
+                return;
+            }
+            seen[safeName] = true;
+            names.push(safeName);
+        }
+        appendDepartment(currentDepartment);
+        for (var i = 0; i < fixedDepartments.length; i += 1) {
+            appendDepartment(fixedDepartments[i]);
+        }
+        return names.map(function (name) {
+            return {
+                name: name,
+                key: resolveAssistantDepartmentKey(name),
+                current: name === currentDepartment
+            };
+        });
+    }
+
+    function shouldShowAssistantDepartmentActions(detail) {
+        var safeDetail = detail && typeof detail === "object" ? detail : {};
+        var department = plainText(safeDetail.recommendedDepartment || safeDetail.recommended_department);
+        var status = plainText(safeDetail.mediationStatus || safeDetail.mediation_status);
+        var currentStage = resolveCurrentStageName(safeDetail);
+        var recommendStage = resolveProcessSteps(safeDetail)[0];
+        if (!department) {
+            return false;
+        }
+        if (safeDetail.diversionCompletedAt || safeDetail.diversion_completed_at || safeDetail.pushCompletedAt) {
+            return false;
+        }
+        if (isMediatingStatus(status) || isMediationCompletedStatus(status)) {
+            return false;
+        }
+        return currentStage === recommendStage;
+    }
+
+    function buildAssistantDepartmentActionContext(detail) {
+        var safeDetail = detail || {};
+        var currentDepartment = resolveAssistantSelectedDepartment(safeDetail);
+        var options = resolveAssistantDepartmentOptions(safeDetail);
+        if (!currentDepartment || !options.length) {
+            return null;
+        }
+        return {
+            currentDepartment: currentDepartment,
+            options: options.map(function (item) {
+                return Object.assign({}, item);
+            })
+        };
+    }
+
+    function clearAssistantDepartmentActions() {
+        assistantState.departmentMenuOpen = false;
+        assistantState.departmentMenuMessageId = '';
+        assistantState.departmentActionMessageId = '';
+        for (var i = 0; i < assistantState.chatMessages.length; i += 1) {
+            delete assistantState.chatMessages[i].showDepartmentActions;
+            delete assistantState.chatMessages[i].departmentActionContext;
+        }
+    }
+
+    function markLatestAssistantDepartmentActions(messageId, detail) {
+        var targetId = plainText(messageId);
+        var safeDetail = detail || assistantState.detail || {};
+        var context = null;
+        if (!shouldShowAssistantDepartmentActions(safeDetail)) {
+            return;
+        }
+        context = buildAssistantDepartmentActionContext(safeDetail);
+        if (!context) {
+            return;
+        }
+        if (!targetId) {
+            for (var i = assistantState.chatMessages.length - 1; i >= 0; i -= 1) {
+                if (assistantState.chatMessages[i] && assistantState.chatMessages[i].role === 'assistant' && assistantState.chatMessages[i].finishedAt) {
+                    targetId = assistantState.chatMessages[i].id;
+                    break;
+                }
+            }
+        }
+        if (!targetId) {
+            return;
+        }
+        clearAssistantDepartmentActions();
+        for (var j = assistantState.chatMessages.length - 1; j >= 0; j -= 1) {
+            if (assistantState.chatMessages[j] && assistantState.chatMessages[j].id === targetId) {
+                assistantState.chatMessages[j].showDepartmentActions = true;
+                assistantState.chatMessages[j].departmentActionContext = context;
+                assistantState.departmentActionMessageId = targetId;
+                break;
+            }
+        }
+    }
+
+    function setAssistantSelectedDepartment(name) {
+        var nextDepartment = plainText(name);
+        if (!nextDepartment) {
+            return;
+        }
+        assistantState.selectedDepartment = nextDepartment;
+        assistantState.detail = Object.assign({}, assistantState.detail || {}, {
+            recommendedDepartment: nextDepartment,
+            recommended_department: nextDepartment
+        });
+    }
+
+    async function switchAssistantRecommendedDepartment(name) {
+        var nextDepartment = plainText(name);
+        var nextMessage = "";
+        var loadingHidden = false;
+        if (!nextDepartment) {
+            return;
+        }
+        assistantState.departmentMenuOpen = false;
+        assistantState.departmentMenuMessageId = '';
+        setAssistantSelectedDepartment(nextDepartment);
+        renderChat();
+        showAssistantInitLoading(TEXT.switchDepartmentLoading);
+        try {
+            var requestDetail = Object.assign({}, assistantState.detail || {}, {
+                recommendedDepartment: nextDepartment,
+                recommended_department: nextDepartment
+            });
+            var workflowData = await requestRecommendedDepartment(requestDetail, { changeDepartment: nextDepartment });
+            assistantState.detail = Object.assign({}, assistantState.detail || {}, workflowData || {});
+            if (!plainText(assistantState.detail && (assistantState.detail.recommendedDepartment || assistantState.detail.recommended_department))) {
+                assistantState.detail.recommendedDepartment = nextDepartment;
+            }
+            assistantState.detail.recommendedDepartment = plainText(assistantState.detail.recommendedDepartment || assistantState.detail.recommended_department || nextDepartment);
+            assistantState.detail.recommended_department = assistantState.detail.recommendedDepartment;
+            assistantState.detail.recommendReason = resolveAssistantRecommendReason(assistantState.detail || {});
+            assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail || {});
+            renderPage(assistantState.detail || {}, { preserveChat: true });
+            nextMessage = resolveAssistantInitialMessage(assistantState.detail || {});
+            hideAssistantInitLoading();
+            loadingHidden = true;
+            if (nextMessage) {
+                await typeAssistantMessage(nextMessage, {
+                    mode: resolveAssistantTypingMode(assistantState.detail || {}),
+                    attachDepartmentActions: shouldShowAssistantDepartmentActions(assistantState.detail || {}),
+                    departmentActionDetail: assistantState.detail || {}
+                });
+            }
+        } catch (error) {
+            console.warn("switch recommended department failed", error);
+            assistantState.chatMessages.push({
+                id: "assistant-msg-" + (++assistantState.messageSeq),
+                role: "assistant",
+                content: TEXT.switchDepartmentFail,
+                finishedAt: new Date().toISOString(),
+                liked: false,
+                feedbackSubmitted: false,
+                dislikeOpen: false,
+                dislikeDraft: "",
+                copied: false
+            });
+            renderChat();
+        } finally {
+            if (!loadingHidden) {
+                hideAssistantInitLoading();
+            }
+        }
+    }
+
+    function renderAssistantDepartmentActions(message) {
+        var actionContext = null;
+        var currentDepartment = '';
+        var options = [];
+        var isMenuOpen = false;
+        if (!message || !message.showDepartmentActions) {
+            return '';
+        }
+        actionContext = message.departmentActionContext || null;
+        currentDepartment = plainText(actionContext && actionContext.currentDepartment);
+        options = actionContext && actionContext.options ? actionContext.options : [];
+        if (!currentDepartment || !options.length) {
+            return '';
+        }
+        isMenuOpen = assistantState.departmentMenuOpen && assistantState.departmentMenuMessageId === message.id;
+        return ''
+            + '<div class="assistant-msg-dept-actions">'
+            + '<div class="assistant-msg-dept-actions-inner">'
+            + '<button type="button" class="assistant-msg-dept-btn assistant-msg-dept-btn-confirm" data-dept-confirm="1">'
+            + '<span class="assistant-msg-dept-btn-icon" aria-hidden="true">' + renderDepartmentActionIcon('confirm') + '</span>'
+            + '<span class="assistant-msg-dept-btn-label">' + escapeHtml(TEXT.confirmPushPrefix + currentDepartment) + '</span>'
+            + '</button>'
+            + '<div class="assistant-msg-dept-switch">'
+            + '<button type="button" class="assistant-msg-dept-btn assistant-msg-dept-btn-switch' + (isMenuOpen ? ' is-open' : '') + '" data-dept-toggle="1" aria-expanded="' + (isMenuOpen ? 'true' : 'false') + '" aria-label="' + escapeHtml(TEXT.switchDepartmentAria) + '">'
+            + '<span class="assistant-msg-dept-btn-icon" aria-hidden="true">' + renderDepartmentActionIcon('switch') + '</span>'
+            + '<span class="assistant-msg-dept-btn-label">' + escapeHtml(TEXT.switchDepartment) + '</span>'
+            + '<span class="assistant-msg-dept-btn-caret" aria-hidden="true">' + renderDepartmentActionIcon(isMenuOpen ? 'caretUp' : 'caretDown') + '</span>'
+            + '</button>'
+            + (isMenuOpen
+                ? '<div class="assistant-msg-dept-menu" role="menu" aria-label="' + escapeHtml(TEXT.departmentMenuAria) + '">' + options.map(function (item) {
+                    return ''
+                        + '<button type="button" class="assistant-msg-dept-option assistant-msg-dept-option-' + escapeHtml(item.key) + (item.current ? ' is-current' : '') + '" data-dept-option="' + escapeHtml(item.name) + '">'
+                        + '<span class="assistant-msg-dept-option-icon is-' + escapeHtml(item.key) + '" aria-hidden="true">' + renderDepartmentActionIcon(item.key) + '</span>'
+                        + '<span class="assistant-msg-dept-option-label">' + escapeHtml(item.name) + '</span>'
+                        + '<span class="assistant-msg-dept-option-arrow" aria-hidden="true">' + renderDepartmentActionIcon('optionArrow') + '</span>'
+                        + '</button>';
+                }).join('') + '</div>'
+                : '')
+            + '</div>'
+            + '</div>'
+            + '</div>';
+    }
+
+    var baseRenderPromptActions = renderPromptActions;
+    renderPromptActions = function () {
+        baseRenderPromptActions();
+        syncPromptActionSelection();
+    };
+
+    var baseRenderPage = renderPage;
+    renderPage = function (detail, options) {
+        syncAssistantSelectedDepartment(detail);
+        return baseRenderPage(detail, options);
+    };
+
+    var baseTypeAssistantMessage = typeAssistantMessage;
+    typeAssistantMessage = async function (content, options) {
+        var messageId = await baseTypeAssistantMessage(content, options);
+        if (messageId && options && options.attachDepartmentActions) {
+            markLatestAssistantDepartmentActions(messageId, options.departmentActionDetail || assistantState.detail || {});
+            renderChat();
+        }
+        return messageId;
+    };
+
+    var baseSendChatQuestion = sendChatQuestion;
+    sendChatQuestion = async function (questionText) {
+        assistantState.activeQuickPrompt = '';
+        syncPromptActionSelection();
+        return baseSendChatQuestion(questionText);
+    };
+
+    var baseRenderAssistantMessageToolbar = renderAssistantMessageToolbar;
+    renderAssistantMessageToolbar = function (message) {
+        var toolbarHtml = baseRenderAssistantMessageToolbar(message);
+        if (!message || message.role !== 'assistant' || !message.finishedAt) {
+            return toolbarHtml;
+        }
+        return renderAssistantDepartmentActions(message) + toolbarHtml;
+    };
+
+    var baseBindEvents = bindEvents;
+    bindEvents = function () {
+        baseBindEvents();
+        var chatRoot = document.getElementById('assistantChatList');
+        var promptRoot = document.getElementById('assistantPromptActions');
+        var input = document.getElementById('assistantChatInput');
+        if (chatRoot && !assistantState.departmentActionClickBound) {
+            chatRoot.addEventListener('click', async function (event) {
+                var target = event.target;
+                var messageTarget = target && target.closest ? target.closest('[data-message-id]') : null;
+                var messageId = plainText(messageTarget && messageTarget.getAttribute ? messageTarget.getAttribute('data-message-id') : '');
+                var confirmTarget = target && target.closest ? target.closest('[data-dept-confirm]') : null;
+                var toggleTarget = target && target.closest ? target.closest('[data-dept-toggle]') : null;
+                var optionTarget = target && target.closest ? target.closest('[data-dept-option]') : null;
+                if (confirmTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    assistantState.departmentMenuOpen = false;
+                    assistantState.departmentMenuMessageId = '';
+                    setAssistantSelectedDepartment(resolveAssistantSelectedDepartment(assistantState.detail || {}));
+                    await sendChatQuestion('\u786e\u8ba4');
+                    return;
+                }
+                if (toggleTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (assistantState.departmentMenuOpen && assistantState.departmentMenuMessageId === messageId) {
+                        assistantState.departmentMenuOpen = false;
+                        assistantState.departmentMenuMessageId = '';
+                    } else {
+                        assistantState.departmentMenuOpen = true;
+                        assistantState.departmentMenuMessageId = messageId;
+                    }
+                    renderChat();
+                    return;
+                }
+                if (optionTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await switchAssistantRecommendedDepartment(optionTarget.getAttribute('data-dept-option'));
+                }
+            });
+            assistantState.departmentActionClickBound = true;
+        }
+        if (promptRoot && !assistantState.promptSelectionClickBound) {
+            promptRoot.addEventListener('click', function (event) {
+                var promptTarget = event.target && event.target.closest ? event.target.closest('[data-assistant-prompt]') : null;
+                if (!promptTarget) {
+                    return;
+                }
+                setAssistantActiveQuickPrompt(promptTarget.getAttribute('data-assistant-prompt'));
+            });
+            assistantState.promptSelectionClickBound = true;
+        }
+        if (input && !assistantState.promptSelectionInputBound) {
+            input.addEventListener('input', function () {
+                setAssistantActiveQuickPrompt(input.value);
+            });
+            assistantState.promptSelectionInputBound = true;
+            setAssistantActiveQuickPrompt(input.value);
+        }
+        if (!assistantState.departmentActionOutsideBound) {
+            document.addEventListener('click', function (event) {
+                var target = event.target;
+                if (!assistantState.departmentMenuOpen) {
+                    return;
+                }
+                if (target && target.closest && target.closest('.assistant-msg-dept-switch')) {
+                    return;
+                }
+                assistantState.departmentMenuOpen = false;
+                assistantState.departmentMenuMessageId = '';
+                renderChat();
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && assistantState.departmentMenuOpen) {
+                    assistantState.departmentMenuOpen = false;
+                    assistantState.departmentMenuMessageId = '';
+                    renderChat();
+                }
+            });
+            assistantState.departmentActionOutsideBound = true;
+        }
+    };
 
     applyStaticText();
     bindEvents();

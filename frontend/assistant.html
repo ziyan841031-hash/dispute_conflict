@@ -44,10 +44,29 @@
             <div id="assistantQuickActions" class="assistant-quick-actions"></div>
           </div>
           <div id="assistantChatList" class="assistant-chat-list"></div>
-          <div id="assistantPromptActions" class="assistant-prompt-actions"></div>
+          <div class="assistant-chat-toolbar">
+            <button id="assistantTraceShortcutBtn" type="button" class="assistant-chat-shortcut-btn"></button>
+          </div>
           <div class="assistant-chat-input-wrap">
-            <textarea id="assistantChatInput" class="assistant-chat-input" rows="1"></textarea>
-            <button id="assistantChatSendBtn" type="button" class="ui-btn ui-btn-primary assistant-chat-send-btn"></button>
+            <div id="assistantPromptActions" class="assistant-prompt-actions" aria-hidden="true"></div>
+            <div class="assistant-chat-composer">
+              <button
+                id="assistantPromptToggleBtn"
+                type="button"
+                class="assistant-prompt-toggle-btn"
+                aria-label="快捷操作"
+                aria-expanded="false"
+                aria-controls="assistantPromptActions"
+              ></button>
+              <div class="assistant-chat-composer-divider" aria-hidden="true"></div>
+              <textarea id="assistantChatInput" class="assistant-chat-input" rows="1"></textarea>
+              <button
+                id="assistantChatSendBtn"
+                type="button"
+                class="ui-btn ui-btn-primary assistant-chat-send-btn"
+                aria-label="发送"
+              ></button>
+            </div>
           </div>
         </section>
 

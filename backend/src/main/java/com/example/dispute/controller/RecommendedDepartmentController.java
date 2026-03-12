@@ -54,7 +54,8 @@ public class RecommendedDepartmentController {
     private static final String CONFIRM_TEXT = "确认";
     private static final String EVENT_ACCEPT = "案件受理";
     private static final String EVENT_RECOMMEND = "部门推荐";
-    private static final String EVENT_PUSH = "案件推送";
+    private static final String EVENT_REPLACE = "部门更换";
+    private static final String EVENT_PUSH = "案件派送";
     private static final String EVENT_QA = "智能问答";
     private static final String EVENT_SUPERVISE = "案件监督";
     private static final String EXPEDITE_TEXT = "催办";
@@ -100,25 +101,35 @@ public class RecommendedDepartmentController {
         if (request == null || request.getCaseId() == null) {
             throw new IllegalArgumentException("caseId参数不能为空");
         }
-        log.info("recommended department request: caseId={}, query={}", request.getCaseId(), request.getQuery());
+        String changeDepartment = safeText(request.getChangeDepartment());
+        log.info("recommended department request: caseId={}, query={}, changeDepartment={}",
+                request.getCaseId(), request.getQuery(), changeDepartment);
 
         ensureAcceptanceTraceIfAbsent(request.getCaseId(), resolveCaseSummary(request));
 
         CaseDisposalWorkflowRecord latestRecord = findLatestRecordByCaseId(request.getCaseId());
-        if (latestRecord != null && StringUtils.hasText(latestRecord.getMediationStatus())) {
+        if (latestRecord != null && StringUtils.hasText(latestRecord.getMediationStatus()) && !StringUtils.hasText(changeDepartment)) {
             ensureRecommendedTraceIfAbsent(request.getCaseId(), latestRecord);
             log.info("recommended department hit existing workflow record: caseId={}, mediationStatus={}",
                     request.getCaseId(), latestRecord.getMediationStatus());
             latestRecord.setBriefing(null);
-            latestRecord.setRecommendReason(null);
+            if(!STATUS_ACCEPTED.equals(latestRecord.getMediationStatus())){
+                latestRecord.setRecommendReason(null);
+            }
+
             return ApiResponse.success(latestRecord);
         }
 
         Object responseData = difyClient.invokeChatMessagesStreaming(request, recommendedDepartmentApiKey);
-        CaseDisposalWorkflowRecord record = saveRecommendedDepartmentRecord(request.getCaseId(), responseData);
+        CaseDisposalWorkflowRecord record = saveRecommendedDepartmentRecord(request, responseData);
         if (record != null) {
             ensureRecommendedTraceIfAbsent(request.getCaseId(), record);
         }
+
+        if (StringUtils.hasText(changeDepartment)) {
+            ensureRecommendedTraceIfAbsent1(request.getCaseId(), record);
+        }
+
         return ApiResponse.success(record == null ? responseData : record);
     }
 
@@ -448,6 +459,18 @@ public class RecommendedDepartmentController {
         insertTrackingIfAbsent(caseId, EVENT_RECOMMEND, "", answer, summary, LocalDateTime.now());
     }
 
+    private void ensureRecommendedTraceIfAbsent1(Long caseId, CaseDisposalWorkflowRecord record) {
+        if (record == null) {
+            return;
+        }
+        String answer = safeText(record.getRecommendedDepartment());
+        String summary = safeText(record.getRecommendReason());
+        if (!StringUtils.hasText(answer) && !StringUtils.hasText(summary)) {
+            return;
+        }
+        insertTrackingRecord(caseId, EVENT_REPLACE, "", answer, summary, LocalDateTime.now());
+    }
+
     private void ensurePushTraceIfAbsent(Long caseId, CaseDisposalWorkflowRecord record) {
         if (record == null || !StringUtils.hasText(record.getBriefing())) {
             return;
@@ -543,10 +566,12 @@ public class RecommendedDepartmentController {
         );
     }
 
-    private CaseDisposalWorkflowRecord saveRecommendedDepartmentRecord(Long caseId, Object responseObj) {
+    private CaseDisposalWorkflowRecord saveRecommendedDepartmentRecord(DifyInvokeRequest request, Object responseObj) {
+        Long caseId = request == null ? null : request.getCaseId();
         if (caseId == null || responseObj == null) {
             return null;
         }
+        String changeDepartment = safeText(request.getChangeDepartment());
         try {
             Map<String, Object> response = asMap(responseObj);
             Map<String, Object> answerMap = parseAnswerMap(response.get("answer"));
@@ -557,7 +582,7 @@ public class RecommendedDepartmentController {
             record.setTaskId(toStringValue(firstNonNull(response.get("task_id"), record.getTaskId())));
             record.setMessageId(toStringValue(firstNonNull(firstNonNull(response.get("message_id"), response.get("id")), record.getMessageId())));
             record.setConversationId(toStringValue(firstNonNull(response.get("conversation_id"), record.getConversationId())));
-            record.setRecommendedDepartment(firstText(answerMap.get("recommended_department"), record.getRecommendedDepartment()));
+            record.setRecommendedDepartment(firstText(answerMap.get("recommended_department"), changeDepartment, record.getRecommendedDepartment()));
             record.setRecommendedMediationType(firstText(answerMap.get("recommended_mediation_type"), record.getRecommendedMediationType()));
             record.setRecommendReason(firstText(
                     answerMap.get("markdown_message"),
