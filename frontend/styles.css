@@ -2419,6 +2419,48 @@ table { width: 100%; border-collapse: collapse; }
   }
 }
 
+.smart-tools-grid-layout {
+  grid-template-columns: 1fr;
+}
+
+.smart-tools-module {
+  width: 100%;
+  position: static;
+}
+
+.smart-tools-fill-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  justify-content: stretch;
+}
+
+.smart-tools-fill-grid .ios-tool-tile {
+  width: 100%;
+  max-width: none;
+  min-height: 116px;
+  height: auto;
+  aspect-ratio: auto;
+  justify-self: stretch;
+}
+
+@media (max-width: 900px) {
+  .smart-tools-fill-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .smart-tools-fill-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .smart-tools-fill-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 
 

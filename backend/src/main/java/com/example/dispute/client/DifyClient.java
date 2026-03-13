@@ -223,7 +223,7 @@ public class DifyClient {
                 ? new HashMap<String, Object>()
                 : new HashMap<>(request.getVariables());
         if (request != null && StringUtils.hasText(request.getChangeDepartment())) {
-            inputs.put("change_department", request.getChangeDepartment().trim());
+            inputs.put("selected_department", request.getChangeDepartment().trim());
         }
         body.put("inputs", inputs);
         body.put("query", request == null ? "" : request.getQuery());
@@ -239,10 +239,10 @@ public class DifyClient {
         files.add(file);
         body.put("files", files);
 
-        log.info("Dify chat-messages streaming request: url={}, caseId={}", url, request == null ? null : request.getCaseId());
+        log.info("部门推荐请求参数: {}",body);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-        log.info("Dify chat-messages streaming response: status={}", response.getStatusCodeValue());
+        log.info("Dify chat-messages streaming response: status={}，{}", response.getStatusCodeValue(),response);
         return parseChatMessageSseResponse(response.getBody());
     }
 

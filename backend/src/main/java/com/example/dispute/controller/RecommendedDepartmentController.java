@@ -7,8 +7,10 @@ import com.example.dispute.dto.DepartmentPushRequest;
 import com.example.dispute.dto.DifyInvokeRequest;
 import com.example.dispute.entity.CaseDisposalWorkflowRecord;
 import com.example.dispute.entity.CaseDynamicTrackingRecord;
+import com.example.dispute.entity.CaseRecord;
 import com.example.dispute.mapper.CaseDisposalWorkflowRecordMapper;
 import com.example.dispute.mapper.CaseDynamicTrackingRecordMapper;
+import com.example.dispute.mapper.CaseRecordMapper;
 import com.example.dispute.util.BriefingPdfUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,11 +35,13 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -62,6 +66,14 @@ public class RecommendedDepartmentController {
     private static final String SUPERVISE_TEXT = "督办";
     private static final String RESULT_SUCCESS_TEXT = "成功";
     private static final String RESULT_FAILURE_TEXT = "失败";
+    private static final String PROGRESS_TRACKING_TEXT = "案件进度追踪";
+    private static final String STAGE_DISPATCH = "案件派送";
+    private static final String ACTION_EXPEDITE = "催办";
+    private static final String ACTION_SUPERVISE = "督办";
+    private static final String ACTION_MEDIATION_SUCCESS = "调解成功";
+    private static final String ACTION_MEDIATION_FAILURE = "调解失败";
+    private static final String DEFAULT_PROGRESS_DESCRIPTION = "暂未生成案件进度描述，请稍后重试。";
+    private static final String EMPTY_PROGRESS_DURATION = "0天0时0分0秒";
     private static final DateTimeFormatter CN_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss");
     private static final DateTimeFormatter DISPLAY_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -69,6 +81,7 @@ public class RecommendedDepartmentController {
     private final DifyController difyController;
     private final CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper;
     private final CaseDynamicTrackingRecordMapper caseDynamicTrackingRecordMapper;
+    private final CaseRecordMapper caseRecordMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${dify.recommended-department-api-key:replace-with-recommended-department-key}")
@@ -86,14 +99,19 @@ public class RecommendedDepartmentController {
     @Value("${dify.dispute-mediation-api-key:replace-with-dispute-mediation-key}")
     private String disputeMediationApiKey;
 
+    @Value("${dify.query-progress-api-key:replace-with-query-progress-key}")
+    private String queryProgressApiKey;
+
     public RecommendedDepartmentController(DifyClient difyClient,
                                            DifyController difyController,
                                            CaseDisposalWorkflowRecordMapper caseDisposalWorkflowRecordMapper,
-                                           CaseDynamicTrackingRecordMapper caseDynamicTrackingRecordMapper) {
+                                           CaseDynamicTrackingRecordMapper caseDynamicTrackingRecordMapper,
+                                           CaseRecordMapper caseRecordMapper) {
         this.difyClient = difyClient;
         this.difyController = difyController;
         this.caseDisposalWorkflowRecordMapper = caseDisposalWorkflowRecordMapper;
         this.caseDynamicTrackingRecordMapper = caseDynamicTrackingRecordMapper;
+        this.caseRecordMapper = caseRecordMapper;
     }
 
     @PostMapping("/run")
@@ -142,8 +160,9 @@ public class RecommendedDepartmentController {
         boolean confirmed = isConfirmQuery(request.getQuery());
         boolean mediationResult = !confirmed && isDisputeMediationQuery(request.getQuery());
         boolean expediteSupervise = !confirmed && !mediationResult && isExpediteSuperviseQuery(request.getQuery());
-        log.info("department push request: caseId={}, confirmed={}, mediationResult={}, expediteSupervise={}, query={}, currentStage={}",
-                request.getCaseId(), confirmed, mediationResult, expediteSupervise, request.getQuery(), request.getCurrentStage());
+        boolean progressTracking = !confirmed && !mediationResult && !expediteSupervise && isProgressTrackingQuery(request.getQuery());
+        log.info("department push request: caseId={}, confirmed={}, mediationResult={}, expediteSupervise={}, progressTracking={}, query={}, currentStage={}, eventSource={}",
+                request.getCaseId(), confirmed, mediationResult, expediteSupervise, progressTracking, request.getQuery(), request.getCurrentStage(), request.getEventSource());
 
         CaseDisposalWorkflowRecord latestRecord = findLatestRecordByCaseId(request.getCaseId());
         if (confirmed) {
@@ -173,8 +192,13 @@ public class RecommendedDepartmentController {
             CaseDisposalWorkflowRecord record = saveExpediteSuperviseRecord(request, latestRecord, responseData);
             String standardReply = extractExpediteStandardReply(responseData);
             String replySummary = extractExpediteReplySummary(responseData);
-            insertTrackingRecord(request.getCaseId(), EVENT_SUPERVISE, request.getQuery(), standardReply, replySummary, LocalDateTime.now());
+            insertTrackingRecord(request.getCaseId(), resolveExpediteSuperviseEventSource(request.getQuery()), request.getQuery(), standardReply, replySummary, LocalDateTime.now());
             return ApiResponse.success(buildExpediteSuperviseResponseRecord(request, record != null ? record : latestRecord, responseData));
+        }
+
+        if (progressTracking) {
+            Map<String, Object> responseData = invokeProgressTrackingWorkflow(request);
+            return ApiResponse.success(buildProgressTrackingResponse(request, responseData));
         }
 
         Map<String, Object> responseData = invokeReservedDialogueWorkflow(request, latestRecord);
@@ -440,6 +464,149 @@ public class RecommendedDepartmentController {
         inputs.put("user_question", safeText(request == null ? null : request.getQuery()));
         return inputs;
     }
+
+    private Map<String, Object> invokeProgressTrackingWorkflow(DepartmentPushRequest request) {
+        Object response = difyClient.runWorkflowWithInputs(buildProgressTrackingInputs(request), queryProgressApiKey, "案件进度查询");
+        return asMap(response);
+    }
+
+    private Map<String, Object> buildProgressTrackingInputs(DepartmentPushRequest request) {
+        Map<String, Object> inputs = new HashMap<>();
+        List<CaseDynamicTrackingRecord> records = findProgressTrackingRecords(request == null ? null : request.getCaseId());
+        inputs.put("current_node", safeText(request == null ? null : request.getCurrentStage()));
+        inputs.put("node_finish_time", formatProgressDuration(records));
+        inputs.put("case_source", resolveRequestEventSource(request));
+        inputs.put("case_progress_json", buildCaseProgressJson(records));
+        return inputs;
+    }
+
+    private Map<String, Object> buildProgressTrackingResponse(DepartmentPushRequest request, Map<String, Object> responseData) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("caseId", request == null ? null : request.getCaseId());
+        response.put("progressDescription", extractProgressDescription(responseData));
+        response.put("progressActions", resolveProgressActions(request == null ? null : request.getCurrentStage()));
+        if (responseData != null && !responseData.isEmpty()) {
+            try {
+                response.put("rawResponse", objectMapper.writeValueAsString(responseData));
+            } catch (Exception ex) {
+                log.warn("build progress tracking response rawResponse failed: {}", ex.getMessage());
+            }
+        }
+        return response;
+    }
+
+    private List<CaseDynamicTrackingRecord> findProgressTrackingRecords(Long caseId) {
+        if (caseId == null) {
+            return Collections.emptyList();
+        }
+        return caseDynamicTrackingRecordMapper.selectList(
+                new LambdaQueryWrapper<CaseDynamicTrackingRecord>()
+                        .eq(CaseDynamicTrackingRecord::getCaseId, caseId)
+                        .ne(CaseDynamicTrackingRecord::getEventSource, EVENT_QA)
+                        .isNotNull(CaseDynamicTrackingRecord::getEventTime)
+                        .orderByAsc(CaseDynamicTrackingRecord::getEventTime)
+                        .orderByAsc(CaseDynamicTrackingRecord::getId)
+        );
+    }
+
+    private String formatProgressDuration(List<CaseDynamicTrackingRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return EMPTY_PROGRESS_DURATION;
+        }
+        LocalDateTime earliestTime = null;
+        for (CaseDynamicTrackingRecord record : records) {
+            if (record == null || record.getEventTime() == null) {
+                continue;
+            }
+            if (earliestTime == null || record.getEventTime().isBefore(earliestTime)) {
+                earliestTime = record.getEventTime();
+            }
+        }
+        if (earliestTime == null) {
+            return EMPTY_PROGRESS_DURATION;
+        }
+        Duration duration = Duration.between(earliestTime, LocalDateTime.now());
+        long totalSeconds = Math.max(0L, duration.getSeconds());
+        long days = totalSeconds / (24L * 60L * 60L);
+        long hours = (totalSeconds % (24L * 60L * 60L)) / (60L * 60L);
+        long minutes = (totalSeconds % (60L * 60L)) / 60L;
+        long seconds = totalSeconds % 60L;
+        return days + "天" + hours + "时" + minutes + "分" + seconds + "秒";
+    }
+
+    private String buildCaseProgressJson(List<CaseDynamicTrackingRecord> records) {
+        Map<String, List<String>> progressMap = new LinkedHashMap<>();
+        if (records != null) {
+            for (CaseDynamicTrackingRecord record : records) {
+                if (record == null || record.getEventTime() == null) {
+                    continue;
+                }
+                String eventSource = safeText(record.getEventSource());
+                if (!StringUtils.hasText(eventSource)) {
+                    continue;
+                }
+                List<String> eventTimes = progressMap.computeIfAbsent(eventSource, key -> new ArrayList<>());
+                eventTimes.add(formatDisplayDateTime(record.getEventTime()));
+            }
+        }
+        try {
+            return objectMapper.writeValueAsString(progressMap);
+        } catch (Exception ex) {
+            log.warn("build case progress json failed: {}", ex.getMessage(), ex);
+            return "{}";
+        }
+    }
+
+    private String resolveRequestEventSource(DepartmentPushRequest request) {
+        String requestEventSource = safeText(request == null ? null : request.getEventSource());
+        if (StringUtils.hasText(requestEventSource)) {
+            return requestEventSource;
+        }
+        Long caseId = request == null ? null : request.getCaseId();
+        if (caseId == null) {
+            return "";
+        }
+        try {
+            CaseRecord caseRecord = caseRecordMapper.selectById(caseId);
+            return safeText(caseRecord == null ? null : caseRecord.getEventSource());
+        } catch (Exception ex) {
+            log.warn("resolve request event source failed: caseId={}, message={}", caseId, ex.getMessage(), ex);
+            return "";
+        }
+    }
+
+    private String extractProgressDescription(Map<String, Object> responseData) {
+        Map<String, Object> outputs = parseMap(responseData == null ? null : responseData.get("outputs"));
+        return firstText(
+                outputs.get("progress_description"),
+                outputs.get("progressDescription"),
+                outputs.get("answer"),
+                responseData == null ? null : responseData.get("answer"),
+                DEFAULT_PROGRESS_DESCRIPTION
+        );
+    }
+
+    private List<Map<String, String>> resolveProgressActions(String currentStage) {
+        String stage = safeText(currentStage);
+        List<Map<String, String>> actions = new ArrayList<>();
+        if (stage.contains(STAGE_DISPATCH)) {
+            actions.add(buildProgressAction(ACTION_EXPEDITE));
+            actions.add(buildProgressAction(ACTION_SUPERVISE));
+            return actions;
+        }
+        if (stage.contains(ACTION_EXPEDITE) || stage.contains(ACTION_SUPERVISE)) {
+            actions.add(buildProgressAction(ACTION_MEDIATION_SUCCESS));
+            actions.add(buildProgressAction(ACTION_MEDIATION_FAILURE));
+        }
+        return actions;
+    }
+
+    private Map<String, String> buildProgressAction(String label) {
+        Map<String, String> action = new LinkedHashMap<>();
+        action.put("label", label);
+        action.put("query", label);
+        return action;
+    }
     private void ensureAcceptanceTraceIfAbsent(Long caseId, String caseSummary) {
         if (!StringUtils.hasText(caseSummary)) {
             return;
@@ -498,6 +665,17 @@ public class RecommendedDepartmentController {
             return "调解失败";
         }
         return "";
+    }
+
+    private String resolveExpediteSuperviseEventSource(String query) {
+        String text = toStringValue(query);
+        if (text.contains(ACTION_EXPEDITE)) {
+            return ACTION_EXPEDITE;
+        }
+        if (text.contains(ACTION_SUPERVISE)) {
+            return ACTION_SUPERVISE;
+        }
+        return EVENT_SUPERVISE;
     }
 
     private void insertDialogueTrace(Long caseId, String question, String briefingText) {
@@ -861,6 +1039,10 @@ public class RecommendedDepartmentController {
         return text.contains(RESULT_SUCCESS_TEXT) || text.contains(RESULT_FAILURE_TEXT);
     }
 
+    private boolean isProgressTrackingQuery(String query) {
+        return PROGRESS_TRACKING_TEXT.equals(toStringValue(query));
+    }
+
     private String resolveDisputeMediationStatus(String query) {
         String text = toStringValue(query);
         int successIndex = text.indexOf(RESULT_SUCCESS_TEXT);
@@ -1033,4 +1215,3 @@ public class RecommendedDepartmentController {
         return dateTime.format(DISPLAY_DATETIME_FORMATTER);
     }
 }
-

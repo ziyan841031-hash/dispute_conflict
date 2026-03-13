@@ -324,6 +324,11 @@
         overlay.setAttribute('aria-hidden', 'true');
     }
 
+    function isAssistantInitLoadingVisible() {
+        var overlay = document.getElementById('assistantInitLoading');
+        return !!(overlay && !overlay.classList.contains('hidden'));
+    }
+
     function buildRecommendedDepartmentPayload(detail) {
         return {
             caseId: assistantState.caseId ? Number(assistantState.caseId) : null,
@@ -363,6 +368,7 @@
             case_category: plainText(detail && detail.disputeSubType),
             case_level: plainText(detail && detail.riskLevel),
             current_stage: resolveCurrentStageName(detail),
+            event_source: plainText(detail && (detail.eventSource || detail.caseSource || detail.event_source)),
             query: plainText(query)
         };
     }
@@ -383,6 +389,24 @@
             throw new Error((json && json.message) || 'department push request failed');
         }
         return json.data || null;
+    }
+
+    function normalizeAssistantProgressActions(actions) {
+        var items = Array.isArray(actions) ? actions : [];
+        var normalized = [];
+        for (var i = 0; i < items.length; i += 1) {
+            var item = items[i] && typeof items[i] === 'object' ? items[i] : null;
+            var queryText = plainText(item && (item.query || item.value || item.label));
+            var labelText = plainText(item && (item.label || item.query || item.value));
+            if (!queryText || !labelText) {
+                continue;
+            }
+            normalized.push({
+                label: labelText,
+                query: queryText
+            });
+        }
+        return normalized;
     }
 
     async function requestTrackingEvents(caseId) {
@@ -1237,13 +1261,7 @@
     }
 
     async function openAssistantTraceShortcut() {
-        assistantState.sideTab = 'trace';
-        renderSideModules(assistantState.detail || {});
-        await loadTrackingEvents(true);
-        var tracePanel = document.getElementById('assistantTracePanel');
-        if (tracePanel && typeof tracePanel.scrollIntoView === 'function') {
-            tracePanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
+        await sendChatQuestion(TEXT.traceShortcut);
     }
 
     function seedChat() {
@@ -1673,7 +1691,8 @@
         try {
             var confirmed = isConfirmText(question);
             var pushData = await requestDepartmentPush(assistantState.detail || {}, question);
-            var responseBriefing = plainText(pushData && pushData.briefing);
+            var progressActions = normalizeAssistantProgressActions(pushData && pushData.progressActions);
+            var responseBriefing = plainText(pushData && (pushData.progressDescription || pushData.briefing));
             if (pushData && typeof pushData === 'object') {
                 assistantState.detail = Object.assign({}, assistantState.detail || {}, pushData || {});
             }
@@ -1698,7 +1717,10 @@
             if (waitingMessageId && removeChatMessage(waitingMessageId)) {
                 renderChat();
             }
-            await typeAssistantMessage(pushedMessage, { mode: resolveAssistantTypingMode(assistantState.detail || {}) });
+            await typeAssistantMessage(pushedMessage, {
+                mode: resolveAssistantTypingMode(assistantState.detail || {}),
+                messageMeta: progressActions.length ? { progressActions: progressActions } : null
+            });
         } catch (error) {
             if (waitingMessageId && removeChatMessage(waitingMessageId)) {
                 renderChat();
@@ -2050,21 +2072,34 @@
     };
 
     requestRecommendedDepartment = async function (detail, options) {
-        var payload = buildRecommendedDepartmentPayload(detail, options);
+        var safeOptions = options && typeof options === "object" ? options : {};
+        var changeDepartment = plainText(safeOptions.changeDepartment || safeOptions.change_department);
+        var shouldManageLoading = safeOptions.showLoading !== false && !isAssistantInitLoadingVisible();
+        var loadingText = safeOptions.loadingText || (changeDepartment ? TEXT.switchDepartmentLoading : TEXT.initLoading);
+        var payload = buildRecommendedDepartmentPayload(detail, safeOptions);
         if (!payload.caseId) {
             return null;
         }
-        var response = await fetch(API_BASE + '/recommended-department/run', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        var json = await response.json();
-        var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
-        if (!response.ok || !json || !successCode) {
-            throw new Error((json && json.message) || 'recommended department request failed');
+        if (shouldManageLoading) {
+            showAssistantInitLoading(loadingText);
         }
-        return json.data || null;
+        try {
+            var response = await fetch(API_BASE + '/recommended-department/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            var json = await response.json();
+            var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
+            if (!response.ok || !json || !successCode) {
+                throw new Error((json && json.message) || 'recommended department request failed');
+            }
+            return json.data || null;
+        } finally {
+            if (shouldManageLoading) {
+                hideAssistantInitLoading();
+            }
+        }
     };
 
     function resolveQuickPromptSelection(value) {
@@ -2372,6 +2407,22 @@
             + '</div>';
     }
 
+    function renderAssistantProgressActions(message) {
+        var actions = normalizeAssistantProgressActions(message && message.progressActions);
+        if (!actions.length) {
+            return '';
+        }
+        return ''
+            + '<div class="assistant-msg-progress-actions" role="group" aria-label="progress actions">'
+            + actions.map(function (item) {
+                return ''
+                    + '<button type="button" class="assistant-msg-progress-btn" data-progress-action="' + escapeHtml(item.query) + '">'
+                    + escapeHtml(item.label)
+                    + '</button>';
+            }).join('')
+            + '</div>';
+    }
+
     var baseRenderPromptActions = renderPromptActions;
     renderPromptActions = function () {
         baseRenderPromptActions();
@@ -2407,7 +2458,7 @@
         if (!message || message.role !== 'assistant' || !message.finishedAt) {
             return toolbarHtml;
         }
-        return renderAssistantDepartmentActions(message) + toolbarHtml;
+        return renderAssistantProgressActions(message) + renderAssistantDepartmentActions(message) + toolbarHtml;
     };
 
     var baseBindEvents = bindEvents;
@@ -2421,9 +2472,16 @@
                 var target = event.target;
                 var messageTarget = target && target.closest ? target.closest('[data-message-id]') : null;
                 var messageId = plainText(messageTarget && messageTarget.getAttribute ? messageTarget.getAttribute('data-message-id') : '');
+                var progressActionTarget = target && target.closest ? target.closest('[data-progress-action]') : null;
                 var confirmTarget = target && target.closest ? target.closest('[data-dept-confirm]') : null;
                 var toggleTarget = target && target.closest ? target.closest('[data-dept-toggle]') : null;
                 var optionTarget = target && target.closest ? target.closest('[data-dept-option]') : null;
+                if (progressActionTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await sendChatQuestion(progressActionTarget.getAttribute('data-progress-action'));
+                    return;
+                }
                 if (confirmTarget) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -2499,7 +2557,6 @@
     bindEvents();
     loadAssistantDetail();
 })();
-
 
 
 
