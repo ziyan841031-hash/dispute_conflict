@@ -8,6 +8,7 @@ import com.example.dispute.entity.CaseStatsDetail;
 import com.example.dispute.mapper.CaseStatsBatchMapper;
 import com.example.dispute.mapper.CaseStatsDetailMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.sl.usermodel.PictureData;
 import org.apache.poi.sl.usermodel.ShapeType;
 import org.apache.poi.sl.usermodel.VerticalAlignment;
@@ -33,6 +34,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
@@ -67,32 +69,67 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * 案件统计控制器。
- * 提供Excel导入、批次查询、明细查询、统计分析与PPT报告下载能力。
- */
+ * 妗堜欢缁熻鎺у埗鍣ㄣ€? * 鎻愪緵Excel瀵煎叆銆佹壒娆℃煡璇€佹槑缁嗘煡璇€佺粺璁″垎鏋愪笌PPT鎶ュ憡涓嬭浇鑳藉姏銆? */
+@Slf4j
 @RestController
 @RequestMapping("/api/case-stats")
 public class CaseStatsController {
 
-    private static final List<String> REQUIRED_HEADERS = Arrays.asList("序号", "时间", "区", "街镇", "登记来源", "类型", "登记时间", "当前办理状态");
+    private static final List<String> REQUIRED_HEADERS = Arrays.asList("序号", "时间", "区", "街镇", "登记来源", "类型", "风险等级", "当前办理状态");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4})[-/](\\d{1,2})");
     private static final int PPT_WIDTH = 1366;
     private static final int PPT_HEIGHT = 768;
     private static final int MARGIN = 36;
     private static final String CHINESE_FONT_FAMILY = resolveChineseFontFamily();
+    private static final DateTimeFormatter OUTPUT_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy/M/d H:mm:ss");
+    private static final List<DateTimeFormatter> DATE_TIME_FORMATTERS = Arrays.asList(
+            DateTimeFormatter.ofPattern("yyyy/M/d H:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-M-d H:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/M/d HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-M-d HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/M/d H:mm"),
+            DateTimeFormatter.ofPattern("yyyy-M-d H:mm"),
+            DateTimeFormatter.ofPattern("yyyy/M/d HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-M-d HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy/M/d'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-M-d'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/M/d'T'HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-M-d'T'HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日 H:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日 H:mm"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日HH:mm")
+    );
+    private static final List<DateTimeFormatter> DATE_FORMATTERS = Arrays.asList(
+            DateTimeFormatter.ofPattern("yyyy/M/d"),
+            DateTimeFormatter.ofPattern("yyyy-M-d"),
+            DateTimeFormatter.ofPattern("yyyy.M.d"),
+            DateTimeFormatter.ofPattern("yyyy年M月d日")
+    );
 
     private final CaseStatsBatchMapper batchMapper;
     private final CaseStatsDetailMapper detailMapper;
     private final DifyClient difyClient;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("${dify.case-stats-api-key:replace-with-case-stats-key}")
     private String caseStatsApiKey;
 
-    public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient) {
+    @Value("${dify.case-stats-sql-generator-api-key:replace-with-case-stats-sql-generator-key}")
+    private String caseStatsSqlGeneratorApiKey;
+
+    @Value("${dify.case-stats-sql-runner-api-key:replace-with-case-stats-sql-runner-key}")
+    private String caseStatsSqlRunnerApiKey;
+
+    @Value("${dify.case-stats-analysis-api-key:replace-with-case-stats-analysis-key}")
+    private String caseStatsAnalysisApiKey;
+
+    public CaseStatsController(CaseStatsBatchMapper batchMapper, CaseStatsDetailMapper detailMapper, DifyClient difyClient, JdbcTemplate jdbcTemplate) {
         this.batchMapper = batchMapper;
         this.detailMapper = detailMapper;
         this.difyClient = difyClient;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
@@ -113,7 +150,7 @@ public class CaseStatsController {
             }
             Row headerRow = sheet.getRow(0);
             if (!validateHeader(headerRow)) {
-                return ApiResponse.fail("Excel表头不符合要求，应为：序号，时间，区，街镇，登记来源，类型，登记时间，当前办理状态");
+                return ApiResponse.fail("Excel表头不符合要求，应为：序号，时间，区，街镇，登记来源，类型，风险等级，当前办理状态");
             }
 
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
@@ -123,12 +160,12 @@ public class CaseStatsController {
                 }
                 CaseStatsDetail detail = new CaseStatsDetail();
                 detail.setSerialNo(cellString(row, 0));
-                detail.setEventTime(cellString(row, 1));
+                detail.setEventTime(safeCellDateTimeString(row, 1));
                 detail.setDistrict(cellString(row, 2));
                 detail.setStreetTown(cellString(row, 3));
                 detail.setRegisterSource(cellString(row, 4));
                 detail.setCaseType(cellString(row, 5));
-                detail.setRegisterTime(cellString(row, 6));
+                detail.setRiskLevel(cellString(row, 6));
                 detail.setCurrentStatus(cellString(row, 7));
                 detail.setCreatedAt(LocalDateTime.now());
                 details.add(detail);
@@ -156,7 +193,7 @@ public class CaseStatsController {
             detailMapper.insert(detail);
         }
 
-        // 生成四维度统计数据。
+        // 生成五维度统计数据。
         Map<String, Object> analysis = buildAnalysis(details);
         // 渲染图表并生成PPT文件。
         Map<String, String> files = generateChartsAndPpt(batch, analysis);
@@ -167,10 +204,12 @@ public class CaseStatsController {
         batch.setStreetTop10Json(toJson(analysis.get("streetTop10")));
         batch.setTypeTop10Json(toJson(analysis.get("typeTop10")));
         batch.setDistrictStatusJson(toJson(analysis.get("districtStatus")));
+        batch.setDistrictHighRiskJson(toJson(analysis.get("districtHighRisk")));
         batch.setTimeChartPath(files.get("timeChartPath"));
         batch.setStreetChartPath(files.get("streetChartPath"));
         batch.setTypeChartPath(files.get("typeChartPath"));
         batch.setDistrictChartPath(files.get("districtChartPath"));
+        batch.setDistrictHighRiskChartPath(files.get("districtHighRiskChartPath"));
         batch.setReportFilePath(files.get("pptPath"));
         batchMapper.updateById(batch);
 
@@ -182,10 +221,12 @@ public class CaseStatsController {
         result.put("streetTop10Json", batch.getStreetTop10Json());
         result.put("typeTop10Json", batch.getTypeTop10Json());
         result.put("districtStatusJson", batch.getDistrictStatusJson());
+        result.put("districtHighRiskJson", batch.getDistrictHighRiskJson());
         result.put("timeChartPath", batch.getTimeChartPath());
         result.put("streetChartPath", batch.getStreetChartPath());
         result.put("typeChartPath", batch.getTypeChartPath());
         result.put("districtChartPath", batch.getDistrictChartPath());
+        result.put("districtHighRiskChartPath", batch.getDistrictHighRiskChartPath());
         return ApiResponse.success(result);
     }
 
@@ -224,12 +265,90 @@ public class CaseStatsController {
         result.put("streetTop10Json", batch.getStreetTop10Json());
         result.put("typeTop10Json", batch.getTypeTop10Json());
         result.put("districtStatusJson", batch.getDistrictStatusJson());
+        result.put("districtHighRiskJson", batch.getDistrictHighRiskJson());
         result.put("timeChartPath", batch.getTimeChartPath());
         result.put("streetChartPath", batch.getStreetChartPath());
         result.put("typeChartPath", batch.getTypeChartPath());
         result.put("districtChartPath", batch.getDistrictChartPath());
+        result.put("districtHighRiskChartPath", batch.getDistrictHighRiskChartPath());
         result.put("reportFileUrl", batch.getReportFileUrl());
         return ApiResponse.success(result);
+    }
+
+
+    @GetMapping("/district-insight")
+    public ApiResponse<Map<String, Object>> districtInsight() {
+        List<CaseStatsDetail> rows = detailMapper.selectList(new LambdaQueryWrapper<CaseStatsDetail>()
+                .orderByDesc(CaseStatsDetail::getId));
+        Map<String, Long> districtCount = rows.stream()
+                .collect(Collectors.groupingBy(item -> safe(item.getDistrict()), Collectors.counting()));
+        LinkedHashMap<String, Long> sorted = districtCount.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("districtCount", sorted);
+        result.put("total", rows.size());
+        return ApiResponse.success(result);
+    }
+
+
+    @PostMapping("/district-insight/ask")
+    public ApiResponse<Map<String, Object>> askDistrictInsightBySql(@RequestBody Map<String, Object> request) {
+        String question = request == null ? "" : String.valueOf(request.getOrDefault("question", "")).trim();
+        if (question.isEmpty()) {
+            return ApiResponse.fail("请输入问题");
+        }
+        try {
+            Map<String, Object> inputs = new HashMap<>();
+            Object rawInputs = request == null ? null : request.get("inputs");
+            if (rawInputs instanceof Map) {
+                ((Map<?, ?>) rawInputs).forEach((key, value) -> {
+                    if (key != null) {
+                        inputs.put(String.valueOf(key), value);
+                    }
+                });
+            }
+            inputs.put("user_request", question);
+            inputs.putIfAbsent("default_limit", 20);
+            String sqlApiKey = (caseStatsSqlGeneratorApiKey == null || caseStatsSqlGeneratorApiKey.trim().isEmpty()
+                    || caseStatsSqlGeneratorApiKey.startsWith("replace-with"))
+                    ? caseStatsSqlRunnerApiKey : caseStatsSqlGeneratorApiKey;
+            Object difyResponse = difyClient.runWorkflowWithInputs(inputs, sqlApiKey, "统计SQL生成器");
+            String sql = extractSqlFromDifyResponse(difyResponse);
+            if (sql == null || sql.trim().isEmpty()) {
+                return ApiResponse.fail("未从SQL生成器返回中解析到sql字段");
+            }
+            String normalizedSql = normalizeSelectSql(sql);
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(normalizedSql);
+            String jsonResult = OBJECT_MAPPER.writeValueAsString(rows);
+            String clueJson = "[]";
+            String clueSql = extractOutputFieldFromDifyResponse(difyResponse, "clue_sql");
+            if (clueSql != null && !clueSql.trim().isEmpty()) {
+                String normalizedClueSql = normalizeSelectSql(clueSql);
+                List<Map<String, Object>> clueRows = jdbcTemplate.queryForList(normalizedClueSql);
+                clueJson = OBJECT_MAPPER.writeValueAsString(clueRows);
+            }
+            Map<String, Object> analysisInputs = new HashMap<>();
+            analysisInputs.put("question", question);
+            analysisInputs.put("stats_json", jsonResult);
+            analysisInputs.put("clue_json", clueJson);
+//            analysisInputs.put("default_limit", inputs.getOrDefault("default_limit", 20));
+            String analysisApiKey = (caseStatsAnalysisApiKey == null || caseStatsAnalysisApiKey.trim().isEmpty()
+                    || caseStatsAnalysisApiKey.startsWith("replace-with"))
+                    ? caseStatsSqlRunnerApiKey : caseStatsAnalysisApiKey;
+            Object analysisResponse = difyClient.runWorkflowWithInputs(analysisInputs, analysisApiKey, "统计结果分析与逐条风险评级");
+
+            Map<String, Object> parsedAnalysis = extractAnalysisPayload(analysisResponse);
+            log.info("分析返回报文：{}",analysisResponse);
+            log.info("分析返回map报文：{}",parsedAnalysis);
+            return ApiResponse.success(parsedAnalysis);
+        } catch (IllegalArgumentException ex) {
+            return ApiResponse.fail(ex.getMessage());
+        } catch (Exception ex) {
+            log.error("洞察问答SQL执行失败", ex);
+            return ApiResponse.fail("洞察问答失败: " + ex.getMessage());
+        }
     }
 
     /**
@@ -254,9 +373,143 @@ public class CaseStatsController {
                 .body(resource);
     }
 
+    private Map<String, Object> extractAnalysisPayload(Object analysisResponse) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("analysisMarkdown", "");
+        payload.put("renderMap", 0);
+        payload.put("ratedItems", Collections.emptyList());
+        if (!(analysisResponse instanceof Map)) {
+            return payload;
+        }
+        Map<?, ?> root = (Map<?, ?>) analysisResponse;
+        Map<?, ?> outputs = null;
+        Object directOutputs = root.get("outputs");
+        if (directOutputs instanceof Map) {
+            outputs = (Map<?, ?>) directOutputs;
+        }
+        if (outputs == null) {
+            Object data = root.get("data");
+            if (data instanceof Map) {
+                Object nested = ((Map<?, ?>) data).get("outputs");
+                if (nested instanceof Map) {
+                    outputs = (Map<?, ?>) nested;
+                }
+            }
+        }
+        if (outputs == null) {
+            return payload;
+        }
+        Object markdown = outputs.get("analysis_markdown");
+        if (markdown != null) {
+            payload.put("analysisMarkdown", String.valueOf(markdown));
+        }
+        Object renderMap = outputs.get("render_map");
+        if (renderMap != null) {
+            payload.put("renderMap", renderMap);
+        }
+        Object ratedData = outputs.get("rated_data");
+        if (ratedData instanceof Map) {
+            Object items = ((Map<?, ?>) ratedData).get("items");
+            if (items instanceof List) {
+                payload.put("ratedItems", items);
+            }
+        }
+        return payload;
+    }
+
+    private String extractAnalysisText(Object analysisResponse) {
+        Map<String, Object> payload = extractAnalysisPayload(analysisResponse);
+        Object markdown = payload.get("analysisMarkdown");
+        if (markdown != null && !String.valueOf(markdown).trim().isEmpty()) {
+            return String.valueOf(markdown).trim();
+        }
+        if (!(analysisResponse instanceof Map)) {
+            return "";
+        }
+        Map<?, ?> root = (Map<?, ?>) analysisResponse;
+        Object text = root.get("text");
+        if (text != null && !text.toString().trim().isEmpty()) {
+            return text.toString().trim();
+        }
+        Object outputs = root.get("outputs");
+        if (outputs instanceof Map) {
+            Map<?, ?> outputMap = (Map<?, ?>) outputs;
+            Object summary = outputMap.get("summary");
+            if (summary != null && !summary.toString().trim().isEmpty()) {
+                return summary.toString().trim();
+            }
+            Object analysis = outputMap.get("analysis");
+            if (analysis != null && !analysis.toString().trim().isEmpty()) {
+                return analysis.toString().trim();
+            }
+            Object risk = outputMap.get("risk_rating");
+            if (risk != null && !risk.toString().trim().isEmpty()) {
+                return risk.toString().trim();
+            }
+        }
+        Object data = root.get("data");
+        if (data instanceof Map) {
+            Object outputs2 = ((Map<?, ?>) data).get("outputs");
+            if (outputs2 instanceof Map) {
+                for (Object v : ((Map<?, ?>) outputs2).values()) {
+                    if (v != null && !v.toString().trim().isEmpty()) {
+                        return v.toString().trim();
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    private String extractSqlFromDifyResponse(Object difyResponse) {
+        return extractOutputFieldFromDifyResponse(difyResponse, "sql");
+    }
+
+    private String extractOutputFieldFromDifyResponse(Object difyResponse, String fieldName) {
+        if (!(difyResponse instanceof Map)) {
+            return null;
+        }
+        Map<?, ?> root = (Map<?, ?>) difyResponse;
+        Object directValue = root.get(fieldName);
+        if (directValue != null && !directValue.toString().trim().isEmpty()) {
+            return directValue.toString().trim();
+        }
+        Object outputs = root.get("outputs");
+        if (outputs instanceof Map) {
+            Object outputValue = ((Map<?, ?>) outputs).get(fieldName);
+            if (outputValue != null && !outputValue.toString().trim().isEmpty()) {
+                return outputValue.toString().trim();
+            }
+        }
+        Object data = root.get("data");
+        if (data instanceof Map) {
+            Object outputs2 = ((Map<?, ?>) data).get("outputs");
+            if (outputs2 instanceof Map) {
+                Object outputValue2 = ((Map<?, ?>) outputs2).get(fieldName);
+                if (outputValue2 != null && !outputValue2.toString().trim().isEmpty()) {
+                    return outputValue2.toString().trim();
+                }
+            }
+        }
+        return null;
+    }
+    private String normalizeSelectSql(String sql) {
+        String normalized = sql == null ? "" : sql.trim();
+        if (normalized.endsWith(";")) {
+            normalized = normalized.substring(0, normalized.length() - 1).trim();
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (!(lower.startsWith("select") || lower.startsWith("with"))) {
+            throw new IllegalArgumentException("仅允许执行查询SQL");
+        }
+        if (normalized.contains(";")) {
+            throw new IllegalArgumentException("涓嶅厑璁告墽琛屽鏉QL");
+        }
+        return normalized;
+    }
+
     /**
-     * 基于明细列表构建四个维度统计分析数据。
-     */
+     * 鍩轰簬鏄庣粏鍒楄〃鏋勫缓浜斾釜缁村害缁熻鍒嗘瀽鏁版嵁銆?     */
     private Map<String, Object> buildAnalysis(List<CaseStatsDetail> details) {
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -270,7 +523,7 @@ public class CaseStatsController {
             monthMap.put(key, 0L);
         }
         for (CaseStatsDetail d : details) {
-            String month = extractMonth(d.getRegisterTime(), d.getEventTime());
+            String month = extractMonth(d.getEventTime());
             if (monthMap.containsKey(month)) {
                 monthMap.put(month, monthMap.get(month) + 1);
             }
@@ -295,7 +548,7 @@ public class CaseStatsController {
                 if (!street.equals(safe(d.getStreetTown()))) {
                     continue;
                 }
-                String month = extractMonth(d.getRegisterTime(), d.getEventTime());
+                String month = extractMonth(d.getEventTime());
                 if (streetMonth.containsKey(month)) {
                     streetMonth.put(month, streetMonth.get(month) + 1);
                 }
@@ -324,6 +577,11 @@ public class CaseStatsController {
             statusMap.put(status, statusMap.getOrDefault(status, 0L) + 1);
         }
         result.put("districtStatus", districtStatus);
+
+        Map<String, Long> districtHighRisk = topNMap(details.stream()
+                .filter(item -> isHighRiskLevel(item.getRiskLevel()))
+                .collect(Collectors.groupingBy(item -> safe(item.getDistrict()), Collectors.counting())), 10);
+        result.put("districtHighRisk", districtHighRisk);
         return result;
     }
 
@@ -339,6 +597,7 @@ public class CaseStatsController {
             String streetChartPath = dir.resolve("street-top10.png").toString();
             String typeChartPath = dir.resolve("type-top10.png").toString();
             String districtChartPath = dir.resolve("district-status.png").toString();
+            String districtHighRiskChartPath = dir.resolve("district-high-risk.png").toString();
             String pptPath = dir.resolve("case-stats-report.pptx").toString();
 
             drawLineChart("近6个月趋势", ((Map<String, Long>) analysis.get("timeTrend")),
@@ -346,15 +605,17 @@ public class CaseStatsController {
             drawVerticalBarChart("街镇高发Top10", ((Map<String, Long>) analysis.get("streetTop10")), streetChartPath);
             drawHorizontalBarChart("类型高发Top10", ((Map<String, Long>) analysis.get("typeTop10")), typeChartPath);
             drawGroupedBarChart("区办理状态", ((Map<String, Map<String, Long>>) analysis.get("districtStatus")), districtChartPath);
+            drawPieChart("区高发案件统计（高风险）", ((Map<String, Long>) analysis.get("districtHighRisk")), districtHighRiskChartPath);
 
             Map<String, String> aiSummary = callDifyForCaseStatsSummary(analysis);
-            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath, batch.getImportedAt());
+            buildPpt(pptPath, aiSummary, timeChartPath, streetChartPath, typeChartPath, districtChartPath, districtHighRiskChartPath, batch.getImportedAt());
 
             Map<String, String> files = new HashMap<>();
             files.put("timeChartPath", timeChartPath);
             files.put("streetChartPath", streetChartPath);
             files.put("typeChartPath", typeChartPath);
             files.put("districtChartPath", districtChartPath);
+            files.put("districtHighRiskChartPath", districtHighRiskChartPath);
             files.put("pptPath", pptPath);
             return files;
         } catch (Exception ex) {
@@ -363,7 +624,7 @@ public class CaseStatsController {
     }
 
     /**
-     * 调用Dify工作流生成四个维度的标题与摘要。
+     * 调用Dify工作流生成五个维度的标题与摘要。
      */
     private Map<String, String> callDifyForCaseStatsSummary(Map<String, Object> analysis) {
         Map<String, String> result = new HashMap<>();
@@ -375,12 +636,15 @@ public class CaseStatsController {
         result.put("type_summary", "1）类型高发Top10见图；2）建议聚焦头部类型强化源头治理。");
         result.put("district_title", "各区办理状态分布分析");
         result.put("district_summary", "1）各区办理状态分布见图；2）建议跟踪办理中事项提升闭环效率。");
+        result.put("high_risk_title", "区高发案件统计（高风险）");
+        result.put("high_risk_summary", "1）各区高风险案件占比见图；2）建议针对高风险高发区开展预警与联动处置。");
         try {
             Map<String, Object> inputs = new HashMap<>();
             inputs.put("monthly_trend_json", toJson(analysis.get("timeTrend")));
             inputs.put("street_top10_json", toJson(analysis.get("streetTop10")));
             inputs.put("type_top10_json", toJson(analysis.get("typeTop10")));
             inputs.put("district_status_json", toJson(analysis.get("districtStatus")));
+            inputs.put("district_high_risk_json", toJson(analysis.get("districtHighRisk")));
             Object response = difyClient.runWorkflowWithInputs(inputs, caseStatsApiKey, "案件统计摘要");
             if (response instanceof Map) {
                 Object outputs = ((Map<?, ?>) response).get("outputs");
@@ -394,6 +658,8 @@ public class CaseStatsController {
                     mergeSummaryField(result, map, "type_summary");
                     mergeSummaryField(result, map, "district_title");
                     mergeSummaryField(result, map, "district_summary");
+                    mergeSummaryField(result, map, "high_risk_title");
+                    mergeSummaryField(result, map, "high_risk_summary");
                 }
             }
         } catch (Exception ex) {
@@ -413,10 +679,10 @@ public class CaseStatsController {
     }
 
     /**
-     * 将标题、分段摘要和图表排版到PPT（四页）。
+     * 将标题、分段摘要和图表排版到PPT（五页）。
      */
     private void buildPpt(String pptPath, Map<String, String> summary, String timeChartPath, String streetChartPath,
-                          String typeChartPath, String districtChartPath, LocalDateTime importedAt) throws Exception {
+                          String typeChartPath, String districtChartPath, String districtHighRiskChartPath, LocalDateTime importedAt) throws Exception {
         XMLSlideShow ppt = new XMLSlideShow();
         ppt.setPageSize(new java.awt.Dimension(PPT_WIDTH, PPT_HEIGHT));
         addCoverSlide(ppt, importedAt);
@@ -424,6 +690,7 @@ public class CaseStatsController {
         addPptSlide(ppt, summary.get("street_title"), summary.get("street_summary"), streetChartPath);
         addPptSlide(ppt, summary.get("type_title"), summary.get("type_summary"), typeChartPath);
         addPptSlide(ppt, summary.get("district_title"), summary.get("district_summary"), districtChartPath);
+        addPptSlide(ppt, summary.get("high_risk_title"), summary.get("high_risk_summary"), districtHighRiskChartPath);
         try (FileOutputStream out = new FileOutputStream(pptPath)) {
             ppt.write(out);
         }
@@ -580,6 +847,80 @@ public class CaseStatsController {
     /**
      * 绘制折线图（近6个月趋势）。
      */
+
+    private void drawPieChart(String title, Map<String, Long> data, String output) throws Exception {
+        BufferedImage img = createCanvas(title);
+        Graphics2D g = img.createGraphics();
+        setupGraphics(g);
+        if (data == null || data.isEmpty()) {
+            ImageIO.write(img, "png", new File(output));
+            g.dispose();
+            return;
+        }
+
+        long total = data.values().stream().filter(Objects::nonNull).mapToLong(Long::longValue).sum();
+        if (total <= 0) {
+            ImageIO.write(img, "png", new File(output));
+            g.dispose();
+            return;
+        }
+
+        int pieSize = 360;
+        int pieX = 100;
+        int pieY = 170;
+        Color[] colors = {
+                new Color(59, 130, 246), new Color(16, 185, 129), new Color(245, 158, 11),
+                new Color(239, 68, 68), new Color(139, 92, 246), new Color(20, 184, 166),
+                new Color(99, 102, 241), new Color(249, 115, 22), new Color(168, 85, 247),
+                new Color(34, 197, 94)
+        };
+
+        int start = 0;
+        int idx = 0;
+        int centerX = pieX + pieSize / 2;
+        int centerY = pieY + pieSize / 2;
+        int labelRadius = pieSize / 2 + 26;
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.BOLD, 14));
+        for (Map.Entry<String, Long> entry : data.entrySet()) {
+            long value = entry.getValue() == null ? 0L : entry.getValue();
+            int angle = (int) Math.round(value * 360.0 / total);
+            if (idx == data.size() - 1) {
+                angle = 360 - start;
+            }
+            g.setColor(colors[idx % colors.length]);
+            g.fillArc(pieX, pieY, pieSize, pieSize, start, angle);
+
+            if (angle > 0) {
+                double middleAngle = Math.toRadians(start + angle / 2.0);
+                int labelX = centerX + (int) Math.round(Math.cos(middleAngle) * labelRadius);
+                int labelY = centerY - (int) Math.round(Math.sin(middleAngle) * labelRadius);
+                String districtLabel = safe(entry.getKey());
+                g.setColor(new Color(31, 41, 55));
+                g.drawString(districtLabel, labelX, labelY);
+            }
+            start += angle;
+            idx++;
+        }
+
+        int legendX = pieX + pieSize + 70;
+        int legendY = pieY + 20;
+        g.setFont(new Font(CHINESE_FONT_FAMILY, Font.PLAIN, 18));
+        idx = 0;
+        for (Map.Entry<String, Long> entry : data.entrySet()) {
+            long value = entry.getValue() == null ? 0L : entry.getValue();
+            double pct = value * 100.0 / total;
+            g.setColor(colors[idx % colors.length]);
+            g.fillRect(legendX, legendY + idx * 34, 18, 18);
+            g.setColor(new Color(31, 41, 55));
+            g.drawString(String.format("%s  %d (%.1f%%)", safe(entry.getKey()), value, pct),
+                    legendX + 28, legendY + 15 + idx * 34);
+            idx++;
+        }
+
+        ImageIO.write(img, "png", new File(output));
+        g.dispose();
+    }
+
     private void drawLineChart(String title, Map<String, Long> data, Map<String, Map<String, Long>> top3Series, String output) throws Exception {
         BufferedImage img = createCanvas(title);
         Graphics2D g = img.createGraphics();
@@ -985,11 +1326,19 @@ public class CaseStatsController {
         g.drawLine(left, top, left, bottom);
     }
 
+    private boolean isHighRiskLevel(String riskLevel) {
+        if (riskLevel == null) {
+            return false;
+        }
+        String normalized = riskLevel.trim();
+        return normalized.contains("高") || "HIGH".equalsIgnoreCase(normalized);
+    }
+
     /**
-     * 从登记时间或事件时间提取“yyyy-MM”月份键。
+     * 从事件时间提取“yyyy-MM”月份键。
      */
-    private String extractMonth(String registerTime, String eventTime) {
-        String source = (registerTime == null || registerTime.trim().isEmpty()) ? eventTime : registerTime;
+    private String extractMonth(String eventTime) {
+        String source = eventTime;
         if (source == null) {
             return "";
         }
@@ -1068,6 +1417,81 @@ public class CaseStatsController {
             return String.valueOf(cell.getBooleanCellValue());
         }
         return cell.toString().trim();
+    }
+
+
+    private String safeCellDateTimeString(Row row, int index) {
+        try {
+            return cellDateTimeString(row, index);
+        } catch (Exception ex) {
+            log.warn("读取日期时间单元格失败，已跳过该字段: row={}, col={}, error={}", row == null ? -1 : row.getRowNum(), index, ex.getMessage());
+            return "";
+        }
+    }
+
+    private String cellDateTimeString(Row row, int index) {
+        Cell cell = row.getCell(index, MissingCellPolicy.RETURN_BLANK_AS_NULL);
+        if (cell == null) {
+            return "";
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            Double numericValue = cell.getNumericCellValue();
+            LocalDateTime dateTime = null;
+            if (DateUtil.isCellDateFormatted(cell)) {
+                dateTime = cell.getLocalDateTimeCellValue();
+            } else if (numericValue != null && numericValue > 1d) {
+                try {
+                    dateTime = DateUtil.getLocalDateTime(numericValue);
+                } catch (Exception ignored) {
+                }
+            }
+            if (dateTime != null) {
+                return OUTPUT_DATE_TIME_FORMATTER.format(dateTime);
+            }
+        }
+        String raw = cellString(row, index);
+        if (raw.isEmpty()) {
+            return "";
+        }
+        return parseDateTimeString(raw);
+    }
+
+    private String parseDateTimeString(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) {
+            return "";
+        }
+        value = value.replace('T', ' ').replaceAll("\\s+", " ");
+
+        for (DateTimeFormatter formatter : DATE_TIME_FORMATTERS) {
+            try {
+                LocalDateTime dateTime = LocalDateTime.parse(value, formatter);
+                return OUTPUT_DATE_TIME_FORMATTER.format(dateTime);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+            try {
+                LocalDate date = LocalDate.parse(value, formatter);
+                return OUTPUT_DATE_TIME_FORMATTER.format(date.atStartOfDay());
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        if (value.matches("^\\d{10,13}$")) {
+            try {
+                long epoch = Long.parseLong(value);
+                if (value.length() == 10) {
+                    epoch = epoch * 1000L;
+                }
+                LocalDateTime dateTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(epoch), java.time.ZoneId.systemDefault());
+                return OUTPUT_DATE_TIME_FORMATTER.format(dateTime);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return value;
     }
 
     /**

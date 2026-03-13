@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>统计洞察 - 上海区域案件分布</title>
+  <script src="tailwind-bridge.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷预防和化解<br>智能体应用系统</h1>
+    <a href="index.html">首页</a>
+    <a href="smart-tools.html">智能体集</a>
+    <a href="gov-consult.html">咨询服务</a>
+    <a href="cases.html">案件管理</a>
+    <a href="stats.html">案件统计</a>
+    <a href="insight-bubble.html">洞察统计</a>
+  </aside>
+  <main class="content">
+    <section class="card stats-insight-layout">
+      <div class="insight-left">
+        <h2>上海市各区域案件数量统计</h2>
+        <div id="shMapChart" class="sh-map-chart" aria-label="上海各区案件数量地图"></div>
+      </div>
+      <div class="insight-right">
+        <div class="insight-chat insight-chat-panel">
+          <div class="insight-chat-head">
+            <div>
+              <h3>洞察问答</h3>
+              <p>页面加载后将自动统计各区域案件数量，并实时刷新地图。</p>
+            </div>
+            <div class="insight-chat-badge">AI 分析</div>
+          </div>
+          <div class="insight-current-query" id="insightCurrentQueryCard">
+            <div class="insight-current-query-label">当前问题</div>
+            <div id="insightCurrentQuestion" class="insight-current-query-text">帮我统计各区域案件数量</div>
+          </div>
+          <div id="insightChatLog" class="insight-chat-log insight-chat-log-modern"></div>
+          <div class="insight-chat-row insight-chat-row-modern">
+            <input id="insightQuestion" placeholder="例如：哪个区案件最多？" />
+            <button type="button" class="ui-btn ui-btn-primary" onclick="askDistrictInsight()">提交分析</button>
+          </div>
+        </div>
+        <div class="insight-charts">
+          <canvas id="districtBarCanvas" width="360" height="220"></canvas>
+          <canvas id="districtPieCanvas" width="360" height="220"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@antv/l7@2/dist/l7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@antv/l7-maps@2/dist/l7-maps.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!--<script src="main.js"></script>-->
+<script src="./javascript/config.js"></script>
+<script src="./javascript/utils.js"></script>
+<script src="./javascript/file-upload.js"></script>
+<script src="./javascript/ingestion.js"></script>
+<script src="./javascript/assistant.js"></script>
+<script src="./javascript/cases.js"></script>
+<script src="./javascript/law-chat.js"></script>
+<script src="./javascript/insight.js"></script>
+<script src="./javascript/clues.js"></script>
+<script src="main.js"></script>
+<script>loadDistrictInsight();</script>
+</body>
+</html>

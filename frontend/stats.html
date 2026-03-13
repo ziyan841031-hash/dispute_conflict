@@ -3,16 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>矛盾纠纷系统管理 - 案件统计</title>
+  <title>智能化矛盾纠纷综合治理系统 - 案件统计</title>
+  <script src="tailwind-bridge.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <h1>矛盾纠纷系统管理</h1>
-    <a href="index.html">智能工具</a>
+    <h1>矛盾纠纷预防和化解<br>智能体应用系统</h1>
+    <a href="index.html">首页</a>
+    <a href="smart-tools.html">智能体集</a>
+    <a href="gov-consult.html">咨询服务</a>
     <a href="cases.html">案件管理</a>
     <a class="active" href="stats.html">案件统计</a>
+        <a href="insight-bubble.html">洞察统计</a>
   </aside>
   <main class="content">
     <section class="card">
@@ -53,7 +59,7 @@
       <table class="cases-table stats-detail-table">
         <thead>
         <tr>
-          <th>序号</th><th>时间</th><th>区</th><th>街镇</th><th>登记来源</th><th>类型</th><th>登记时间</th><th>当前办理状态</th>
+          <th>序号</th><th>时间</th><th>区</th><th>街镇</th><th>登记来源</th><th>类型</th><th>风险等级</th><th>当前办理状态</th>
         </tr>
         </thead>
         <tbody id="statsDetailBody"></tbody>
@@ -62,7 +68,20 @@
   </div>
 </div>
 
+<!--<script src="main.js"></script>-->
+<script src="./javascript/config.js"></script>
+<script src="./javascript/utils.js"></script>
+<script src="./javascript/file-upload.js"></script>
+<script src="./javascript/ingestion.js"></script>
+<script src="./javascript/assistant.js"></script>
+<script src="./javascript/cases.js"></script>
+<script src="./javascript/law-chat.js"></script>
+<script src="./javascript/insight.js"></script>
+<script src="./javascript/clues.js"></script>
 <script src="main.js"></script>
 <script>loadStatsBatches();</script>
 </body>
 </html>
+
+
+

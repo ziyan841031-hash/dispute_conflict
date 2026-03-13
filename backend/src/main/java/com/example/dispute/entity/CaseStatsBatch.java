@@ -43,6 +43,9 @@ public class CaseStatsBatch {
     @TableField("district_status_json")
     private String districtStatusJson;
 
+    @TableField("district_high_risk_json")
+    private String districtHighRiskJson;
+
     @TableField("time_chart_path")
     private String timeChartPath;
 
@@ -54,6 +57,9 @@ public class CaseStatsBatch {
 
     @TableField("district_chart_path")
     private String districtChartPath;
+
+    @TableField("district_high_risk_chart_path")
+    private String districtHighRiskChartPath;
 
     @TableField("report_file_path")
     private String reportFilePath;
