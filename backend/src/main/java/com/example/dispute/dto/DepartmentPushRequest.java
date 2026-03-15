@@ -23,5 +23,8 @@ public class DepartmentPushRequest {
     @JsonProperty("current_stage")
     private String currentStage;
 
+    @JsonProperty("event_source")
+    private String eventSource;
+
     private String query;
 }

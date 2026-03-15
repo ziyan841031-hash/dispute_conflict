@@ -1,37 +1,39 @@
 package com.example.dispute.util;
 
+import org.apache.fontbox.ttf.NamingTable;
+import org.apache.fontbox.ttf.TrueTypeCollection;
+import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Font;
+import java.awt.FontFormatException;
+import java.awt.GraphicsEnvironment;
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
-public final class ArchiveReportPdfUtil {
+public final class PdfChineseFontSupport {
 
-    private static final Logger log = LoggerFactory.getLogger(ArchiveReportPdfUtil.class);
-    private static final Path OUTPUT_DIR = Paths.get("generated-docs", "archive-reports").toAbsolutePath().normalize();
-    private static final float FONT_SIZE = 12F;
-    private static final float LEADING = 18F;
-    private static final float MARGIN = 48F;
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-
-
+    private static final Logger log = LoggerFactory.getLogger(PdfChineseFontSupport.class);
     private static final String CHINESE_SAMPLE = "\u4e2d\u6587\u5b57\u4f53\u6d4b\u8bd5";
     private static final String[] PREFERRED_FONT_FAMILIES = {
             "Microsoft YaHei",
@@ -49,73 +51,42 @@ public final class ArchiveReportPdfUtil {
             "Dialog"
     };
 
-    private ArchiveReportPdfUtil() {
+    private PdfChineseFontSupport() {
     }
 
-    public static String generateArchiveReportPdfPath(Long caseId,
-                                                      String archiveSummary,
-                                                      String factsProcess,
-                                                      String responsibilitySplit) throws IOException {
-        String content = buildContent(archiveSummary, factsProcess, responsibilitySplit);
-        if (!StringUtils.hasText(content)) {
-            return "";
-        }
-        Files.createDirectories(OUTPUT_DIR);
-        String fileName = "archive-report-" + (caseId == null ? "unknown" : caseId)
-                + "-" + TS.format(LocalDateTime.now()) + ".pdf";
-        Path filePath = OUTPUT_DIR.resolve(fileName).toAbsolutePath().normalize();
-
-        try (PDDocument document = new PDDocument();
-             PdfChineseFontSupport.LoadedFont loadedFont = PdfChineseFontSupport.loadFont(document)) {
-            PDFont font = loadedFont.getFont();
-            List<String> lines = wrapLines(font, FONT_SIZE, content, PDRectangle.A4.getWidth() - (MARGIN * 2));
-            writeLines(document, font, lines);
-            document.save(filePath.toFile());
-        }
-        return filePath.toString();
-    }
-
-    private static String buildContent(String archiveSummary, String factsProcess, String responsibilitySplit) {
-        List<String> sections = new ArrayList<>();
-        appendSection(sections, "褰掓。鎬荤粨", archiveSummary);
-        appendSection(sections, "浜嬪疄缁忚繃", factsProcess);
-        appendSection(sections, "璐ｄ换鍒掑垎", responsibilitySplit);
-        return String.join("\n\n", sections).trim();
-    }
-
-    private static void appendSection(List<String> sections, String title, String body) {
-        String text = body == null ? "" : body.trim();
-        if (!StringUtils.hasText(text)) {
-            return;
-        }
-        sections.add(title + "\n" + text);
-    }
-
-    private static PDFont loadFont(PDDocument document) throws IOException {
+    public static LoadedFont loadFont(PDDocument document) throws IOException {
         LinkedHashSet<Path> candidates = new LinkedHashSet<>();
         String customFontPath = firstNonBlank(System.getProperty("cjk.font.path"), System.getenv("CJK_FONT_PATH"));
         String preferredFamily = resolveChineseFontFamily();
 
-        if (StringUtils.hasText(customFontPath)) {
-            candidates.add(Paths.get(customFontPath));
-        }
+        addCandidate(candidates, customFontPath);
         candidates.addAll(buildKnownFontCandidates());
         candidates.addAll(scanSystemFontFiles(preferredFamily));
 
         Path fallback = findFontViaFcMatch();
         if (fallback != null) {
-            candidates.add(fallback);
+            candidates.add(fallback.toAbsolutePath().normalize());
         }
 
         for (Path candidate : candidates) {
-            PDFont font = tryLoadFont(document, candidate);
-            if (font != null) {
-                return font;
+            LoadedFont loadedFont = tryLoadFont(document, candidate, preferredFamily);
+            if (loadedFont != null) {
+                return loadedFont;
             }
         }
 
-        log.warn("no usable Chinese font file found, fallback to Helvetica");
-        return PDType1Font.HELVETICA;
+        throw new IOException("No usable Chinese font file found. Configure -Dcjk.font.path or CJK_FONT_PATH.");
+    }
+
+    private static void addCandidate(Set<Path> candidates, String rawPath) {
+        if (!StringUtils.hasText(rawPath)) {
+            return;
+        }
+        try {
+            candidates.add(Paths.get(rawPath.trim()).toAbsolutePath().normalize());
+        } catch (Exception ex) {
+            log.warn("ignore invalid font path {}: {}", rawPath, ex.getMessage());
+        }
     }
 
     private static List<Path> buildKnownFontCandidates() {
@@ -124,11 +95,13 @@ public final class ArchiveReportPdfUtil {
         if (osName.contains("win")) {
             candidates.addAll(Arrays.asList(
                     Paths.get("C:/Windows/Fonts/simhei.ttf"),
+                    Paths.get("C:/Windows/Fonts/simsun.ttc"),
                     Paths.get("C:/Windows/Fonts/simsunb.ttf"),
                     Paths.get("C:/Windows/Fonts/simkai.ttf"),
                     Paths.get("C:/Windows/Fonts/STXIHEI.TTF"),
                     Paths.get("C:/Windows/Fonts/STKAITI.TTF"),
                     Paths.get("C:/Windows/Fonts/Deng.ttf"),
+                    Paths.get("C:/Windows/Fonts/msyh.ttc"),
                     Paths.get("C:/Windows/Fonts/msyh.ttf"),
                     Paths.get("C:/Windows/Fonts/HYZhongHeiTi-197.ttf"),
                     Paths.get("C:/Windows/Fonts/Alibaba-PuHuiTi-Regular.otf"),
@@ -137,6 +110,8 @@ public final class ArchiveReportPdfUtil {
         } else if (osName.contains("linux")) {
             candidates.addAll(Arrays.asList(
                     Paths.get("/usr/share/fonts/chinese/simsun.ttf"),
+                    Paths.get("/usr/share/fonts/chinese/simsun.ttc"),
+                    Paths.get("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
                     Paths.get("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf"),
                     Paths.get("/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"),
                     Paths.get("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc")
@@ -147,7 +122,11 @@ public final class ArchiveReportPdfUtil {
                     Paths.get("/System/Library/Fonts/Hiragino Sans GB.ttc")
             ));
         }
-        return candidates;
+        List<Path> normalized = new ArrayList<>();
+        for (Path candidate : candidates) {
+            normalized.add(candidate.toAbsolutePath().normalize());
+        }
+        return normalized;
     }
 
     private static List<Path> scanSystemFontFiles(String preferredFamily) {
@@ -159,7 +138,7 @@ public final class ArchiveReportPdfUtil {
             }
             try (Stream<Path> stream = Files.walk(fontDir, 2)) {
                 stream.filter(Files::isRegularFile)
-                        .filter(ArchiveReportPdfUtil::isFontFile)
+                        .filter(PdfChineseFontSupport::isFontFile)
                         .forEach(path -> classifyFontFile(path, preferredFamily, preferred, fallback));
             } catch (Exception ex) {
                 log.warn("scan system font dir failed: {}", fontDir, ex);
@@ -175,14 +154,20 @@ public final class ArchiveReportPdfUtil {
                                          LinkedHashSet<Path> preferred,
                                          LinkedHashSet<Path> fallback) {
         Font font = loadAwtFont(path);
-        if (font == null || font.canDisplayUpTo(CHINESE_SAMPLE) != -1) {
+        if (font == null) {
+            if (looksLikeChineseFont(path)) {
+                fallback.add(path.toAbsolutePath().normalize());
+            }
             return;
         }
-        String family = font.getFamily();
-        if (familyMatches(family, preferredFamily)) {
-            preferred.add(path);
+        if (font.canDisplayUpTo(CHINESE_SAMPLE) != -1) {
+            return;
+        }
+        Path normalized = path.toAbsolutePath().normalize();
+        if (familyMatches(font.getFamily(), preferredFamily)) {
+            preferred.add(normalized);
         } else {
-            fallback.add(path);
+            fallback.add(normalized);
         }
     }
 
@@ -198,6 +183,27 @@ public final class ArchiveReportPdfUtil {
         } catch (IOException ex) {
             return null;
         }
+    }
+
+    private static boolean looksLikeChineseFont(Path path) {
+        String name = path == null || path.getFileName() == null ? "" : path.getFileName().toString().toLowerCase();
+        return name.contains("simsun")
+                || name.contains("simhei")
+                || name.contains("simkai")
+                || name.contains("yahei")
+                || name.contains("msyh")
+                || name.contains("noto")
+                || name.contains("cjk")
+                || name.contains("wenquanyi")
+                || name.contains("wqy")
+                || name.contains("sourcehan")
+                || name.contains("heiti")
+                || name.contains("kaiti")
+                || name.contains("fang")
+                || name.contains("song")
+                || name.contains("droidsansfallback")
+                || name.contains("unicode")
+                || name.contains("puhuiti");
     }
 
     private static boolean isType1Font(Path path) {
@@ -221,6 +227,7 @@ public final class ArchiveReportPdfUtil {
             String home = System.getProperty("user.home");
             if (StringUtils.hasText(home)) {
                 dirs.add(Paths.get(home, ".fonts"));
+                dirs.add(Paths.get(home, ".local", "share", "fonts"));
             }
         } else if (osName.contains("mac")) {
             dirs.add(Paths.get("/System/Library/Fonts"));
@@ -233,30 +240,124 @@ public final class ArchiveReportPdfUtil {
         return dirs;
     }
 
-    private static PDFont tryLoadFont(PDDocument document, Path candidate) {
+    private static LoadedFont tryLoadFont(PDDocument document, Path candidate, String preferredFamily) {
         if (candidate == null || !Files.isRegularFile(candidate)) {
             return null;
         }
+        Path normalized = candidate.toAbsolutePath().normalize();
+        Exception directFailure = null;
         try {
-            log.info("try briefing font: {}", candidate);
-            return PDType0Font.load(document, candidate.toFile());
+            PDFont font = PDType0Font.load(document, normalized.toFile());
+            log.info("loaded pdf font file: {}", normalized);
+            return new LoadedFont(font, null);
         } catch (Exception ex) {
-            log.warn("load briefing font failed, skip {}: {}", candidate, ex.getMessage());
+            directFailure = ex;
+        }
+
+        TrueTypeCollection collection = null;
+        try {
+            collection = new TrueTypeCollection(normalized.toFile());
+            TrueTypeFont trueTypeFont = selectTrueTypeFont(collection, preferredFamily);
+            if (trueTypeFont == null) {
+                closeQuietly(collection);
+                return null;
+            }
+            PDFont font = PDType0Font.load(document, trueTypeFont, true);
+            log.info("loaded pdf font from collection: {} -> {}", normalized, describeTrueTypeFont(trueTypeFont));
+            return new LoadedFont(font, collection);
+        } catch (Exception ex) {
+            closeQuietly(collection);
+            log.warn("load pdf font failed, skip {}: direct={}, collection={}",
+                    normalized,
+                    directFailure == null ? "-" : safeMessage(directFailure),
+                    safeMessage(ex));
             return null;
         }
     }
 
-    private static String firstNonBlank(String... values) {
-        if (values == null) {
+    private static TrueTypeFont selectTrueTypeFont(TrueTypeCollection collection, String preferredFamily) throws IOException {
+        if (collection == null) {
             return null;
         }
-        for (String value : values) {
-            if (StringUtils.hasText(value)) {
-                return value.trim();
+        if (StringUtils.hasText(preferredFamily)) {
+            try {
+                TrueTypeFont exact = collection.getFontByName(preferredFamily);
+                if (exact != null) {
+                    return exact;
+                }
+            } catch (IOException ex) {
+                log.info("match TTC font by family failed: {}", ex.getMessage());
             }
         }
-        return null;
+
+        List<TrueTypeFont> fonts = new ArrayList<>();
+        collection.processAllFonts(new TrueTypeCollection.TrueTypeFontProcessor() {
+            @Override
+            public void process(TrueTypeFont trueTypeFont) {
+                fonts.add(trueTypeFont);
+            }
+        });
+        if (fonts.isEmpty()) {
+            return null;
+        }
+        for (TrueTypeFont font : fonts) {
+            if (fontMatchesPreferred(font, preferredFamily)) {
+                return font;
+            }
+        }
+        for (String preferred : PREFERRED_FONT_FAMILIES) {
+            for (TrueTypeFont font : fonts) {
+                if (fontMatchesPreferred(font, preferred)) {
+                    return font;
+                }
+            }
+        }
+        return fonts.get(0);
     }
+
+    private static boolean fontMatchesPreferred(TrueTypeFont font, String preferredFamily) {
+        if (font == null || !StringUtils.hasText(preferredFamily)) {
+            return false;
+        }
+        return findMatchedFamily(preferredFamily, collectFontNames(font)) != null;
+    }
+
+    private static Set<String> collectFontNames(TrueTypeFont font) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        if (font == null) {
+            return names;
+        }
+        try {
+            addName(names, font.getName());
+        } catch (IOException ex) {
+            log.info("read TTC font name failed: {}", ex.getMessage());
+        }
+        try {
+            NamingTable naming = font.getNaming();
+            if (naming != null) {
+                addName(names, naming.getFontFamily());
+                addName(names, naming.getPostScriptName());
+            }
+        } catch (IOException ex) {
+            log.info("read TTC naming table failed: {}", ex.getMessage());
+        }
+        return names;
+    }
+
+    private static void addName(Set<String> names, String value) {
+        if (StringUtils.hasText(value)) {
+            names.add(value.trim());
+        }
+    }
+
+    private static String describeTrueTypeFont(TrueTypeFont font) {
+        Set<String> names = collectFontNames(font);
+        if (names.isEmpty()) {
+            return "unknown";
+        }
+        return String.join(" / ", names);
+    }
+
     private static String resolveChineseFontFamily() {
         try {
             String customPath = firstNonBlank(System.getProperty("cjk.font.path"), System.getenv("CJK_FONT_PATH"));
@@ -280,6 +381,7 @@ public final class ArchiveReportPdfUtil {
                     return family;
                 }
             }
+            log.warn("no AWT Chinese font family available, candidate files will be used directly");
         } catch (Exception ex) {
             log.warn("resolve chinese font family failed: {}", ex.getMessage());
             return "Dialog";
@@ -298,9 +400,12 @@ public final class ArchiveReportPdfUtil {
             GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
             String family = font.getFamily();
             if (new Font(family, Font.PLAIN, 16).canDisplayUpTo(sample) == -1) {
-                log.info("registered custom font family: {}", family);
+                log.info("registered custom Chinese font family: {}", family);
                 return family;
             }
+            log.warn("custom font cannot display Chinese sample: {}", family);
+        } catch (FontFormatException ex) {
+            log.warn("custom font format is unsupported by AWT, will try PDFBox fallback: {}", ex.getMessage());
         } catch (Exception ex) {
             log.warn("register custom font failed: {}", ex.getMessage());
         }
@@ -308,13 +413,16 @@ public final class ArchiveReportPdfUtil {
     }
 
     private static String findMatchedFamily(String preferred, Set<String> available) {
+        if (!StringUtils.hasText(preferred) || available == null || available.isEmpty()) {
+            return null;
+        }
         if (available.contains(preferred)) {
             return preferred;
         }
         String preferredLower = preferred.toLowerCase();
         String[] tokens = preferredLower.split("\\s+");
         for (String family : available) {
-            if (family == null) {
+            if (!StringUtils.hasText(family)) {
                 continue;
             }
             String familyLower = family.toLowerCase();
@@ -342,93 +450,78 @@ public final class ArchiveReportPdfUtil {
         if (family.equalsIgnoreCase(preferredFamily)) {
             return true;
         }
-        return findMatchedFamily(preferredFamily, new HashSet<>(Arrays.asList(family))) != null;
+        Set<String> available = new HashSet<>();
+        available.add(family);
+        return findMatchedFamily(preferredFamily, available) != null;
     }
 
     private static Path findFontViaFcMatch() {
+        Process process = null;
         try {
-            Process process = Runtime.getRuntime().exec("fc-match -f '%{file}' :lang=zh");
+            process = new ProcessBuilder("fc-match", "-f", "%{file}", ":lang=zh").start();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line = reader.readLine();
-                if (line != null && !line.isEmpty()) {
-                    return Paths.get(line);
+                if (StringUtils.hasText(line)) {
+                    return Paths.get(line.trim()).toAbsolutePath().normalize();
                 }
             }
-        } catch (IOException ex) {
-            log.warn("run fc-match failed", ex);
+        } catch (Exception ex) {
+            log.info("run fc-match failed: {}", ex.getMessage());
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
         }
         return null;
     }
 
-
-//    private static PDFont loadFont(PDDocument document) throws IOException {
-//        List<Path> candidates = Arrays.asList(
-//                Paths.get("C:/Windows/Fonts/msyh.ttf"),
-//                Paths.get("C:/Windows/Fonts/simhei.ttf"),
-//                Paths.get("C:/Windows/Fonts/Deng.ttf"),
-//                Paths.get("C:/Windows/Fonts/NotoSansSC-VF.ttf")
-//        );
-//        for (Path candidate : candidates) {
-//            if (Files.exists(candidate)) {
-//                return PDType0Font.load(document, candidate.toFile());
-//            }
-//        }
-//        log.warn("archive report pdf font not found, fallback to Helvetica");
-//        return PDType1Font.HELVETICA;
-//    }
-
-    private static void writeLines(PDDocument document, PDFont font, List<String> lines) throws IOException {
-        PDPage page = new PDPage(PDRectangle.A4);
-        document.addPage(page);
-        PDPageContentStream stream = new PDPageContentStream(document, page);
-        float y = page.getMediaBox().getHeight() - MARGIN;
-        stream.setFont(font, FONT_SIZE);
-        stream.beginText();
-        stream.newLineAtOffset(MARGIN, y);
-        for (String line : lines) {
-            if (y <= MARGIN) {
-                stream.endText();
-                stream.close();
-                page = new PDPage(PDRectangle.A4);
-                document.addPage(page);
-                stream = new PDPageContentStream(document, page);
-                stream.setFont(font, FONT_SIZE);
-                y = page.getMediaBox().getHeight() - MARGIN;
-                stream.beginText();
-                stream.newLineAtOffset(MARGIN, y);
-            }
-            stream.showText(line);
-            stream.newLineAtOffset(0, -LEADING);
-            y -= LEADING;
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
         }
-        stream.endText();
-        stream.close();
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
-    private static List<String> wrapLines(PDFont font, float fontSize, String text, float maxWidth) throws IOException {
-        List<String> lines = new ArrayList<>();
-        String[] rawLines = String.valueOf(text).split("\r?\n", -1);
-        for (String rawLine : rawLines) {
-            if (!StringUtils.hasText(rawLine)) {
-                lines.add(" ");
-                continue;
-            }
-            StringBuilder current = new StringBuilder();
-            for (int i = 0; i < rawLine.length(); i += 1) {
-                char ch = rawLine.charAt(i);
-                current.append(ch);
-                float width = font.getStringWidth(current.toString()) / 1000 * fontSize;
-                if (width > maxWidth && current.length() > 1) {
-                    char last = current.charAt(current.length() - 1);
-                    current.deleteCharAt(current.length() - 1);
-                    lines.add(current.toString());
-                    current = new StringBuilder().append(last);
-                }
-            }
-            if (current.length() > 0) {
-                lines.add(current.toString());
+    private static String safeMessage(Exception ex) {
+        String message = ex == null ? null : ex.getMessage();
+        return StringUtils.hasText(message) ? message : ex.getClass().getSimpleName();
+    }
+
+    private static void closeQuietly(Closeable closeable) {
+        if (closeable == null) {
+            return;
+        }
+        try {
+            closeable.close();
+        } catch (IOException ex) {
+            log.info("close font resource failed: {}", ex.getMessage());
+        }
+    }
+
+    public static final class LoadedFont implements Closeable {
+
+        private final PDFont font;
+        private final Closeable resource;
+
+        private LoadedFont(PDFont font, Closeable resource) {
+            this.font = font;
+            this.resource = resource;
+        }
+
+        public PDFont getFont() {
+            return font;
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (resource != null) {
+                resource.close();
             }
         }
-        return lines;
     }
 }

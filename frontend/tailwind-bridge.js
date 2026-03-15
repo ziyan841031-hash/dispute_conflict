@@ -1,27 +1,27 @@
-﻿window.tailwind = window.tailwind || {};
+window.tailwind = window.tailwind || {};
 window.tailwind.config = {
   theme: {
     extend: {
       colors: {
-        primary: '#2563EB',
-        background: '#F6F8FC',
+        primary: '#1a4080',
+        background: '#f0f3f7',
         card: '#FFFFFF',
-        border: '#E5EAF3',
-        foreground: '#0F172A',
-        muted: '#475569',
-        success: '#16A34A',
-        warning: '#F59E0B',
-        danger: '#EF4444'
+        border: '#cdd5df',
+        foreground: '#1a1f2e',
+        muted: '#4a5568',
+        success: '#1a7a3c',
+        warning: '#b45309',
+        danger: '#b91c1c'
       },
       borderRadius: {
-        sm: '8px',
-        md: '10px',
-        lg: '12px',
-        xl: '14px'
+        sm: '3px',
+        md: '4px',
+        lg: '4px',
+        xl: '6px'
       },
       boxShadow: {
-        card: '0 6px 18px rgba(15, 23, 42, 0.06)',
-        soft: '0 2px 10px rgba(15, 23, 42, 0.05)'
+        card: '0 1px 4px rgba(15, 23, 42, 0.08)',
+        soft: '0 1px 3px rgba(15, 23, 42, 0.06)'
       }
     }
   }

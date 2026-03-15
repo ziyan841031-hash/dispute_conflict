@@ -1,0 +1,130 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能化矛盾纠纷综合治理系统 - 案件导入</title>
+  <script src="tailwind-bridge.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="components/ui/ui.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>矛盾纠纷预防和化解<br>智能体应用系统</h1>
+    <a href="index.html">首页</a>
+    <a href="gov-consult.html">咨询服务</a>
+    <a class="active" href="case-import.html">案件导入</a>
+    <a href="cases.html">案件管理</a>
+    <a href="insight-bubble.html">数据洞察</a>
+    <a href="smart-tools.html">智能工具</a>
+  </aside>
+  <main class="content ios-home-content">
+    <section class="card ios-home-hero ios-tools-hero">
+      <div>
+        <h2>案件导入</h2>
+        <p>集中处理文本、音频和 Excel 批量案件导入，保留原有多模态案源导入能力。</p>
+      </div>
+    </section>
+
+    <section class="ios-home-grid ios-home-grid-two">
+      <article class="card ios-module-card ios-module-main">
+        <div class="ios-module-header">
+          <h3>多模态案源导入</h3>
+          <span class="ios-module-tag">单案件 + 批量</span>
+        </div>
+        <div class="ios-submodule-wrap">
+          <section class="ios-submodule-card ios-submodule-single">
+            <h4>单案件导入（文本 + 音频）</h4>
+            <div class="ios-input-dual ios-upload-row-single">
+              <div class="ios-input-group">
+                <label for="caseText">文本上传</label>
+                <textarea id="caseText" placeholder="请输入案件描述..."></textarea>
+                <div class="ios-source-wrap">
+                  <label for="eventSource">事件来源</label>
+                  <select id="eventSource">
+                    <option value="线下接待">线下接待</option>
+                    <option value="网上反映">网上反映</option>
+                    <option value="主动排查">主动排查</option>
+                    <option value="来电求助">来电求助</option>
+                    <option value="部门流转">部门流转</option>
+                  </select>
+                </div>
+                <button type="button" onclick="submitText()">提交文本案件</button>
+              </div>
+              <div class="ios-input-group">
+                <label for="audioFile">音频上传</label>
+                <input type="file" id="audioFile" accept="audio/*" class="ios-file-input">
+                <div class="ios-file-stage">
+                  <label for="audioFile" id="audioFileDropzone" class="ios-file-dropzone" tabindex="0" aria-label="选择音频文件">
+                    <span class="ios-file-dropzone-tip">拖拽文件到此处，或点击选择</span>
+                  </label>
+                  <div id="audioFilePreview" class="ios-file-preview hidden">
+                    <div class="ios-file-preview-head">
+                      <span id="audioFileName" class="ios-file-selected-name">未选择文件</span>
+                      <button type="button" class="ios-file-remove" onclick="clearSelectedFile('audioFile')">×</button>
+                    </div>
+                    <audio id="audioFilePlayer" controls class="ios-audio-player"></audio>
+                  </div>
+                </div>
+                <div class="ios-source-wrap ios-source-wrap-placeholder" aria-hidden="true"></div>
+                <button type="button" onclick="submitAudio()">提交音频转写</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="ios-submodule-card ios-submodule-batch">
+            <h4>批量导入（Excel）</h4>
+            <div class="ios-input-group">
+              <label for="excelFile">上传 Excel 表格</label>
+              <input type="file" id="excelFile" accept=".xlsx,.xls" class="ios-file-input">
+              <div class="ios-file-stage">
+                <label for="excelFile" id="excelFileDropzone" class="ios-file-dropzone" tabindex="0" aria-label="选择 Excel 文件">
+                  <span class="ios-file-dropzone-tip">拖拽文件到此处，或点击选择</span>
+                </label>
+                <div id="excelFilePreview" class="ios-file-preview hidden">
+                  <div class="ios-file-preview-head">
+                    <span id="excelFileName" class="ios-file-selected-name">未选择文件</span>
+                    <button type="button" class="ios-file-remove" onclick="clearSelectedFile('excelFile')">×</button>
+                  </div>
+                </div>
+              </div>
+              <div class="ios-source-wrap ios-batch-source-wrap">
+                <label for="excelEventSource">事件来源</label>
+                <select id="excelEventSource">
+                  <option value="线下接待">线下接待</option>
+                  <option value="部门流转">部门流转</option>
+                </select>
+              </div>
+              <button id="excelSubmitBtn" type="button" onclick="submitExcel()">提交批量导入</button>
+            </div>
+          </section>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>
+
+<div id="parseModal" class="modal hidden">
+  <div class="modal-content workflow-waiting-content parse-modal-content">
+    <div class="workflow-waiting-spinner" aria-hidden="true"></div>
+    <h3 id="parseModalTitle">案件处理中</h3>
+    <p id="parseModalTip">请稍候...</p>
+    <ul class="parse-list">
+      <li id="step-audio" class="parse-step"><span id="icon-audio" class="status-icon">○</span><span class="parse-step-text">音频识别中</span></li>
+      <li class="parse-step"><span id="icon-text" class="status-icon">○</span><span class="parse-step-text">智能要素提取中</span></li>
+      <li class="parse-step"><span id="icon-classify" class="status-icon">○</span><span class="parse-step-text">智能分类中</span></li>
+    </ul>
+    <p id="excelProgressText" class="hidden"></p>
+  </div>
+</div>
+
+<script src="./javascript/config.js"></script>
+<script src="./javascript/utils.js"></script>
+<script src="./javascript/file-upload.js"></script>
+<script src="./javascript/ingestion.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

@@ -72,6 +72,9 @@ public class CaseDisposalWorkflowRecord {
     @TableField("briefing_document_path")
     private String briefingDocumentPath;
 
+    @TableField("briefing_generated_at")
+    private LocalDateTime briefingGeneratedAt;
+
     @TableField("archive_completed_at")
     private LocalDateTime archiveCompletedAt;
 
@@ -81,8 +84,15 @@ public class CaseDisposalWorkflowRecord {
     @TableField("archive_document_path")
     private String archiveDocumentPath;
 
+    @TableField("mediation_document_generated_at")
+    private LocalDateTime mediationDocumentGeneratedAt;
+
     @TableField("archive_report_path")
     private String archiveReportPath;
+
+    @TableField("archive_report_generated_at")
+    private LocalDateTime archiveReportGeneratedAt;
+
     @TableField("facts_process")
     private String factsProcess;
 

@@ -164,7 +164,7 @@
         if (list) {
             list.innerHTML = '';
         }
-        appendGovConsultMessage('assistant', '你好，这里是政务平台咨询服务助手。请输入你的问题，我会基于当前会话的最新记录继续解答。');
+        appendGovConsultMessage('assistant', '你好，这里是市民咨询服务助手。请输入你的问题，我会基于当前会话的最新记录继续解答。');
     };
 
     window.onGovConsultInputKeydown = function (event) {
@@ -200,11 +200,11 @@
             const answer = String((data && data.answer) || '').trim();
             clearGovConsultWaitingState(waitingNode);
             const waitingBody = waitingNode && waitingNode.querySelector('.law-agent-msg-body');
-            await typeGovConsultAssistantContent(waitingBody, answer || '????????????????');
+            await typeGovConsultAssistantContent(waitingBody, answer || '暂未获取到有效回复，请稍后再试。');
         } catch (error) {
             clearGovConsultWaitingState(waitingNode);
             const waitingBody = waitingNode && waitingNode.querySelector('.law-agent-msg-body');
-            renderGovConsultAssistantContent(waitingBody, `?????${(error && error.message) || '?????'}`);
+            renderGovConsultAssistantContent(waitingBody, `请求失败：${(error && error.message) || '请稍后重试'}`);
         } finally {
             setGovConsultSendingState(false);
             const list = document.getElementById('govConsultChatList');

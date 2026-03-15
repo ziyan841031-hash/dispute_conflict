@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -14,24 +14,24 @@
   <aside class="sidebar">
     <h1 id="assistantSidebarTitle"></h1>
     <a id="assistantNavHome" href="index.html"></a>
-    <a id="assistantNavTools" href="smart-tools.html"></a>
     <a id="assistantNavConsult" href="gov-consult.html"></a>
+    <a id="assistantNavImport" href="case-import.html"></a>
     <a id="assistantNavCases" class="active" href="cases.html"></a>
-    <a id="assistantNavStats" href="stats.html"></a>
     <a id="assistantNavInsight" href="insight-bubble.html"></a>
+    <a id="assistantNavTools" href="smart-tools.html"></a>
   </aside>
 
   <main class="content assistant-page-content">
     <div class="assistant-shell">
       <header class="assistant-header ui-card">
         <div class="assistant-header-main">
-          <div>
+          <div class="assistant-header-title">
             <p id="assistantEyebrow" class="assistant-eyebrow"></p>
             <h1 id="assistantPageTitle"></h1>
           </div>
+          <div id="assistantProcessBar" class="assistant-process-bar"></div>
           <a id="assistantBackLink" class="ui-btn ui-btn-secondary" href="cases.html"></a>
         </div>
-        <div id="assistantProcessBar" class="assistant-process-bar"></div>
       </header>
 
       <section class="assistant-content-grid">
@@ -44,9 +44,29 @@
             <div id="assistantQuickActions" class="assistant-quick-actions"></div>
           </div>
           <div id="assistantChatList" class="assistant-chat-list"></div>
+          <div class="assistant-chat-toolbar">
+            <button id="assistantTraceShortcutBtn" type="button" class="assistant-chat-shortcut-btn"></button>
+          </div>
           <div class="assistant-chat-input-wrap">
-            <textarea id="assistantChatInput" class="assistant-chat-input" rows="3"></textarea>
-            <button id="assistantChatSendBtn" type="button" class="ui-btn ui-btn-primary"></button>
+            <div id="assistantPromptActions" class="assistant-prompt-actions" aria-hidden="true"></div>
+            <div class="assistant-chat-composer">
+              <button
+                id="assistantPromptToggleBtn"
+                type="button"
+                class="assistant-prompt-toggle-btn"
+                aria-label="快捷操作"
+                aria-expanded="false"
+                aria-controls="assistantPromptActions"
+              ></button>
+              <div class="assistant-chat-composer-divider" aria-hidden="true"></div>
+              <textarea id="assistantChatInput" class="assistant-chat-input" rows="1"></textarea>
+              <button
+                id="assistantChatSendBtn"
+                type="button"
+                class="ui-btn ui-btn-primary assistant-chat-send-btn"
+                aria-label="发送"
+              ></button>
+            </div>
           </div>
         </section>
 

@@ -1,72 +1,77 @@
-﻿(function () {
+(function () {
     var TEXT = {
-        eyebrow: '\u6848\u4ef6\u52a9\u624b',
-        back: '\u8fd4\u56de\u6848\u4ef6\u5217\u8868',
-        pageTitle: '\u6848\u4ef6\u534f\u540c\u63a8\u8fdb',
-        chatTitle: '\u667a\u80fd\u5bf9\u8bdd',
-        chatDesc: '\u56f4\u7ed5\u6848\u4ef6\u8981\u70b9\u3001\u90e8\u95e8\u63a8\u8fdb\u548c\u98ce\u9669\u8fdb\u884c\u8f85\u52a9\u4ea4\u6d41',
-        infoTitle: '\u6848\u4ef6\u4fe1\u606f',
-        infoDesc: '\u6848\u4ef6\u57fa\u7840\u4fe1\u606f\u3001\u6848\u4ef6\u8be6\u60c5\u3001\u6848\u4ef6\u8ffd\u8e2a\u4e0e\u6587\u4ef6\u7ba1\u7406',
-        send: '\u53d1\u9001',
-        sending: '\u53d1\u9001\u4e2d...',
-        inputPlaceholder: '\u8bf7\u8f93\u5165\u4f60\u60f3\u4e86\u89e3\u7684\u95ee\u9898\uff0c\u4f8b\u5982\uff1a\u5f53\u524d\u98ce\u9669\u70b9\u6709\u54ea\u4e9b\uff1f',
-        detailBtn: '\u6848\u4ef6\u8be6\u60c5',
-        analysisBtn: '\u6848\u4ef6\u7814\u5224',
-        traceTitle: '\u6848\u4ef6\u8ffd\u8e2a',
-        filesTitle: '\u6587\u4ef6\u7ba1\u7406',
-        modalClose: '\u5173\u95ed',
-        noCase: '\u7f3a\u5c11\u6848\u4ef6ID\uff0c\u65e0\u6cd5\u52a0\u8f7d\u8be6\u60c5\u3002',
-        loadFail: '\u6848\u4ef6\u8be6\u60c5\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-        noSummary: '\u6682\u65e0\u6848\u4ef6\u6458\u8981',
-        noText: '\u6682\u65e0\u53ef\u5c55\u793a\u8be6\u60c5',
-        noEmotion: '\u5f85\u8865\u5145',
-        processing: '\u5904\u7406\u4e2d',
-        success: '\u6210\u529f',
-        failed: '\u5931\u8d25',
-        caseOverview: '\u6848\u4ef6\u6982\u8ff0',
-        riskHint: '\u98ce\u9669\u63d0\u793a',
-        deptReason: '\u63a8\u8350\u90e8\u95e8\u4f9d\u636e',
-        nextStep: '\u4e0b\u4e00\u6b65\u52a8\u4f5c',
-        expand: '\u5168\u90e8',
-        collapse: '\u6536\u8d77',
-        traceDetail: '\u8be6\u60c5',
-        currentQuestion: '\u5f53\u524d\u95ee\u9898',
-        assistantMeta: '\u667a\u80fd\u52a9\u624b',
-        summaryMeta: '\u6848\u4ef6\u6458\u8981',
-        detailTitle: '\u6848\u4ef6\u8be6\u60c5',
-        analysisTitle: '\u6848\u4ef6\u7814\u5224',
-        traceDetailTitle: '\u52a8\u6001\u8be6\u60c5',
-        baseInfo: '\u57fa\u7840\u4fe1\u606f',
-        partyInfo: '\u5f53\u4e8b\u4eba\u4fe1\u606f',
-        caseType: '\u6848\u4ef6\u5206\u7c7b',
-        caseRaw: '\u6848\u4ef6\u539f\u6587',
-        emotion: '\u5ba2\u6237\u60c5\u611f\u5206\u6790',
-        factSummary: '\u4e8b\u5b9e\u6458\u8981',
-        judgement: '\u88c1\u91cf\u4f9d\u636e',
-        mediationAdvice: '\u8c03\u89e3\u5efa\u8bae',
-        sidebarTitle: '\u77db\u76fe\u7ea0\u7eb7\u9884\u9632\u548c\u5316\u89e3\n\u667a\u80fd\u4f53\u5e94\u7528\u7cfb\u7edf',
-        navHome: '\u9996\u9875',
-        navTools: '\u667a\u80fd\u4f53\u96c6',
-        navConsult: '\u54a8\u8be2\u670d\u52a1',
-        navCases: '\u6848\u4ef6\u7ba1\u7406',
-        navStats: '\u6848\u4ef6\u7edf\u8ba1',
-        navInsight: '\u6d1e\u5bdf\u7edf\u8ba1',
-        caseMaterialTitle: '\u6848\u4ef6\u8be6\u60c5',
-        initLoading: '\u6b63\u5728\u751f\u6210\u90e8\u95e8\u63a8\u8350...',
-        feedbackTitle: '\u8bf7\u8f93\u5165\u672c\u6b21\u53cd\u9988\u5185\u5bb9',
-        feedbackPlaceholder: '\u4f8b\u5982\uff1a\u8fd9\u6761\u56de\u590d\u8fd8\u9700\u8981\u8865\u5145\u54ea\u4e9b\u4fe1\u606f\uff1f',
-        feedbackSubmit: '\u63d0\u4ea4',
-        feedbackCancel: '\u53d6\u6d88',
-        fileEmpty: '\u5f53\u524d\u6682\u65e0\u53ef\u4e0b\u8f7d\u7684\u6848\u4ef6\u6587\u4ef6\uff0c\u5f85\u6848\u4ef6\u63a8\u8fdb\u5230\u5bf9\u5e94\u9636\u6bb5\u540e\u4f1a\u5728\u8fd9\u91cc\u751f\u6210\u3002',
-        copy: '\u590d\u5236',
-        copied: '\u5df2\u590d\u5236',
-        like: '\u70b9\u8d5e',
-        dislike: '\u4e0d\u8d5e',
-        responseTime: '\u54cd\u5e94\u5b8c\u6210\u65f6\u95f4',
-        pushFail: '\u90e8\u95e8\u63a8\u9001\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-        traceLoading: '\u6b63\u5728\u52a0\u8f7d\u6848\u4ef6\u52a8\u6001...',
-        traceEmpty: '\u6682\u65e0\u6848\u4ef6\u52a8\u6001',
-        traceSummaryLabel: '\u8be6\u60c5'
+        eyebrow: '案件助手',
+        back: '返回案件列表',
+        pageTitle: '案件协同推进',
+        chatTitle: '辅助办案助手',
+        chatDesc: '围绕案件要点、部门推进和风险进行辅助交流',
+        infoTitle: '案件信息',
+        infoDesc: '案件基础信息、案件详情、案件跟踪与文件管理',
+        send: '发送',
+        sending: '发送中...',
+        inputPlaceholder: '\u8bf7\u8f93\u5165 \u4f60\u60f3\u4e86\u89e3\u7684\u95ee\u9898...',
+        detailBtn: '案件详情',
+        analysisBtn: '案件研判',
+        traceTitle: '案件跟踪',
+        filesTitle: '文件管理',
+        modalClose: '关闭',
+        noCase: '缺少案件ID，无法加载详情。',
+        loadFail: '案件详情加载失败，请稍后重试。',
+        noSummary: '暂无案件摘要',
+        noText: '暂无不可展示详情',
+        noEmotion: '待补充',
+        processing: '处理中',
+        success: '成功',
+        failed: '失败',
+        caseOverview: '案件概述',
+        riskHint: '风险提示',
+        deptReason: '推荐部门依据',
+        nextStep: '下一步动作',
+        expand: '全部',
+        collapse: '收起',
+        traceDetail: '详情',
+        currentQuestion: '当前问题',
+        assistantMeta: '智能助手',
+        summaryMeta: '案件摘要',
+        detailTitle: '案件详情',
+        analysisTitle: '案件研判',
+        traceDetailTitle: '动态详情',
+        baseInfo: '基础信息',
+        partyInfo: '当事人信息',
+        caseType: '案件分类',
+        caseRaw: '案件原文',
+        emotion: '客户情感分析',
+        factSummary: '事实摘要',
+        judgement: '裁量依据',
+        mediationAdvice: '调解建议',
+        sidebarTitle: '矛盾纠纷预防和化解\n智能体应用系统',
+        navHome: '首页',
+        navTools: '智能工具',
+        navConsult: '咨询服务',
+        navCases: '案件管理',
+        navImport: '案件导入',
+        navInsight: '数据洞察',
+        caseMaterialTitle: '案件详情',
+        initLoading: '正在生成部门推荐...',
+        feedbackTitle: '请输入本次反馈内容',
+        feedbackPlaceholder: '例如：这条回复还需要补充哪些信息？',
+        feedbackSubmit: '提交',
+        feedbackCancel: '取消',
+        fileEmpty: '当前暂无可下载的案件文件，待案件推进到对应阶段后会在这里生成。',
+        fileLoading: '正在加载文件...',
+        fileLoadFail: '文件列表加载失败，请稍后重试。',
+        copy: '复制',
+        copied: '已复制',
+        like: '点赞',
+        dislike: '不赞',
+        responseTime: '响应完成时间',
+        pushFail: '部门推送失败，请稍后重试。',
+        traceLoading: '正在加载案件动态...',
+        traceEmpty: '暂无案件动态',
+        traceSummaryLabel: '详情',
+        quickActionsTitle: '快捷操作',
+        quickActionsAria: '快捷操作',
+        traceShortcut: '\u6848\u4ef6\u8fdb\u5ea6\u8ffd\u8e2a'
     };
 
     var assistantState = {
@@ -75,27 +80,41 @@
         trackingEvents: [],
         trackingLoaded: false,
         trackingLoading: false,
+        fileItems: [],
+        filesLoaded: false,
+        filesLoading: false,
+        fileLoadError: '',
         expandedEventIds: {},
         chatMessages: [],
         isSending: false,
         sideTab: 'detail',
-        messageSeq: 0
+        messageSeq: 0,
+        quickActionsOpen: false,
+        departmentMenuOpen: false,
+        departmentMenuMessageId: '',
+        departmentActionMessageId: ''
     };
 
     var assistantMarkdownRenderer = null;
-    var PROCESS_STEPS = ['\u90e8\u95e8\u63a8\u8350', '\u6848\u4ef6\u63a8\u9001', '\u6848\u4ef6\u76d1\u7763', '\u6848\u4ef6\u5f52\u6863'];
+    var PROCESS_STEPS = ['部门推荐', '案件派送', '催办/督办', '调解结果', '案件归档'];
+    var QUICK_PROMPTS = [
+        { label: '风险点分析', prompt: '风险点分析', description: '识别当前案件潜在风险', icon: 'risk', tone: 'risk' },
+        { label: '类似案例', prompt: '类似案例', description: '检索相似案件供参考', icon: 'case', tone: 'case' },
+        { label: '法律依据', prompt: '法律依据', description: '查找相关法律法规条文', icon: 'law', tone: 'law' },
+        { label: '调解建议', prompt: '调解建议', description: '生成调解方案与话术', icon: 'mediation', tone: 'mediation' },
+        { label: '时间线梳理', prompt: '时间线梳理', description: '整理案件关键时间节点', icon: 'timeline', tone: 'timeline' }
+    ];
     var STATUS = {
-        accepted: '\u6848\u4ef6\u5df2\u53d7\u7406',
-        mediating: '\u6848\u4ef6\u8c03\u89e3\u4e2d',
-        mediatingShort: '\u8c03\u89e3\u4e2d',
-        success: '\u6848\u4ef6\u8c03\u89e3\u6210\u529f',
-        successShort: '\u8c03\u89e3\u6210\u529f',
-        failed: '\u6848\u4ef6\u8c03\u89e3\u5931\u8d25',
-        failedShort: '\u8c03\u89e3\u5931\u8d25',
-        archived: '\u5df2\u5f52\u6863',
-        litigation: '\u8bc9\u8bbc'
+        accepted: '案件已受理',
+        mediating: '案件调解中',
+        mediatingShort: '调解中',
+        success: '案件调解成功',
+        successShort: '调解成功',
+        failed: '案件调解失败',
+        failedShort: '调解失败',
+        archived: '已归档',
+        litigation: '诉讼'
     };
-
     function getMarkdownRenderer() {
         if (!assistantMarkdownRenderer && window.markdownit && typeof window.markdownit === 'function') {
             assistantMarkdownRenderer = window.markdownit({ breaks: true, linkify: true, html: false });
@@ -121,6 +140,139 @@
         return String(value == null ? '' : value).trim();
     }
 
+    function renderPromptToggleIcon() {
+        var iconSrc = assistantState.quickActionsOpen ? './img/selected.png' : './img/selectedBefore.png';
+        return '<img class="assistant-prompt-toggle-image" src="' + iconSrc + '" alt="" aria-hidden="true">';
+    }
+
+    function renderSendButtonIcon(isSending) {
+        if (isSending) {
+            return '<span class="assistant-send-icon assistant-send-icon-spinner" aria-hidden="true"></span>';
+        }
+        return ''
+            + '<span class="assistant-send-icon" aria-hidden="true">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+            + '<path d="M4.75 11.5 19 5.25l-4.95 13.5-2.55-4.75L4.75 11.5Z"></path>'
+            + '<path d="M11.5 14 19 5.25"></path>'
+            + '</svg>'
+            + '</span>';
+    }
+
+    function renderPromptCardArrow() {
+        return ''
+            + '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            + '<path d="m7 4 6 6-6 6"></path>'
+            + '</svg>';
+    }
+
+    function renderPromptCardIcon(type) {
+        if (type === 'risk') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M12 3.5 20.25 18a1.5 1.5 0 0 1-1.31 2.25H5.06A1.5 1.5 0 0 1 3.75 18L12 3.5Z"></path>'
+                + '<path d="M12 9v4.2"></path>'
+                + '<circle cx="12" cy="17" r="1"></circle>'
+                + '</svg>';
+        }
+        if (type === 'case') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M3.75 8.25A2.25 2.25 0 0 1 6 6h4.4l1.85 2.1H18A2.25 2.25 0 0 1 20.25 10.35v6.9A2.25 2.25 0 0 1 18 19.5H6a2.25 2.25 0 0 1-2.25-2.25Z"></path>'
+                + '</svg>';
+        }
+        if (type === 'law') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M12 4v14.5"></path>'
+                + '<path d="M7 7h10"></path>'
+                + '<path d="M7.4 7 5 11.25h4.8L7.4 7Z"></path>'
+                + '<path d="M16.6 7 14.2 11.25H19L16.6 7Z"></path>'
+                + '<path d="M8.75 19.5h6.5"></path>'
+                + '</svg>';
+        }
+        if (type === 'mediation') {
+            return ''
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M7.25 6.25h5.5A3.25 3.25 0 0 1 16 9.5v1A3.25 3.25 0 0 1 12.75 13.75H10l-3 2v-2H7.25A3.25 3.25 0 0 1 4 10.5v-1a3.25 3.25 0 0 1 3.25-3.25Z"></path>'
+                + '<path d="M14.5 11.25h2.25A3.25 3.25 0 0 1 20 14.5v1A3.25 3.25 0 0 1 16.75 18.75H15.5l-2.5 1.75v-1.75"></path>'
+                + '</svg>';
+        }
+        return ''
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            + '<rect x="4" y="5.5" width="16" height="14" rx="2.6"></rect>'
+            + '<path d="M8 3.75v3.5"></path>'
+            + '<path d="M16 3.75v3.5"></path>'
+            + '<path d="M4 9.5h16"></path>'
+            + '<path d="M8 13h2"></path>'
+            + '<path d="M12 13h2"></path>'
+            + '<path d="M8 16.5h2"></path>'
+            + '<path d="M12 16.5h2"></path>'
+            + '</svg>';
+    }
+
+    function syncComposerControls() {
+        var sendBtn = document.getElementById('assistantChatSendBtn');
+        var input = document.getElementById('assistantChatInput');
+        var promptToggleBtn = document.getElementById('assistantPromptToggleBtn');
+        var traceShortcutBtn = document.getElementById('assistantTraceShortcutBtn');
+        var promptRoot = document.getElementById('assistantPromptActions');
+        var hasInputValue = !!(input && plainText(input.value));
+        if (sendBtn) {
+            sendBtn.innerHTML = renderSendButtonIcon(assistantState.isSending);
+            sendBtn.setAttribute('aria-label', assistantState.isSending ? TEXT.sending : TEXT.send);
+            sendBtn.disabled = !!assistantState.isSending;
+            sendBtn.classList.toggle('is-ready', hasInputValue && !assistantState.isSending);
+        }
+        if (promptToggleBtn) {
+            promptToggleBtn.innerHTML = renderPromptToggleIcon();
+            promptToggleBtn.classList.toggle('is-open', !!assistantState.quickActionsOpen);
+            promptToggleBtn.setAttribute('aria-expanded', assistantState.quickActionsOpen ? 'true' : 'false');
+            promptToggleBtn.setAttribute('aria-label', TEXT.quickActionsAria);
+            promptToggleBtn.disabled = !!assistantState.isSending;
+        }
+        if (promptRoot) {
+            promptRoot.classList.toggle('is-open', !!assistantState.quickActionsOpen);
+            promptRoot.setAttribute('aria-hidden', assistantState.quickActionsOpen ? 'false' : 'true');
+        }
+    }
+
+    function setPromptActionsOpen(isOpen) {
+        assistantState.quickActionsOpen = !!isOpen && !assistantState.isSending;
+        syncComposerControls();
+    }
+    function getAssistantPrefill(caseId) {
+        if (!caseId || typeof sessionStorage === 'undefined') {
+            return null;
+        }
+        try {
+            var raw = sessionStorage.getItem('assistantPrefill');
+            if (!raw) {
+                return null;
+            }
+            var parsed = JSON.parse(raw);
+            if (!parsed || String(parsed.id || '').trim() !== String(caseId).trim()) {
+                return null;
+            }
+            return parsed;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function applyAssistantPrefill(detail, prefill) {
+        var merged = detail && typeof detail === 'object' ? Object.assign({}, detail) : {};
+        var safePrefill = prefill && typeof prefill === 'object' ? prefill : null;
+        if (!safePrefill) {
+            return merged;
+        }
+        var prefillEventSource = plainText(safePrefill.eventSource || safePrefill.caseSource || safePrefill.event_source);
+        if (prefillEventSource) {
+            merged.eventSource = prefillEventSource;
+            merged.caseSource = prefillEventSource;
+            merged.event_source = prefillEventSource;
+        }
+        return merged;
+    }
     function isAcceptedStatus(status) {
         return plainText(status) === STATUS.accepted;
     }
@@ -147,7 +299,7 @@
     function resolveProcessSteps(detail) {
         var steps = PROCESS_STEPS.slice();
         if (isMediationFailureStatus(detail && detail.mediationStatus)) {
-            steps[3] = STATUS.litigation;
+            steps[4] = STATUS.litigation;
         }
         return steps;
     }
@@ -170,6 +322,11 @@
         }
         overlay.classList.add('hidden');
         overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function isAssistantInitLoadingVisible() {
+        var overlay = document.getElementById('assistantInitLoading');
+        return !!(overlay && !overlay.classList.contains('hidden'));
     }
 
     function buildRecommendedDepartmentPayload(detail) {
@@ -211,6 +368,7 @@
             case_category: plainText(detail && detail.disputeSubType),
             case_level: plainText(detail && detail.riskLevel),
             current_stage: resolveCurrentStageName(detail),
+            event_source: plainText(detail && (detail.eventSource || detail.caseSource || detail.event_source)),
             query: plainText(query)
         };
     }
@@ -233,6 +391,24 @@
         return json.data || null;
     }
 
+    function normalizeAssistantProgressActions(actions) {
+        var items = Array.isArray(actions) ? actions : [];
+        var normalized = [];
+        for (var i = 0; i < items.length; i += 1) {
+            var item = items[i] && typeof items[i] === 'object' ? items[i] : null;
+            var queryText = plainText(item && (item.query || item.value || item.label));
+            var labelText = plainText(item && (item.label || item.query || item.value));
+            if (!queryText || !labelText) {
+                continue;
+            }
+            normalized.push({
+                label: labelText,
+                query: queryText
+            });
+        }
+        return normalized;
+    }
+
     async function requestTrackingEvents(caseId) {
         if (!caseId) {
             return [];
@@ -242,6 +418,19 @@
         var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
         if (!response.ok || !json || !successCode) {
             throw new Error((json && json.message) || 'tracking request failed');
+        }
+        return Array.isArray(json.data) ? json.data : [];
+    }
+
+    async function requestCaseFiles(caseId) {
+        if (!caseId) {
+            return [];
+        }
+        var response = await fetch(API_BASE + '/recommended-department/files?caseId=' + encodeURIComponent(caseId));
+        var json = await response.json();
+        var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
+        if (!response.ok || !json || !successCode) {
+            throw new Error((json && json.message) || 'file request failed');
         }
         return Array.isArray(json.data) ? json.data : [];
     }
@@ -294,14 +483,84 @@
         }
     }
 
+    function normalizeFileItems(items) {
+        if (!Array.isArray(items)) {
+            return [];
+        }
+        return items.map(function (item, index) {
+            var path = plainText(item && item.path);
+            var endpoint = plainText(item && item.endpoint);
+            var fileName = plainText(item && (item.fileName || item.file_name));
+            var id = plainText(item && item.id) || ('file-' + index);
+            var title = plainText(item && item.title) || fileName || ('\u6587\u4ef6' + (index + 1));
+            var generatedAt = item && (item.generatedAt || item.generated_at || item.time);
+            if (id === 'archive-document') {
+                title = '\u8c03\u89e3\u534f\u8bae\u4e66';
+            }
+            if (!path || !endpoint) {
+                return null;
+            }
+            return {
+                id: id,
+                title: title,
+                fileName: fileName || title,
+                path: path,
+                endpoint: endpoint,
+                time: generatedAt || ''
+            };
+        }).filter(function (item) {
+            return !!item;
+        });
+    }
+
+    async function loadFileItems(forceRefresh) {
+        if (!assistantState.caseId) {
+            assistantState.fileItems = [];
+            assistantState.filesLoaded = true;
+            assistantState.fileLoadError = '';
+            renderFileList();
+            return [];
+        }
+        if (assistantState.filesLoading) {
+            return assistantState.fileItems;
+        }
+        if (assistantState.filesLoaded && !forceRefresh) {
+            renderFileList();
+            return assistantState.fileItems;
+        }
+        assistantState.filesLoading = true;
+        assistantState.fileLoadError = '';
+        renderFileList();
+        try {
+            assistantState.fileItems = normalizeFileItems(await requestCaseFiles(assistantState.caseId));
+            assistantState.filesLoaded = true;
+            return assistantState.fileItems;
+        } catch (error) {
+            console.warn('load file items failed', error);
+            assistantState.fileItems = [];
+            assistantState.filesLoaded = true;
+            assistantState.fileLoadError = TEXT.fileLoadFail;
+            return assistantState.fileItems;
+        } finally {
+            assistantState.filesLoading = false;
+            renderFileList();
+        }
+    }
+
     function resolveCurrentStageName(detail) {
         var status = plainText(detail && detail.mediationStatus);
         var steps = resolveProcessSteps(detail);
-        if (status === STATUS.archived) {
-            return steps[3];
+        if (detail && detail.archiveCompletedAt) {
+            return steps[4];
         }
-        if (isMediationCompletedStatus(status)) {
-            return steps[3];
+        if (status === STATUS.archived) {
+            return steps[4];
+        }
+        if (isMediationSuccessStatus(status)) {
+            return STATUS.successShort;
+        }
+        if (isMediationFailureStatus(status)) {
+            return steps[4];
         }
         if (Number(detail && detail.expediteSuperviseStatus) === 1) {
             return steps[2];
@@ -323,31 +582,30 @@
 
     function isDisputeMediationQuestion(question) {
         var text = plainText(question);
-        return text.indexOf('\u6210\u529f') >= 0 || text.indexOf('\u5931\u8d25') >= 0;
+        return text === '\u8c03\u89e3\u6210\u529f' || text === '\u8c03\u89e3\u5931\u8d25' || text === '\u6848\u4ef6\u8c03\u89e3\u6210\u529f' || text === '\u6848\u4ef6\u8c03\u89e3\u5931\u8d25';
     }
 
     function updateAssistantSendingState(isSending) {
-        var sendBtn = document.getElementById('assistantChatSendBtn');
         var input = document.getElementById('assistantChatInput');
         assistantState.isSending = !!isSending;
-        if (sendBtn) {
-            sendBtn.disabled = !!isSending;
-            sendBtn.textContent = isSending ? TEXT.sending : TEXT.send;
+        if (assistantState.isSending) {
+            assistantState.quickActionsOpen = false;
         }
         if (input) {
             input.disabled = !!isSending;
         }
+        syncComposerControls();
     }
 
     function applyStaticText() {
         var mapping = {
             assistantSidebarTitle: TEXT.sidebarTitle,
             assistantNavHome: TEXT.navHome,
-            assistantNavTools: TEXT.navTools,
             assistantNavConsult: TEXT.navConsult,
+            assistantNavImport: TEXT.navImport,
             assistantNavCases: TEXT.navCases,
-            assistantNavStats: TEXT.navStats,
             assistantNavInsight: TEXT.navInsight,
+            assistantNavTools: TEXT.navTools,
             assistantEyebrow: TEXT.eyebrow,
             assistantBackLink: TEXT.back,
             assistantPageTitle: TEXT.pageTitle,
@@ -355,7 +613,7 @@
             assistantChatDesc: TEXT.chatDesc,
             assistantInfoTitle: TEXT.infoTitle,
             assistantInfoDesc: TEXT.infoDesc,
-            assistantChatSendBtn: TEXT.send,
+            assistantTraceShortcutBtn: TEXT.traceShortcut,
             assistantDetailTitle: TEXT.detailTitle,
             assistantTraceTitle: TEXT.traceTitle,
             assistantFilesTitle: TEXT.filesTitle,
@@ -376,9 +634,15 @@
             node.textContent = mapping[id];
         });
         var input = document.getElementById('assistantChatInput');
+        var promptToggleBtn = document.getElementById('assistantPromptToggleBtn');
         if (input) {
             input.placeholder = TEXT.inputPlaceholder;
         }
+        if (promptToggleBtn) {
+            promptToggleBtn.setAttribute('aria-label', TEXT.quickActionsAria);
+        }
+        renderPromptActions();
+        syncComposerControls();
         document.title = TEXT.eyebrow;
     }
 
@@ -423,10 +687,13 @@
             return { activeStage: 1, completedStage: 1, animatedLine: 1 };
         }
         if (detail.archiveCompletedAt || status === STATUS.archived) {
-            return { activeStage: 4, completedStage: 4, animatedLine: 0 };
+            return { activeStage: 5, completedStage: 5, animatedLine: 0 };
         }
-        if (isMediationCompletedStatus(status)) {
-            return { activeStage: 4, completedStage: 4, animatedLine: 0 };
+        if (isMediationSuccessStatus(status)) {
+            return { activeStage: 5, completedStage: 5, animatedLine: 0 };
+        }
+        if (isMediationFailureStatus(status)) {
+            return { activeStage: 5, completedStage: 5, animatedLine: 0 };
         }
         if (Number(detail && detail.expediteSuperviseStatus) === 1) {
             return { activeStage: 3, completedStage: 3, animatedLine: 3 };
@@ -450,17 +717,34 @@
         }
         var processState = resolveProcessState(detail);
         var processSteps = resolveProcessSteps(detail);
+        var status = plainText(detail && detail.mediationStatus);
+        var highlightResultStages = !!detail && (
+            detail.archiveCompletedAt
+            || status === STATUS.archived
+            || isMediationCompletedStatus(status)
+        );
         var pieces = [];
         for (var i = 0; i < processSteps.length; i += 1) {
             var stepIndex = i + 1;
             var stepClasses = [];
+            var stepLabel = processSteps[i];
             if (stepIndex <= processState.completedStage) {
                 stepClasses.push('is-complete');
             }
             if (stepIndex === processState.activeStage) {
                 stepClasses.push('is-active');
             }
-            pieces.push('<div class="assistant-step ' + stepClasses.join(' ') + '">' + escapeHtml(processSteps[i]) + '</div>');
+            if (highlightResultStages && (stepIndex === 4 || stepIndex === 5) && stepClasses.indexOf('is-active') === -1) {
+                stepClasses.push('is-active');
+            }
+            if (stepIndex === 4 && stepIndex <= processState.completedStage) {
+                if (isMediationSuccessStatus(status)) {
+                    stepLabel = STATUS.successShort;
+                } else if (isMediationFailureStatus(status)) {
+                    stepLabel = STATUS.failedShort;
+                }
+            }
+            pieces.push('<div class="assistant-step ' + stepClasses.join(' ') + '"><span class="assistant-step-num">' + stepIndex + '</span><span class="assistant-step-label">' + escapeHtml(stepLabel) + '</span></div>');
             if (i < processSteps.length - 1) {
                 var lineIndex = i + 1;
                 var lineClasses = [];
@@ -625,7 +909,8 @@
 
     function renderDetailGrid(items) {
         return '<div class="case-detail-grid">' + items.map(function (item) {
-            return '<div class="case-detail-item"><span class="case-detail-label">' + escapeHtml(item.label) + '</span><span class="case-detail-value">' + escapeHtml(formatDetailValue(item.value)) + '</span></div>';
+            var extraClass = item.wide ? ' case-detail-item-wide' : '';
+            return '<div class="case-detail-item' + extraClass + '"><span class="case-detail-label">' + escapeHtml(item.label) + '</span><span class="case-detail-value">' + escapeHtml(formatDetailValue(item.value)) + '</span></div>';
         }).join('') + '</div>';
     }
 
@@ -641,15 +926,10 @@
         var normalizedAudioUrl = normalizeAudioUrl(safeData.audioFileUrl);
         var hasAudio = Boolean(normalizedAudioUrl);
         var basicItems = [
-            { label: '\u6848\u4ef6\u7f16\u53f7', value: safeData.caseNo },
-            { label: '\u767b\u8bb0\u65f6\u95f4', value: safeData.registerTime },
-            { label: '\u4e8b\u4ef6\u6765\u6e90', value: safeData.eventSource },
+            { label: '\u4e8b\u4ef6\u6765\u6e90', value: safeData.eventSource || safeData.caseSource || safeData.event_source },
             { label: '\u529e\u7406\u8fdb\u5ea6', value: safeData.handlingProgress || safeData.mediationStatus },
-            { label: '\u7ea0\u7eb7\u7c7b\u578b', value: safeData.disputeType },
-            { label: '\u7ea0\u7eb7\u5b50\u7c7b', value: safeData.disputeSubType },
-            { label: '\u7ea0\u7eb7\u5730\u70b9', value: safeData.disputeLocation },
-            { label: '\u98ce\u9669\u7b49\u7ea7', value: safeData.riskLevel },
-            { label: '\u63a5\u5f85\u4eba', value: safeData.receiver }
+            { label: '\u7ea0\u7eb7\u5730\u70b9', value: safeData.disputeLocation, wide: true },
+            { label: '\u767b\u8bb0\u65f6\u95f4', value: safeData.registerTime, wide: true }
         ];
         var partyItems = [
             { label: '\u59d3\u540d', value: safeData.partyName },
@@ -712,6 +992,7 @@
         var rows = buildInfoRows(detail);
         var riskLevel = textValue(detail && detail.riskLevel, '\u5f85\u8bc4\u4f30');
         var caseCode = textValue(detail && (detail.caseNo || detail.caseId || detail.id));
+        var riskClass = riskLevel === '\u9ad8' ? 'risk-high' : riskLevel === '\u4e2d' ? 'risk-medium' : riskLevel === '\u4f4e' ? 'risk-low' : '';
         root.innerHTML = ''
             + '<section class="assistant-info-profile">'
             + '<div class="assistant-info-profile-top">'
@@ -723,7 +1004,7 @@
             + '</div>'
             + '</div>'
             + '<div class="assistant-info-risk-wrap">'
-            + '<div class="assistant-info-risk-pill"><span class="assistant-info-risk-dot"></span><span>\u98ce\u9669\u7b49\u7ea7\uff1a' + escapeHtml(riskLevel) + '</span></div>'
+            + '<div class="assistant-info-risk-pill ' + riskClass + '"><span class="assistant-info-risk-dot"></span><span>\u98ce\u9669\u7b49\u7ea7\uff1a' + escapeHtml(riskLevel) + '</span></div>'
             + '</div>'
             + '</div>'
             + '<div class="assistant-info-divider"></div>'
@@ -823,6 +1104,21 @@
         return parts[parts.length - 1] || '\u6848\u4ef6\u7b80\u62a5.pdf';
     }
 
+    function formatFileDisplayTime(value) {
+        if (!value) {
+            return '--';
+        }
+        var date = new Date(value);
+        if (isNaN(date.getTime())) {
+            return plainText(value, '--');
+        }
+        return date.getFullYear()
+            + '-' + String(date.getMonth() + 1).padStart(2, '0')
+            + '-' + String(date.getDate()).padStart(2, '0')
+            + ' ' + String(date.getHours()).padStart(2, '0')
+            + ':' + String(date.getMinutes()).padStart(2, '0');
+    }
+
     function buildFileItems(detail) {
         var items = [];
         var briefingPath = plainText(detail && (detail.briefingDocumentPath || detail.briefing_document_path));
@@ -835,7 +1131,7 @@
                 fileName: fileNameFromPath(briefingPath),
                 path: briefingPath,
                 endpoint: '/recommended-department/briefing-document/download',
-                time: detail && (detail.diversionCompletedAt || detail.updatedAt || detail.createdAt)
+                time: detail && (detail.briefingGeneratedAt || detail.diversionCompletedAt || detail.updatedAt || detail.createdAt)
             });
         }
         if (archiveReportPath) {
@@ -845,17 +1141,17 @@
                 fileName: fileNameFromPath(archiveReportPath),
                 path: archiveReportPath,
                 endpoint: '/dify/archive-report/download',
-                time: detail && (detail.archiveCompletedAt || detail.updatedAt || detail.createdAt)
+                time: detail && (detail.archiveReportGeneratedAt || detail.archiveCompletedAt || detail.updatedAt || detail.createdAt)
             });
         }
         if (archiveDocumentPath) {
             items.push({
                 id: 'archive-document',
-                title: '\u8c03\u89e3\u4e66',
+                title: '\u8c03\u89e3\u534f\u8bae\u4e66',
                 fileName: fileNameFromPath(archiveDocumentPath),
                 path: archiveDocumentPath,
                 endpoint: '/dify/archive-document/download',
-                time: detail && (detail.archiveCompletedAt || detail.mediationCompletedAt || detail.updatedAt || detail.createdAt)
+                time: detail && (detail.mediationDocumentGeneratedAt || detail.archiveCompletedAt || detail.mediationCompletedAt || detail.updatedAt || detail.createdAt)
             });
         }
         return items;
@@ -863,9 +1159,9 @@
 
     function iconSvg(name) {
         var icons = {
-            copy: '<img src="./img/copy.png" alt="??">',
-            like: '<img src="./img/zan.png" alt="??">',
-            dislike: '<img src="./img/nozan.png" alt="???">',
+            copy: '<img src="./img/copy.png" alt="">',
+            like: '<img src="./img/zan.png" alt="">',
+            dislike: '<img src="./img/nozan.png" alt="">',
             time: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>',
             file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>',
             download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"></path><path d="m8 10 4 4 4-4"></path><path d="M5 20h14"></path></svg>'
@@ -873,23 +1169,68 @@
         return icons[name] || '';
     }
 
-    function renderFileList(detail) {
+    function getFileType(name) {
+        var lowerName = String(name || '').toLowerCase();
+        if (/\.pdf$/.test(lowerName)) {
+            return 'pdf';
+        }
+        if (/\.(doc|docx)$/.test(lowerName)) {
+            return 'doc';
+        }
+        if (/\.(jpg|jpeg|png|gif|bmp|webp)$/.test(lowerName)) {
+            return 'image';
+        }
+        return 'file';
+    }
+
+    function fileIconSvg(fileName) {
+        var type = getFileType(fileName);
+        if (type === 'pdf') {
+            return '<span class="assistant-file-type-icon is-pdf" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="2.5" width="18" height="23" rx="2.5" fill="#ffffff" stroke="#111827" stroke-width="1.8"></rect><path d="M6 5.5h12v17H6z" fill="#ef233c"></path><path d="M21 8.5l4-4v17.5a2.5 2.5 0 0 1-2.5 2.5H21z" fill="#ffffff" opacity="0.95"></path><path d="M21 8.5h4" stroke="#111827" stroke-width="1.6" stroke-linecap="round"></path><path d="M6.5 22.5H18" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path></svg></span>';
+        }
+        if (type === 'doc') {
+            return '<span class="assistant-file-type-icon is-doc" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="2.5" width="18" height="23" rx="2.5" fill="#ffffff" stroke="#111827" stroke-width="1.8"></rect><path d="M6 5.5h12v17H6z" fill="#4ea8de"></path><path d="M21 8.5l4-4v17.5a2.5 2.5 0 0 1-2.5 2.5H21z" fill="#ffffff" opacity="0.95"></path><path d="M21 8.5h4" stroke="#111827" stroke-width="1.6" stroke-linecap="round"></path><path d="M8.4 10.2h7.2M8.4 13.4h7.2M8.4 16.6h5.2" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"></path></svg></span>';
+        }
+        if (type === 'image') {
+            return '<span class="assistant-file-type-icon is-image" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="4" width="22" height="18" rx="2.5" fill="#fff7cc" stroke="#111827" stroke-width="1.8"></rect><circle cx="20" cy="9" r="2.2" fill="#ffb703"></circle><path d="M7 18l4.2-4.5 3.2 3 2.8-2.6L22 18" stroke="#38b000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M7 18h15" stroke="#38b000" stroke-width="2" stroke-linecap="round"></path></svg></span>';
+        }
+        return '<span class="assistant-file-type-icon is-file" aria-hidden="true">' + iconSvg('file') + '</span>';
+    }
+
+    function fileIconMarkup() {
+        return '<img src="./img/pdf.png" alt="" class="assistant-file-icon-image">';
+    }
+
+    function renderFileList() {
         var root = document.getElementById('assistantFileList');
         var count = document.getElementById('assistantFileCount');
+        var files = assistantState.fileItems || [];
         if (!root) {
             return;
         }
-        var files = buildFileItems(detail);
         if (count) {
             count.textContent = String(files.length);
         }
+        if (assistantState.filesLoading) {
+            root.innerHTML = '<div class="assistant-trace-empty assistant-trace-loading">' + TEXT.fileLoading + '</div>';
+            return;
+        }
+        if (assistantState.fileLoadError) {
+            root.innerHTML = '<div class="assistant-trace-empty">' + escapeHtml(assistantState.fileLoadError) + '</div>';
+            return;
+        }
         if (!files.length) {
-            root.innerHTML = '<div class="assistant-file-empty"><div class="assistant-file-icon">' + iconSvg('file') + '</div><div class="assistant-file-empty-title">\u6682\u65e0\u53ef\u4e0b\u8f7d\u6587\u4ef6</div><div class="assistant-file-empty-text">' + TEXT.fileEmpty + '</div></div>';
+            root.innerHTML = '<div class="assistant-file-empty"><div class="assistant-file-icon-wrap">' + fileIconMarkup() + '</div><div class="assistant-file-empty-title">\u6682\u65e0\u53ef\u4e0b\u8f7d\u6587\u4ef6</div><div class="assistant-file-empty-text">' + TEXT.fileEmpty + '</div></div>';
             return;
         }
         root.innerHTML = files.map(function (item) {
-            return '<button type="button" class="assistant-file-card" data-file-download="' + escapeHtml(item.path) + '" data-file-endpoint="' + escapeHtml(item.endpoint) + '" title="' + escapeHtml(item.fileName) + '">'
-                + '<div class="assistant-file-title">' + escapeHtml(item.title) + '</div>'
+            var displayName = item.title || item.fileName;
+            return '<button type="button" class="assistant-file-card" data-file-download="' + escapeHtml(item.path) + '" data-file-endpoint="' + escapeHtml(item.endpoint) + '" title="\u4e0b\u8f7d ' + escapeHtml(displayName) + '">'
+                + '<span class="assistant-file-icon-wrap">' + fileIconMarkup() + '</span>'
+                + '<span class="assistant-file-main">'
+                + '<span class="assistant-file-title">' + escapeHtml(displayName) + '</span>'
+                + '<span class="assistant-file-time">生成时间：' + escapeHtml(formatFileDisplayTime(item.time)) + '</span>'
+                + '</span>'
                 + '</button>';
         }).join('');
     }
@@ -897,7 +1238,7 @@
     function renderSideModules(detail) {
         renderCaseDetailPanel(detail);
         renderTrackingList();
-        renderFileList(detail);
+        renderFileList();
         var sideRoot = document.getElementById('assistantSideModules');
         var detailPanel = document.getElementById('assistantDetailPanel');
         var tracePanel = document.getElementById('assistantTracePanel');
@@ -919,9 +1260,16 @@
         filePanel.classList.toggle('is-active', activeTab === 'files');
     }
 
+    async function openAssistantTraceShortcut() {
+        await sendChatQuestion(TEXT.traceShortcut);
+    }
+
     function seedChat() {
         assistantState.chatMessages = [];
         assistantState.messageSeq = 0;
+        assistantState.departmentMenuOpen = false;
+        assistantState.departmentMenuMessageId = '';
+        assistantState.departmentActionMessageId = '';
     }
 
     function scrollAssistantChatToBottom() {
@@ -946,6 +1294,32 @@
         return null;
     }
 
+    function removeChatMessage(messageId) {
+        for (var i = 0; i < assistantState.chatMessages.length; i += 1) {
+            if (assistantState.chatMessages[i].id === messageId) {
+                assistantState.chatMessages.splice(i, 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function pushAssistantWaitingMessage() {
+        var id = 'assistant-msg-' + (++assistantState.messageSeq);
+        assistantState.chatMessages.push({
+            id: id,
+            role: 'assistant',
+            content: '',
+            loading: true
+        });
+        renderChat();
+        return id;
+    }
+
+    function renderAssistantWaitingMessage() {
+        return '<span class="assistant-waiting-label"></span>'
+            + '<span class="assistant-waiting-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
+    }
     function formatAssistantMessageTime(value) {
         if (!value) {
             return '';
@@ -966,12 +1340,15 @@
             ? '<div class="assistant-msg-feedback"><div class="assistant-msg-feedback-title">' + TEXT.feedbackTitle + '</div><textarea data-feedback-input="' + escapeHtml(message.id) + '" placeholder="' + escapeHtml(TEXT.feedbackPlaceholder) + '">' + escapeHtml(message.dislikeDraft || '') + '</textarea><div class="assistant-msg-feedback-actions"><button type="button" class="ui-btn ui-btn-secondary" data-feedback-cancel="' + escapeHtml(message.id) + '">' + TEXT.feedbackCancel + '</button><button type="button" class="ui-btn ui-btn-primary" data-feedback-submit="' + escapeHtml(message.id) + '">' + TEXT.feedbackSubmit + '</button></div></div>'
             : '';
         return '<div class="assistant-msg-toolbar">'
-            + '<div class="assistant-msg-actions">'
-            + '<button type="button" class="assistant-msg-action' + (message.copied ? ' is-active' : '') + '" data-msg-action="copy" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(message.copied ? TEXT.copied : TEXT.copy) + '">' + iconSvg('copy') + '</button>'
-            + '<button type="button" class="assistant-msg-action' + (message.liked ? ' is-active' : '') + '" data-msg-action="like" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.like) + '">' + iconSvg('like') + '</button>'
-            + '<button type="button" class="assistant-msg-action' + (dislikeActive ? ' is-active' : '') + '" data-msg-action="dislike" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.dislike) + '">' + iconSvg('dislike') + '</button>'
+            + '<div class="assistant-msg-actions" role="group" aria-label="message actions">'
+            + '<button type="button" class="assistant-msg-action' + (message.copied ? ' is-active' : '') + '" data-msg-action="copy" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(message.copied ? TEXT.copied : TEXT.copy) + '"><span class="assistant-msg-action-icon" aria-hidden="true">' + iconSvg('copy') + '</span></button>'
+            + '<button type="button" class="assistant-msg-action' + (message.liked ? ' is-active' : '') + '" data-msg-action="like" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.like) + '"><span class="assistant-msg-action-icon" aria-hidden="true">' + iconSvg('like') + '</span></button>'
+            + '<button type="button" class="assistant-msg-action' + (dislikeActive ? ' is-active' : '') + '" data-msg-action="dislike" data-message-id="' + escapeHtml(message.id) + '" title="' + escapeHtml(TEXT.dislike) + '"><span class="assistant-msg-action-icon" aria-hidden="true">' + iconSvg('dislike') + '</span></button>'
             + '</div>'
-            + '<span class="assistant-msg-time" title="' + escapeHtml(TEXT.responseTime) + '">' + iconSvg('time') + '<span>' + escapeHtml(formatAssistantMessageTime(message.finishedAt)) + '</span></span>'
+            + '<div class="assistant-msg-time" title="' + escapeHtml(TEXT.responseTime) + '">'
+            + '<span class="assistant-msg-time-icon" aria-hidden="true">' + iconSvg('time') + '</span>'
+            + '<span class="assistant-msg-time-value">' + escapeHtml(formatAssistantMessageTime(message.finishedAt)) + '</span>'
+            + '</div>'
             + '</div>'
             + feedbackHtml;
     }
@@ -1082,14 +1459,7 @@
     }
 
     function shouldTriggerDepartmentPush(detail, question) {
-        var status = plainText(detail && detail.mediationStatus);
-        if (isExpediteSuperviseQuestion(question)) {
-            return true;
-        }
-        if (isDisputeMediationQuestion(question)) {
-            return true;
-        }
-        return !status || isAcceptedStatus(status);
+        return true;
     }
 
     function normalizeAssistantMarkdown(content) {
@@ -1114,12 +1484,14 @@
 
     async function typeAssistantMessage(content, options) {
         var root = document.getElementById('assistantChatList');
+        var messageMeta = options && options.messageMeta && typeof options.messageMeta === 'object' ? options.messageMeta : null;
+        var message = null;
         if (!root) {
-            return;
+            return '';
         }
         var safeContent = normalizeAssistantMarkdown(content);
         if (!safeContent) {
-            return;
+            return '';
         }
         var mode = options && options.mode === 'line' ? 'line' : 'char';
         var wrapper = document.createElement('article');
@@ -1152,7 +1524,7 @@
 
         body.classList.remove('is-typing');
         body.innerHTML = renderAssistantMarkdown(safeContent);
-        assistantState.chatMessages.push({
+        message = Object.assign({
             id: 'assistant-msg-' + (++assistantState.messageSeq),
             role: 'assistant',
             content: safeContent,
@@ -1162,8 +1534,10 @@
             dislikeOpen: false,
             dislikeDraft: '',
             copied: false
-        });
+        }, messageMeta || {});
+        assistantState.chatMessages.push(message);
         renderChat();
+        return message.id;
     }
 
     function buildAssistantReply(question) {
@@ -1193,15 +1567,18 @@
             return;
         }
         root.innerHTML = assistantState.chatMessages.map(function (message) {
-            var bodyHtml = message.role === 'assistant'
-                ? renderAssistantMarkdown(message.content)
-                : renderUserMessage(message.content);
+            var isWaiting = !!(message && message.loading);
+            var bodyHtml = isWaiting
+                ? renderAssistantWaitingMessage()
+                : (message.role === 'assistant'
+                    ? renderAssistantMarkdown(message.content)
+                    : renderUserMessage(message.content));
             var toolbarHtml = message.role === 'assistant' ? renderAssistantMessageToolbar(message) : '';
-            return '<article class="assistant-msg ' + message.role + '" data-message-id="' + escapeHtml(message.id) + '"><div class="assistant-msg-content">' + bodyHtml + '</div>' + toolbarHtml + '</article>';
+            var contentClass = 'assistant-msg-content' + (isWaiting ? ' is-waiting' : '');
+            return '<article class="assistant-msg ' + message.role + '" data-message-id="' + escapeHtml(message.id) + '"><div class="' + contentClass + '">' + bodyHtml + '</div>' + toolbarHtml + '</article>';
         }).join('');
         scrollAssistantChatToBottom();
     }
-
     function renderQuickActions() {
         var root = document.getElementById('assistantQuickActions');
         if (!root) {
@@ -1215,6 +1592,26 @@
         }
         root.style.display = 'flex';
         root.innerHTML = '<button type="button" class="assistant-status-chip" disabled>' + escapeHtml(statusText) + '</button>';
+    }
+
+    function renderPromptActions() {
+        var root = document.getElementById('assistantPromptActions');
+        if (!root) {
+            return;
+        }
+        root.innerHTML = '<div class="assistant-prompt-actions-head">' + escapeHtml(TEXT.quickActionsTitle) + '</div>'
+            + QUICK_PROMPTS.map(function (item) {
+                return ''
+                    + '<button type="button" class="assistant-prompt-card is-tone-' + escapeHtml(item.tone || 'default') + '" data-assistant-prompt="' + escapeHtml(item.prompt) + '">'
+                    + '<span class="assistant-prompt-card-icon" aria-hidden="true">' + renderPromptCardIcon(item.icon) + '</span>'
+                    + '<span class="assistant-prompt-card-body">'
+                    + '<span class="assistant-prompt-card-title">' + escapeHtml(item.label) + '</span>'
+                    + '<span class="assistant-prompt-card-desc">' + escapeHtml(item.description || '') + '</span>'
+                    + '</span>'
+                    + '<span class="assistant-prompt-card-arrow" aria-hidden="true">' + renderPromptCardArrow() + '</span>'
+                    + '</button>';
+            }).join('');
+        syncComposerControls();
     }
 
     function openModal(title, bodyHtml) {
@@ -1274,6 +1671,7 @@
     async function sendChatQuestion(questionText) {
         var input = document.getElementById('assistantChatInput');
         var question = plainText(questionText || (input && input.value));
+        var waitingMessageId = '';
         if (!question || assistantState.isSending) {
             return;
         }
@@ -1286,51 +1684,59 @@
         if (input) {
             input.value = '';
         }
+        setPromptActionsOpen(false);
 
-        if (shouldTriggerDepartmentPush(assistantState.detail, question)) {
-            updateAssistantSendingState(true);
-            try {
-                var confirmed = isConfirmText(question);
-                var pushData = await requestDepartmentPush(assistantState.detail || {}, question);
-                var responseBriefing = plainText(pushData && pushData.briefing);
-                if (pushData && typeof pushData === 'object') {
-                    assistantState.detail = Object.assign({}, assistantState.detail || {}, pushData || {});
-                }
-                assistantState.detail.recommendReason = resolveAssistantRecommendReason(assistantState.detail || {});
-                assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail || {});
-                await loadTrackingEvents(true);
-                renderPage(assistantState.detail || {}, { preserveChat: true });
-                var pushedMessage = !confirmed && responseBriefing
-                    ? responseBriefing
-                    : resolveAssistantInitialMessage(assistantState.detail || {});
-                if (pushedMessage) {
-                    await typeAssistantMessage(pushedMessage, { mode: resolveAssistantTypingMode(assistantState.detail || {}) });
-                }
-            } catch (error) {
-                assistantState.chatMessages.push({
-                    id: 'assistant-msg-' + (++assistantState.messageSeq),
-                    role: 'assistant',
-                    content: TEXT.pushFail,
-                    finishedAt: new Date().toISOString(),
-                    liked: false,
-                    feedbackSubmitted: false,
-                    dislikeOpen: false,
-                    dislikeDraft: '',
-                    copied: false
-                });
-                renderChat();
-            } finally {
-                updateAssistantSendingState(false);
-                if (input) {
-                    input.focus();
-                }
-            }
-            return;
-        }
-
+        waitingMessageId = pushAssistantWaitingMessage();
         updateAssistantSendingState(true);
         try {
-            await typeAssistantMessage(buildAssistantReply(question), { mode: 'char' });
+            var confirmed = isConfirmText(question);
+            var pushData = await requestDepartmentPush(assistantState.detail || {}, question);
+            var progressActions = normalizeAssistantProgressActions(pushData && pushData.progressActions);
+            var responseBriefing = plainText(pushData && (pushData.progressDescription || pushData.briefing));
+            if (pushData && typeof pushData === 'object') {
+                assistantState.detail = Object.assign({}, assistantState.detail || {}, pushData || {});
+            }
+            assistantState.detail.recommendReason = resolveAssistantRecommendReason(assistantState.detail || {});
+            assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail || {});
+            await loadTrackingEvents(true);
+            renderPage(assistantState.detail || {}, { preserveChat: true });
+            if (assistantState.sideTab === 'files') {
+                await loadFileItems(true);
+            }
+
+            var pushedMessage = !confirmed && responseBriefing
+                ? responseBriefing
+                : (resolveAssistantBriefing(assistantState.detail || {})
+                    || resolveAssistantRecommendReason(assistantState.detail || {})
+                    || resolveAssistantInitialMessage(assistantState.detail || {}));
+
+            if (!pushedMessage) {
+                throw new Error('assistant response empty');
+            }
+
+            if (waitingMessageId && removeChatMessage(waitingMessageId)) {
+                renderChat();
+            }
+            await typeAssistantMessage(pushedMessage, {
+                mode: resolveAssistantTypingMode(assistantState.detail || {}),
+                messageMeta: progressActions.length ? { progressActions: progressActions } : null
+            });
+        } catch (error) {
+            if (waitingMessageId && removeChatMessage(waitingMessageId)) {
+                renderChat();
+            }
+            assistantState.chatMessages.push({
+                id: 'assistant-msg-' + (++assistantState.messageSeq),
+                role: 'assistant',
+                content: TEXT.pushFail,
+                finishedAt: new Date().toISOString(),
+                liked: false,
+                feedbackSubmitted: false,
+                dislikeOpen: false,
+                dislikeDraft: '',
+                copied: false
+            });
+            renderChat();
         } finally {
             updateAssistantSendingState(false);
             if (input) {
@@ -1338,7 +1744,6 @@
             }
         }
     }
-
     function renderPage(detail, options) {
         var title = document.getElementById('assistantPageTitle');
         if (title) {
@@ -1352,33 +1757,43 @@
         renderSideModules(detail);
         renderChat();
         renderQuickActions();
+        renderPromptActions();
     }
 
     async function loadAssistantDetail() {
         var params = new URLSearchParams(window.location.search);
+        var assistantPrefill = null;
         assistantState.caseId = String(params.get('caseId') || '').trim();
         assistantState.trackingLoaded = false;
+        assistantState.fileItems = [];
+        assistantState.filesLoaded = false;
+        assistantState.filesLoading = false;
+        assistantState.fileLoadError = '';
         if (!assistantState.caseId) {
             assistantState.trackingEvents = [];
             assistantState.trackingLoaded = true;
+            assistantState.fileItems = [];
+            assistantState.filesLoaded = true;
             renderPage({ caseId: '-', caseNo: '-', caseText: TEXT.noCase });
             return;
         }
+        assistantPrefill = getAssistantPrefill(assistantState.caseId);
         showAssistantInitLoading(TEXT.initLoading);
         try {
             var response = await fetch(API_BASE + '/cases/assistant-detail?caseId=' + encodeURIComponent(assistantState.caseId));
             var json = await response.json();
-            assistantState.detail = json && json.data ? json.data : { caseId: assistantState.caseId };
+            assistantState.detail = applyAssistantPrefill(json && json.data ? json.data : { caseId: assistantState.caseId }, assistantPrefill);
             try {
                 var workflowData = await requestRecommendedDepartment(assistantState.detail || {});
                 if (workflowData && typeof workflowData === 'object') {
-                    assistantState.detail = Object.assign({}, assistantState.detail || {}, workflowData || {});
+                    assistantState.detail = applyAssistantPrefill(Object.assign({}, assistantState.detail || {}, workflowData || {}), assistantPrefill);
                 }
             } catch (workflowError) {
                 console.warn('request recommended department failed', workflowError);
             }
         } catch (error) {
-            assistantState.detail = { caseId: assistantState.caseId, caseNo: assistantState.caseId, caseText: TEXT.loadFail, factsSummary: TEXT.loadFail };
+            console.warn('load assistant detail failed', error);
+            assistantState.detail = applyAssistantPrefill({ caseId: assistantState.caseId, caseNo: assistantState.caseId, caseText: TEXT.loadFail, factsSummary: TEXT.loadFail }, assistantPrefill);
         } finally {
             hideAssistantInitLoading();
         }
@@ -1389,7 +1804,11 @@
         renderPage(assistantState.detail);
         var initialMessage = resolveAssistantInitialMessage(assistantState.detail);
         if (initialMessage) {
-            await typeAssistantMessage(initialMessage, { mode: resolveAssistantTypingMode(assistantState.detail) });
+            await typeAssistantMessage(initialMessage, {
+                mode: resolveAssistantTypingMode(assistantState.detail),
+                attachDepartmentActions: shouldShowAssistantDepartmentActions(assistantState.detail || {}),
+                departmentActionDetail: assistantState.detail || {}
+            });
         }
     }
 
@@ -1401,18 +1820,71 @@
         var traceRoot = document.getElementById('assistantTraceList');
         var sideRoot = document.getElementById('assistantSideModules');
         var chatRoot = document.getElementById('assistantChatList');
+        var promptRoot = document.getElementById('assistantPromptActions');
+        var promptToggleBtn = document.getElementById('assistantPromptToggleBtn');
+        var traceShortcutBtn = document.getElementById('assistantTraceShortcutBtn');
 
         if (sendBtn) {
             sendBtn.onclick = function () { sendChatQuestion(); };
         }
+        if (traceShortcutBtn) {
+            traceShortcutBtn.addEventListener('click', function () {
+                openAssistantTraceShortcut();
+            });
+        }
+        if (promptToggleBtn) {
+            promptToggleBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (assistantState.isSending) {
+                    return;
+                }
+                setPromptActionsOpen(!assistantState.quickActionsOpen);
+            });
+        }
         if (input) {
+            input.addEventListener('input', function () {
+                syncComposerControls();
+            });
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
                     sendChatQuestion();
                 }
+                if (event.key === 'Escape' && assistantState.quickActionsOpen) {
+                    setPromptActionsOpen(false);
+                }
             });
         }
+        if (promptRoot) {
+            promptRoot.addEventListener('click', function (event) {
+                var target = event.target.closest('[data-assistant-prompt]');
+                if (!target || !input || input.disabled) {
+                    return;
+                }
+                input.value = target.getAttribute('data-assistant-prompt') || '';
+                setPromptActionsOpen(false);
+                input.focus();
+                if (typeof input.setSelectionRange === 'function') {
+                    input.setSelectionRange(input.value.length, input.value.length);
+                }
+            });
+        }
+        document.addEventListener('click', function (event) {
+            if (!assistantState.quickActionsOpen) {
+                return;
+            }
+            var target = event.target;
+            if ((promptRoot && promptRoot.contains(target)) || (promptToggleBtn && promptToggleBtn.contains(target))) {
+                return;
+            }
+            setPromptActionsOpen(false);
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && assistantState.quickActionsOpen) {
+                setPromptActionsOpen(false);
+            }
+        });
         if (modalClose) {
             modalClose.onclick = closeModal;
         }
@@ -1438,7 +1910,7 @@
             });
         }
         if (sideRoot) {
-            sideRoot.addEventListener('click', function (event) {
+            sideRoot.addEventListener('click', async function (event) {
                 var tabTarget = event.target.closest('[data-side-tab]');
                 var audioTarget = event.target.closest('[data-case-audio-toggle]');
                 var fileTarget = event.target.closest('[data-file-download]');
@@ -1447,7 +1919,10 @@
                     assistantState.sideTab = nextTab === 'trace' || nextTab === 'files' || nextTab === 'detail' ? nextTab : 'detail';
                     renderSideModules(assistantState.detail || {});
                     if (assistantState.sideTab === 'trace') {
-                        loadTrackingEvents(true);
+                        await loadTrackingEvents(true);
+                    }
+                    if (assistantState.sideTab === 'files') {
+                        await loadFileItems(true);
                     }
                     return;
                 }
@@ -1456,7 +1931,7 @@
                     return;
                 }
                 if (fileTarget) {
-                                        downloadCaseFile(
+                    downloadCaseFile(
                         fileTarget.getAttribute('data-file-download'),
                         fileTarget.getAttribute('data-file-endpoint')
                     );
@@ -1555,11 +2030,533 @@
         }
     }
 
+    /* assistant department push actions */
+    TEXT.confirmPushPrefix = '\u786e\u8ba4\u63a8\u9001\u81f3';
+    TEXT.switchDepartment = '\u66f4\u6362\u90e8\u95e8';
+    TEXT.switchDepartmentAria = '\u66f4\u6362\u63a8\u9001\u90e8\u95e8';
+    TEXT.departmentMenuAria = '\u53ef\u9009\u63a8\u9001\u90e8\u95e8';
+    TEXT.switchDepartmentLoading = '\u6b63\u5728\u91cd\u65b0\u751f\u6210\u90e8\u95e8\u63a8\u8350...';
+    TEXT.switchDepartmentFail = '\u66f4\u6362\u90e8\u95e8\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002';
+    TEXT.committeeDepartment = '\u4eba\u6c11\u8c03\u89e3\u59d4\u5458\u4f1a/\u884c\u4e1a\u4e13\u4e1a\u8c03\u89e3\u59d4\u5458\u4f1a';
+    TEXT.hrssDepartment = '\u4eba\u793e\u90e8\u95e8';
+    TEXT.housingDepartment = '\u4f4f\u5efa\u90e8\u95e8';
+    TEXT.policeDepartment = '\u516c\u5b89\u90e8\u95e8';
+    TEXT.environmentDepartment = '\u751f\u6001\u73af\u5883\u90e8\u95e8';
+
+    assistantState.departmentMenuOpen = false;
+    assistantState.selectedDepartment = plainText(assistantState.selectedDepartment || '');
+    assistantState.activeQuickPrompt = plainText(assistantState.activeQuickPrompt || '');
+    assistantState.departmentActionClickBound = false;
+    assistantState.departmentActionOutsideBound = false;
+    assistantState.promptSelectionClickBound = false;
+    assistantState.promptSelectionInputBound = false;
+
+    buildRecommendedDepartmentPayload = function (detail, options) {
+        var safeOptions = options && typeof options === "object" ? options : {};
+        var changeDepartment = plainText(safeOptions.changeDepartment || safeOptions.change_department);
+        var payload = {
+            caseId: assistantState.caseId ? Number(assistantState.caseId) : null,
+            query: '1',
+            caseSummary: plainText(detail && (detail.factsSummary || detail.caseSummary || detail.caseSmartSummary || detail.summaryText || detail.caseText)),
+            variables: {
+                dispute_text: detail && detail.factsSummary ? detail.factsSummary : '',
+                category_level_1: detail && detail.disputeType ? detail.disputeType : '',
+                category_level_2: detail && detail.disputeSubType ? detail.disputeSubType : '',
+                change_department: changeDepartment
+            }
+        };
+        if (changeDepartment) {
+            payload.changeDepartment = changeDepartment;
+        }
+        return payload;
+    };
+
+    requestRecommendedDepartment = async function (detail, options) {
+        var safeOptions = options && typeof options === "object" ? options : {};
+        var changeDepartment = plainText(safeOptions.changeDepartment || safeOptions.change_department);
+        var shouldManageLoading = safeOptions.showLoading !== false && !isAssistantInitLoadingVisible();
+        var loadingText = safeOptions.loadingText || (changeDepartment ? TEXT.switchDepartmentLoading : TEXT.initLoading);
+        var payload = buildRecommendedDepartmentPayload(detail, safeOptions);
+        if (!payload.caseId) {
+            return null;
+        }
+        if (shouldManageLoading) {
+            showAssistantInitLoading(loadingText);
+        }
+        try {
+            var response = await fetch(API_BASE + '/recommended-department/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            var json = await response.json();
+            var successCode = json && (json.code === 0 || json.code === 200 || json.code === '0' || json.code === '200');
+            if (!response.ok || !json || !successCode) {
+                throw new Error((json && json.message) || 'recommended department request failed');
+            }
+            return json.data || null;
+        } finally {
+            if (shouldManageLoading) {
+                hideAssistantInitLoading();
+            }
+        }
+    };
+
+    function resolveQuickPromptSelection(value) {
+        var text = plainText(value);
+        for (var i = 0; i < QUICK_PROMPTS.length; i += 1) {
+            if (plainText(QUICK_PROMPTS[i].prompt) === text) {
+                return QUICK_PROMPTS[i].prompt;
+            }
+        }
+        return '';
+    }
+
+    function syncPromptActionSelection() {
+        var root = document.getElementById("assistantPromptActions");
+        if (!root) {
+            return;
+        }
+        var cards = root.querySelectorAll("[data-assistant-prompt]");
+        for (var i = 0; i < cards.length; i += 1) {
+            var promptValue = plainText(cards[i].getAttribute("data-assistant-prompt"));
+            cards[i].classList.toggle("is-selected", !!assistantState.activeQuickPrompt && promptValue === assistantState.activeQuickPrompt);
+        }
+    }
+
+    function setAssistantActiveQuickPrompt(promptValue) {
+        assistantState.activeQuickPrompt = resolveQuickPromptSelection(promptValue);
+        syncPromptActionSelection();
+    }
+
+    function renderDepartmentActionIcon(type) {
+        if (type === "confirm") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4.5\" y=\"4.5\" width=\"15\" height=\"15\" rx=\"3.2\"></rect><path d=\"m8.4 12.3 2.35 2.35 4.95-5.25\"></path></svg>";
+        }
+        if (type === "switch") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 7h9.5\"></path><path d=\"m14.5 4 3-4-3-4\" transform=\"translate(0 8)\"></path><path d=\"M16 17H6.5\"></path><path d=\"m9.5 4-3 4 3 4\" transform=\"translate(0 8)\"></path></svg>";
+        }
+        if (type === "caretUp") {
+            return "<svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m4 12 6-6 6 6\"></path></svg>";
+        }
+        if (type === "caretDown") {
+            return "<svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m4 8 6 6 6-6\"></path></svg>";
+        }
+        if (type === "optionArrow") {
+            return "<svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 4 6 6-6 6\"></path></svg>";
+        }
+        if (type === "committee") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"8\" cy=\"9\" r=\"2.3\"></circle><circle cx=\"16\" cy=\"9\" r=\"2.3\"></circle><path d=\"M4.5 18a3.8 3.8 0 0 1 7 0\"></path><path d=\"M12.5 18a3.8 3.8 0 0 1 7 0\"></path></svg>";
+        }
+        if (type === "hrss") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"7\" width=\"14\" height=\"11\" rx=\"2.4\"></rect><path d=\"M9 7V5.5h6V7\"></path><path d=\"M5 11.5h14\"></path></svg>";
+        }
+        if (type === "housing") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.75 19.25h14.5\"></path><path d=\"M7.5 19.25V9.5l4.5-3.5v13.25\"></path><path d=\"M12 8.25h4.5v11\"></path><path d=\"M8.9 12h1.2\"></path><path d=\"M13.9 12h1.2\"></path><path d=\"M13.9 15h1.2\"></path></svg>";
+        }
+        if (type === "police") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 14.5 8.75 10h6.5L17 14.5\"></path><path d=\"M5 14.5h14v2.25A1.75 1.75 0 0 1 17.25 18.5H6.75A1.75 1.75 0 0 1 5 16.75Z\"></path><circle cx=\"8.2\" cy=\"17.25\" r=\"1\"></circle><circle cx=\"15.8\" cy=\"17.25\" r=\"1\"></circle><path d=\"M9.5 10V8.75h5V10\"></path></svg>";
+        }
+        if (type === "environment") {
+            return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 19.5c0-5.2 2.4-9.45 6.5-12.5 0 6.25-2.25 10.55-6.5 12.5Z\"></path><path d=\"M12 19.5C7.75 17.55 5.5 13.25 5.5 7c4.1 3.05 6.5 7.3 6.5 12.5Z\"></path><path d=\"M12 19.5V8.5\"></path></svg>";
+        }
+        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"3\"></rect><path d=\"M9 12h6\"></path><path d=\"M12 9v6\"></path></svg>";
+    }
+
+    function resolveAssistantDepartmentKey(name) {
+        var text = plainText(name);
+        if (!text) { return 'generic'; }
+        if (text.indexOf('\u8c03\u89e3\u59d4\u5458\u4f1a') >= 0) { return 'committee'; }
+        if (text.indexOf('\u4eba\u793e') >= 0) { return 'hrss'; }
+        if (text.indexOf('\u4f4f\u5efa') >= 0) { return 'housing'; }
+        if (text.indexOf('\u516c\u5b89') >= 0) { return 'police'; }
+        if (text.indexOf('\u751f\u6001\u73af\u5883') >= 0) { return 'environment'; }
+        return 'generic';
+    }
+
+    function syncAssistantSelectedDepartment(detail) {
+        var nextDepartment = plainText(detail && (detail.recommendedDepartment || detail.recommended_department));
+        assistantState.selectedDepartment = nextDepartment;
+        if (!nextDepartment) {
+            assistantState.departmentMenuOpen = false;
+        }
+    }
+
+    function resolveAssistantSelectedDepartment(detail) {
+        return plainText(assistantState.selectedDepartment || (detail && (detail.recommendedDepartment || detail.recommended_department)) || '');
+    }
+
+    function resolveAssistantDepartmentOptions(detail) {
+        var currentDepartment = resolveAssistantSelectedDepartment(detail);
+        var fixedDepartments = [
+            TEXT.committeeDepartment,
+            TEXT.hrssDepartment,
+            TEXT.housingDepartment,
+            TEXT.policeDepartment,
+            TEXT.environmentDepartment
+        ];
+        var names = [];
+        var seen = {};
+        function appendDepartment(name) {
+            var safeName = plainText(name);
+            if (!safeName || seen[safeName]) {
+                return;
+            }
+            seen[safeName] = true;
+            names.push(safeName);
+        }
+        appendDepartment(currentDepartment);
+        for (var i = 0; i < fixedDepartments.length; i += 1) {
+            appendDepartment(fixedDepartments[i]);
+        }
+        return names.map(function (name) {
+            return {
+                name: name,
+                key: resolveAssistantDepartmentKey(name),
+                current: name === currentDepartment
+            };
+        });
+    }
+
+    function shouldShowAssistantDepartmentActions(detail) {
+        var safeDetail = detail && typeof detail === "object" ? detail : {};
+        var department = plainText(safeDetail.recommendedDepartment || safeDetail.recommended_department);
+        var status = plainText(safeDetail.mediationStatus || safeDetail.mediation_status);
+        var currentStage = resolveCurrentStageName(safeDetail);
+        var recommendStage = resolveProcessSteps(safeDetail)[0];
+        if (!department) {
+            return false;
+        }
+        if (safeDetail.diversionCompletedAt || safeDetail.diversion_completed_at || safeDetail.pushCompletedAt) {
+            return false;
+        }
+        if (isMediatingStatus(status) || isMediationCompletedStatus(status)) {
+            return false;
+        }
+        return currentStage === recommendStage;
+    }
+
+    function buildAssistantDepartmentActionContext(detail) {
+        var safeDetail = detail || {};
+        var currentDepartment = resolveAssistantSelectedDepartment(safeDetail);
+        var options = resolveAssistantDepartmentOptions(safeDetail);
+        if (!currentDepartment || !options.length) {
+            return null;
+        }
+        return {
+            currentDepartment: currentDepartment,
+            options: options.map(function (item) {
+                return Object.assign({}, item);
+            })
+        };
+    }
+
+    function clearAssistantDepartmentActions() {
+        assistantState.departmentMenuOpen = false;
+        assistantState.departmentMenuMessageId = '';
+        assistantState.departmentActionMessageId = '';
+        for (var i = 0; i < assistantState.chatMessages.length; i += 1) {
+            delete assistantState.chatMessages[i].showDepartmentActions;
+            delete assistantState.chatMessages[i].departmentActionContext;
+        }
+    }
+
+    function markLatestAssistantDepartmentActions(messageId, detail) {
+        var targetId = plainText(messageId);
+        var safeDetail = detail || assistantState.detail || {};
+        var context = null;
+        if (!shouldShowAssistantDepartmentActions(safeDetail)) {
+            return;
+        }
+        context = buildAssistantDepartmentActionContext(safeDetail);
+        if (!context) {
+            return;
+        }
+        if (!targetId) {
+            for (var i = assistantState.chatMessages.length - 1; i >= 0; i -= 1) {
+                if (assistantState.chatMessages[i] && assistantState.chatMessages[i].role === 'assistant' && assistantState.chatMessages[i].finishedAt) {
+                    targetId = assistantState.chatMessages[i].id;
+                    break;
+                }
+            }
+        }
+        if (!targetId) {
+            return;
+        }
+        clearAssistantDepartmentActions();
+        for (var j = assistantState.chatMessages.length - 1; j >= 0; j -= 1) {
+            if (assistantState.chatMessages[j] && assistantState.chatMessages[j].id === targetId) {
+                assistantState.chatMessages[j].showDepartmentActions = true;
+                assistantState.chatMessages[j].departmentActionContext = context;
+                assistantState.departmentActionMessageId = targetId;
+                break;
+            }
+        }
+    }
+
+    function setAssistantSelectedDepartment(name) {
+        var nextDepartment = plainText(name);
+        if (!nextDepartment) {
+            return;
+        }
+        assistantState.selectedDepartment = nextDepartment;
+        assistantState.detail = Object.assign({}, assistantState.detail || {}, {
+            recommendedDepartment: nextDepartment,
+            recommended_department: nextDepartment
+        });
+    }
+
+    async function switchAssistantRecommendedDepartment(name) {
+        var nextDepartment = plainText(name);
+        var nextMessage = "";
+        var loadingHidden = false;
+        if (!nextDepartment) {
+            return;
+        }
+        assistantState.departmentMenuOpen = false;
+        assistantState.departmentMenuMessageId = '';
+        setAssistantSelectedDepartment(nextDepartment);
+        renderChat();
+        showAssistantInitLoading(TEXT.switchDepartmentLoading);
+        try {
+            var requestDetail = Object.assign({}, assistantState.detail || {}, {
+                recommendedDepartment: nextDepartment,
+                recommended_department: nextDepartment
+            });
+            var workflowData = await requestRecommendedDepartment(requestDetail, { changeDepartment: nextDepartment });
+            assistantState.detail = Object.assign({}, assistantState.detail || {}, workflowData || {});
+            if (!plainText(assistantState.detail && (assistantState.detail.recommendedDepartment || assistantState.detail.recommended_department))) {
+                assistantState.detail.recommendedDepartment = nextDepartment;
+            }
+            assistantState.detail.recommendedDepartment = plainText(assistantState.detail.recommendedDepartment || assistantState.detail.recommended_department || nextDepartment);
+            assistantState.detail.recommended_department = assistantState.detail.recommendedDepartment;
+            assistantState.detail.recommendReason = resolveAssistantRecommendReason(assistantState.detail || {});
+            assistantState.detail.briefing = resolveAssistantBriefing(assistantState.detail || {});
+            renderPage(assistantState.detail || {}, { preserveChat: true });
+            nextMessage = resolveAssistantInitialMessage(assistantState.detail || {});
+            hideAssistantInitLoading();
+            loadingHidden = true;
+            if (nextMessage) {
+                await typeAssistantMessage(nextMessage, {
+                    mode: resolveAssistantTypingMode(assistantState.detail || {}),
+                    attachDepartmentActions: shouldShowAssistantDepartmentActions(assistantState.detail || {}),
+                    departmentActionDetail: assistantState.detail || {}
+                });
+            }
+        } catch (error) {
+            console.warn("switch recommended department failed", error);
+            assistantState.chatMessages.push({
+                id: "assistant-msg-" + (++assistantState.messageSeq),
+                role: "assistant",
+                content: TEXT.switchDepartmentFail,
+                finishedAt: new Date().toISOString(),
+                liked: false,
+                feedbackSubmitted: false,
+                dislikeOpen: false,
+                dislikeDraft: "",
+                copied: false
+            });
+            renderChat();
+        } finally {
+            if (!loadingHidden) {
+                hideAssistantInitLoading();
+            }
+        }
+    }
+
+    function renderAssistantDepartmentActions(message) {
+        var actionContext = null;
+        var currentDepartment = '';
+        var options = [];
+        var isMenuOpen = false;
+        if (!message || !message.showDepartmentActions) {
+            return '';
+        }
+        actionContext = message.departmentActionContext || null;
+        currentDepartment = plainText(actionContext && actionContext.currentDepartment);
+        options = actionContext && actionContext.options ? actionContext.options : [];
+        if (!currentDepartment || !options.length) {
+            return '';
+        }
+        isMenuOpen = assistantState.departmentMenuOpen && assistantState.departmentMenuMessageId === message.id;
+        return ''
+            + '<div class="assistant-msg-dept-actions">'
+            + '<div class="assistant-msg-dept-actions-inner">'
+            + '<button type="button" class="assistant-msg-dept-btn assistant-msg-dept-btn-confirm" data-dept-confirm="1">'
+            + '<span class="assistant-msg-dept-btn-icon" aria-hidden="true">' + renderDepartmentActionIcon('confirm') + '</span>'
+            + '<span class="assistant-msg-dept-btn-label">' + escapeHtml(TEXT.confirmPushPrefix + currentDepartment) + '</span>'
+            + '</button>'
+            + '<div class="assistant-msg-dept-switch">'
+            + '<button type="button" class="assistant-msg-dept-btn assistant-msg-dept-btn-switch' + (isMenuOpen ? ' is-open' : '') + '" data-dept-toggle="1" aria-expanded="' + (isMenuOpen ? 'true' : 'false') + '" aria-label="' + escapeHtml(TEXT.switchDepartmentAria) + '">'
+            + '<span class="assistant-msg-dept-btn-icon" aria-hidden="true">' + renderDepartmentActionIcon('switch') + '</span>'
+            + '<span class="assistant-msg-dept-btn-label">' + escapeHtml(TEXT.switchDepartment) + '</span>'
+            + '<span class="assistant-msg-dept-btn-caret" aria-hidden="true">' + renderDepartmentActionIcon(isMenuOpen ? 'caretUp' : 'caretDown') + '</span>'
+            + '</button>'
+            + (isMenuOpen
+                ? '<div class="assistant-msg-dept-menu" role="menu" aria-label="' + escapeHtml(TEXT.departmentMenuAria) + '">' + options.map(function (item) {
+                    return ''
+                        + '<button type="button" class="assistant-msg-dept-option assistant-msg-dept-option-' + escapeHtml(item.key) + (item.current ? ' is-current' : '') + '" data-dept-option="' + escapeHtml(item.name) + '">'
+                        + '<span class="assistant-msg-dept-option-icon is-' + escapeHtml(item.key) + '" aria-hidden="true">' + renderDepartmentActionIcon(item.key) + '</span>'
+                        + '<span class="assistant-msg-dept-option-label">' + escapeHtml(item.name) + '</span>'
+                        + '<span class="assistant-msg-dept-option-arrow" aria-hidden="true">' + renderDepartmentActionIcon('optionArrow') + '</span>'
+                        + '</button>';
+                }).join('') + '</div>'
+                : '')
+            + '</div>'
+            + '</div>'
+            + '</div>';
+    }
+
+    function renderAssistantProgressActions(message) {
+        var actions = normalizeAssistantProgressActions(message && message.progressActions);
+        if (!actions.length) {
+            return '';
+        }
+        return ''
+            + '<div class="assistant-msg-progress-actions" role="group" aria-label="progress actions">'
+            + actions.map(function (item) {
+                return ''
+                    + '<button type="button" class="assistant-msg-progress-btn" data-progress-action="' + escapeHtml(item.query) + '">'
+                    + escapeHtml(item.label)
+                    + '</button>';
+            }).join('')
+            + '</div>';
+    }
+
+    var baseRenderPromptActions = renderPromptActions;
+    renderPromptActions = function () {
+        baseRenderPromptActions();
+        syncPromptActionSelection();
+    };
+
+    var baseRenderPage = renderPage;
+    renderPage = function (detail, options) {
+        syncAssistantSelectedDepartment(detail);
+        return baseRenderPage(detail, options);
+    };
+
+    var baseTypeAssistantMessage = typeAssistantMessage;
+    typeAssistantMessage = async function (content, options) {
+        var messageId = await baseTypeAssistantMessage(content, options);
+        if (messageId && options && options.attachDepartmentActions) {
+            markLatestAssistantDepartmentActions(messageId, options.departmentActionDetail || assistantState.detail || {});
+            renderChat();
+        }
+        return messageId;
+    };
+
+    var baseSendChatQuestion = sendChatQuestion;
+    sendChatQuestion = async function (questionText) {
+        assistantState.activeQuickPrompt = '';
+        syncPromptActionSelection();
+        return baseSendChatQuestion(questionText);
+    };
+
+    var baseRenderAssistantMessageToolbar = renderAssistantMessageToolbar;
+    renderAssistantMessageToolbar = function (message) {
+        var toolbarHtml = baseRenderAssistantMessageToolbar(message);
+        if (!message || message.role !== 'assistant' || !message.finishedAt) {
+            return toolbarHtml;
+        }
+        return renderAssistantProgressActions(message) + renderAssistantDepartmentActions(message) + toolbarHtml;
+    };
+
+    var baseBindEvents = bindEvents;
+    bindEvents = function () {
+        baseBindEvents();
+        var chatRoot = document.getElementById('assistantChatList');
+        var promptRoot = document.getElementById('assistantPromptActions');
+        var input = document.getElementById('assistantChatInput');
+        if (chatRoot && !assistantState.departmentActionClickBound) {
+            chatRoot.addEventListener('click', async function (event) {
+                var target = event.target;
+                var messageTarget = target && target.closest ? target.closest('[data-message-id]') : null;
+                var messageId = plainText(messageTarget && messageTarget.getAttribute ? messageTarget.getAttribute('data-message-id') : '');
+                var progressActionTarget = target && target.closest ? target.closest('[data-progress-action]') : null;
+                var confirmTarget = target && target.closest ? target.closest('[data-dept-confirm]') : null;
+                var toggleTarget = target && target.closest ? target.closest('[data-dept-toggle]') : null;
+                var optionTarget = target && target.closest ? target.closest('[data-dept-option]') : null;
+                if (progressActionTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await sendChatQuestion(progressActionTarget.getAttribute('data-progress-action'));
+                    return;
+                }
+                if (confirmTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    assistantState.departmentMenuOpen = false;
+                    assistantState.departmentMenuMessageId = '';
+                    setAssistantSelectedDepartment(resolveAssistantSelectedDepartment(assistantState.detail || {}));
+                    await sendChatQuestion('\u786e\u8ba4');
+                    return;
+                }
+                if (toggleTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (assistantState.departmentMenuOpen && assistantState.departmentMenuMessageId === messageId) {
+                        assistantState.departmentMenuOpen = false;
+                        assistantState.departmentMenuMessageId = '';
+                    } else {
+                        assistantState.departmentMenuOpen = true;
+                        assistantState.departmentMenuMessageId = messageId;
+                    }
+                    renderChat();
+                    return;
+                }
+                if (optionTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await switchAssistantRecommendedDepartment(optionTarget.getAttribute('data-dept-option'));
+                }
+            });
+            assistantState.departmentActionClickBound = true;
+        }
+        if (promptRoot && !assistantState.promptSelectionClickBound) {
+            promptRoot.addEventListener('click', function (event) {
+                var promptTarget = event.target && event.target.closest ? event.target.closest('[data-assistant-prompt]') : null;
+                if (!promptTarget) {
+                    return;
+                }
+                setAssistantActiveQuickPrompt(promptTarget.getAttribute('data-assistant-prompt'));
+            });
+            assistantState.promptSelectionClickBound = true;
+        }
+        if (input && !assistantState.promptSelectionInputBound) {
+            input.addEventListener('input', function () {
+                setAssistantActiveQuickPrompt(input.value);
+            });
+            assistantState.promptSelectionInputBound = true;
+            setAssistantActiveQuickPrompt(input.value);
+        }
+        if (!assistantState.departmentActionOutsideBound) {
+            document.addEventListener('click', function (event) {
+                var target = event.target;
+                if (!assistantState.departmentMenuOpen) {
+                    return;
+                }
+                if (target && target.closest && target.closest('.assistant-msg-dept-switch')) {
+                    return;
+                }
+                assistantState.departmentMenuOpen = false;
+                assistantState.departmentMenuMessageId = '';
+                renderChat();
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && assistantState.departmentMenuOpen) {
+                    assistantState.departmentMenuOpen = false;
+                    assistantState.departmentMenuMessageId = '';
+                    renderChat();
+                }
+            });
+            assistantState.departmentActionOutsideBound = true;
+        }
+    };
+
     applyStaticText();
     bindEvents();
     loadAssistantDetail();
 })();
-
 
 
 
